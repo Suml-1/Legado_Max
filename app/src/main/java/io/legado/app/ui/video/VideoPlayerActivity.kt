@@ -188,34 +188,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         playerView.enlargeImageRes = R.drawable.ic_fullscreen
         isNew = intent.getBooleanExtra("isNew", true)
         if (isNew) {
-            // 标记新会话启动，跳过 onResume 恢复旧视频
-            isStartingNew = true
-            // 停止上一次的播放并释放媒体，防止 onResume 时旧视频被恢复
-            VideoPlay.stopLoading()
-            VideoPlay.stopPlayback()
-            // 重置可能残留的上一次播放状态，防止旧链接/标题泄漏到新会话
-            VideoPlay.singleUrl = false
-            VideoPlay.videoUrl = null
-            VideoPlay.videoTitle = null
-            intent.getStringExtra("videoUrl")?.let {
-                VideoPlay.videoUrl = it
-                VideoPlay.singleUrl = true
-            }
-            intent.getStringExtra("videoTitle")?.let {
-                binding.titleBar.title = it
-                VideoPlay.videoTitle = it
-            }
-            val sourceKey = intent.getStringExtra("sourceKey")
-            val sourceType = intent.getIntExtra("sourceType", 0)
-            val bookUrl = intent.getStringExtra("bookUrl")
-            val record = intent.getStringExtra("record")
-            VideoPlay.inBookshelf = intent.getBooleanExtra("inBookshelf", true)
-            if (!VideoPlay.initSource(sourceKey, sourceType, bookUrl, record)) {
-                finish()
-                return
-            }
-            VideoPlay.startPlay(playerView)
-            VideoPlay.saveRead()
+            startNewSession()
         } else {
             VideoPlay.clonePlayState(playerView)
             playerView.setSurfaceToPlay()
@@ -236,6 +209,58 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
             }
             finish()
         }
+    }
+
+    /**
+     * 处理 singleTask 复用 Activity 时收到的新 Intent。
+     * 当从发现列表/书籍详情页切换书籍时，旧 Activity 会被复用，
+     * 新的 bookUrl 通过 onNewIntent 传入，需要重新初始化播放。
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // 如果在全屏模式，先退出全屏
+        if (isFullScreen) {
+            toggleFullScreen()
+        }
+        startNewSession()
+        initView()
+        upView()
+    }
+
+    /**
+     * 初始化新的播放会话：停止旧播放、重置状态、加载新书源数据、开始播放。
+     * 被 onActivityCreated(isNew=true) 和 onNewIntent() 共同调用。
+     */
+    private fun startNewSession() {
+        // 标记新会话启动，跳过 onResume 恢复旧视频
+        isStartingNew = true
+        // 停止上一次的播放并释放媒体，防止 onResume 时旧视频被恢复
+        VideoPlay.stopLoading()
+        VideoPlay.stopPlayback()
+        // 重置可能残留的上一次播放状态，防止旧链接/标题泄漏到新会话
+        VideoPlay.singleUrl = false
+        VideoPlay.videoUrl = null
+        VideoPlay.videoTitle = null
+        intent.getStringExtra("videoUrl")?.let {
+            VideoPlay.videoUrl = it
+            VideoPlay.singleUrl = true
+        }
+        intent.getStringExtra("videoTitle")?.let {
+            binding.titleBar.title = it
+            VideoPlay.videoTitle = it
+        }
+        val sourceKey = intent.getStringExtra("sourceKey")
+        val sourceType = intent.getIntExtra("sourceType", 0)
+        val bookUrl = intent.getStringExtra("bookUrl")
+        val record = intent.getStringExtra("record")
+        VideoPlay.inBookshelf = intent.getBooleanExtra("inBookshelf", true)
+        if (!VideoPlay.initSource(sourceKey, sourceType, bookUrl, record)) {
+            finish()
+            return
+        }
+        VideoPlay.startPlay(playerView)
+        VideoPlay.saveRead()
     }
 
     private fun initView() {
