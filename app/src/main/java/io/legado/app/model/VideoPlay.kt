@@ -308,6 +308,17 @@ object VideoPlay : CoroutineScope by MainScope(){
         return backFrom
     }
     /**
+     * 停止当前播放（释放媒体播放器），但不重置状态。
+     * 用于新会话启动时清理旧媒体，防止 onResume 恢复旧视频。
+     */
+    fun stopPlayback() {
+        if (videoManager.listener() != null) {
+            videoManager.listener().onCompletion()
+        }
+        videoManager.releaseMediaPlayer()
+    }
+
+    /**
      * 页面销毁了记得调用是否所有的video
      */
     fun releaseAllVideos() {
