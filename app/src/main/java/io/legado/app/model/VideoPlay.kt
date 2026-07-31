@@ -155,6 +155,7 @@ object VideoPlay : CoroutineScope by MainScope(){
             }.onError {
                 AppLog.put("加载视频链接失败", it, true)
             }
+            isLoading = false
             return
         }
         durChapterPos.takeIf { it > 0 }?.toLong()?.let { player.seekOnStart = it }
@@ -221,6 +222,7 @@ object VideoPlay : CoroutineScope by MainScope(){
                         AppLog.put("加载订阅源为链接的正文失败", it, true)
                     }
             }
+            isLoading = false
             return
         }
         val book = book
@@ -401,6 +403,21 @@ object VideoPlay : CoroutineScope by MainScope(){
 
     fun initSource(sourceKey: String?, sourceType: Int?, bookUrl: String?, record:String?): Boolean {
         isLoading = true
+        // 重置可能残留的上一次会话状态，防止旧数据泄漏（当旧 Activity 未被销毁时尤为重要）
+        rssStar = null
+        rssRecord = null
+        danmakuStr = null
+        danmakuFile = null
+        lockCurScreen = false
+        isPortraitVideo = false
+        chapter = null
+        durVolume = null
+        toc = null
+        volumes.clear()
+        episodes = null
+        chapterInVolumeIndex = 0
+        durVolumeIndex = 0
+        durChapterPos = 0
         source = sourceKey?.let {
             when (sourceType) {
                 SourceType.book -> appDb.bookSourceDao.getBookSource(it)
