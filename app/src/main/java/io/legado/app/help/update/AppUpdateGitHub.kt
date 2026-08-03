@@ -12,116 +12,52 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import kotlinx.coroutines.CoroutineScope
 
-
 @Keep
 @Suppress("unused")
 object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
 
-
     private val checkVariant: AppVariant
         get() = when (AppConfig.updateToVariant) {
-
-            "official_version" ->
-                AppVariant.OFFICIAL
-
-            "beta_release_version" ->
-                AppVariant.BETA_RELEASE
-
-            "beta_legacy_version" ->
-                AppVariant.BETA_LEGACY
-
-            "beta_coexist_version" ->
-                AppVariant.BETA_COEXIST
-
-            "beta_releaseS_version" ->
-                AppVariant.BETA_COEXIST
-
-            else ->
-                AppConst.appInfo.appVariant
+            "official_version" -> AppVariant.OFFICIAL
+            "beta_release_version" -> AppVariant.BETA_RELEASE
+            "beta_legacy_version" -> AppVariant.BETA_LEGACY
+            "beta_coexist_version" -> AppVariant.BETA_COEXIST
+            "beta_releaseS_version" -> AppVariant.BETA_COEXIST
+            else -> AppConst.appInfo.appVariant
         }
 
-
-
     private suspend fun getLatestRelease(): List<AppReleaseInfo> {
-
-
-        /*
-         * 自己仓库
-         */
-        val lastReleaseUrl =
-            "https://api.github.com/repos/Aioprh/Legado_Max/releases/latest"
-
-
-
+        val lastReleaseUrl = if (checkVariant.isBeta()) {
+            "https://api.github.com/repos/gedoor/legado/releases/tags/beta"
+        } else {
+            "https://api.github.com/repos/gedoor/legado/releases/latest"
+        }
         val res = okHttpClient.newCallResponse {
             url(lastReleaseUrl)
         }
-
-
-
         if (!res.isSuccessful) {
-            throw NoStackTraceException(
-                "获取新版本出错(${res.code})"
-            )
+            throw NoStackTraceException("获取新版本出错(${res.code})")
         }
-
-
-
-        val body =
-            res.body.text()
-
-
-
+        val body = res.body.text()
         if (body.isBlank()) {
-            throw NoStackTraceException(
-                "获取新版本出错"
-            )
+            throw NoStackTraceException("获取新版本出错")
         }
-
-
-
         return GSON.fromJsonObject<GithubRelease>(body)
             .getOrElse {
-                throw NoStackTraceException(
-                    "获取新版本出错 ${it.localizedMessage}"
-                )
+                throw NoStackTraceException("获取新版本出错 " + it.localizedMessage)
             }
             .gitReleaseToAppReleaseInfo()
-            .sortedByDescending {
-                it.createdAt
-            }
+            .sortedByDescending { it.createdAt }
     }
-
-
-
 
     override fun check(
         scope: CoroutineScope,
     ): Coroutine<AppUpdate.UpdateInfo> {
-
-
         return Coroutine.async(scope) {
-
-
             getLatestRelease()
-
-                // 匹配当前版本类型
-                .filter {
-                    it.appVariant == checkVariant
-                }
-
-
-                // 找比当前新的
-                .firstOrNull {
-                    it.isNewerThan(
-                        AppConst.appInfo.versionName
-                    )
-                }
-
-
+                .filter { it.appVariant == checkVariant }
+                .firstOrNull { it.isNewerThan(AppConst.appInfo.versionName) }
                 ?.let {
-
-
                     return@async AppUpdate.UpdateInfo(
                         it.versionName,
                         it.note,
@@ -129,41 +65,17 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
                         it.name
                     )
                 }
-
-
-                ?: throw NoStackTraceException(
-                    "已是最新版本"
-                )
-
-
+                ?: throw NoStackTraceException("已是最新版本")
         }.timeout(10000)
-
     }
 
-
-
-
-    override fun getAllVariants(
-        scope: CoroutineScope
-    ): Coroutine<List<AppUpdate.UpdateInfo>> {
-
-
+    override fun getAllVariants(scope: CoroutineScope): Coroutine<List<AppUpdate.UpdateInfo>> {
         return Coroutine.async(scope) {
-
-
-            getLatestRelease()
-
-                .groupBy {
-                    it.appVariant
-                }
-
-
+            getAllReleases()
+                .sortedByDescending { it.createdAt }
+                .groupBy { it.appVariant }
                 .flatMap { (_, infos) ->
-
-
                     infos.firstOrNull()?.let {
-
-
                         listOf(
                             AppUpdate.UpdateInfo(
                                 it.versionName,
@@ -172,15 +84,27 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
                                 it.name
                             )
                         )
-
-                    } ?: emptyList()
-
-
+                    }.orEmpty()
                 }
-
-
         }.timeout(10000)
-
     }
 
+    private suspend fun getAllReleases(): List<AppReleaseInfo> {
+        val latestReleaseUrl = "https://api.github.com/repos/gedoor/legado/releases/latest"
+        val res = okHttpClient.newCallResponse {
+            url(latestReleaseUrl)
+        }
+        if (!res.isSuccessful) {
+            throw NoStackTraceException("获取新版本出错(${res.code})")
+        }
+        val body = res.body.text()
+        if (body.isBlank()) {
+            throw NoStackTraceException("获取新版本出错")
+        }
+        return GSON.fromJsonObject<GithubRelease>(body)
+            .getOrElse {
+                throw NoStackTraceException("获取新版本出错 " + it.localizedMessage)
+            }
+            .gitReleaseToAppReleaseInfo()
+    }
 }
