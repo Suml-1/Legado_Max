@@ -21,7 +21,7 @@ object DatabaseMigrations {
             migration_35_36, migration_36_37, migration_37_38, migration_38_39,
             migration_39_40, migration_40_41, migration_41_42, migration_42_43,
             migration_95_96, migration_96_97, migration_97_98, migration_98_99,
-            migration_99_100
+            migration_99_100, migration_100_101
         )
     }
 
@@ -676,6 +676,154 @@ object DatabaseMigrations {
                     android.util.Log.e("DatabaseMigrations", "99→100: 添加 homepageModules 列失败", e)
                 }
             }
+        }
+    }
+
+    // =======================================================================
+    // 100 → 101：首页模块架构重构 — 消除中间表，改为实时视图 + 轻量偏好层
+    //
+    // 新增三张表：
+    //   homepage_module_prefs — 书源同步模块的用户偏好（显隐/排序/自定义标题/集归属）
+    //   homepage_user_modules — 用户手动创建的模块（按钮组/排行榜等）
+    //   homepage_custom_set_members — 自定义集成员关系（引用关系，不复制数据）
+    //
+    // 旧表 homepage_modules 和 homepage_custom_sets 保留（向后兼容），
+    // 但新代码不再使用 homepage_modules 表，改从书源 homepageModules JSON 实时解析。
+    // homepage_custom_sets 表继续用于自定义集（cs_ 前缀），src_/rss_ 前缀集由书源表自动生成。
+    //
+    // 数据迁移策略：
+    //   1. 用户偏好：从旧 homepage_modules 表提取 isEnabled/customTitle/sortOrder/customSetId
+    //   2. 用户创建模块：从旧 homepage_modules 表提取 isUserCreated=1 的记录
+    //   3. 自定义集成员：从旧 homepage_modules 表提取 customSetId 为 cs_ 前缀的模块关系
+    //   4. 旧表保留不删，避免破坏旧版本回退能力
+    // =======================================================================
+    private val migration_100_101 = object : Migration(100, 101) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // 1. 创建 homepage_module_prefs 表
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `homepage_module_prefs` (
+                    `sourceUrl` TEXT NOT NULL,
+                    `moduleKey` TEXT NOT NULL,
+                    `isEnabled` INTEGER NOT NULL DEFAULT 1,
+                    `customTitle` TEXT,
+                    `sortOrder` INTEGER NOT NULL DEFAULT 0,
+                    `customSetId` TEXT,
+                    PRIMARY KEY(`sourceUrl`, `moduleKey`),
+                    FOREIGN KEY(`sourceUrl`) REFERENCES `book_sources`(`bookSourceUrl`) ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent()
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_homepage_module_prefs_sourceUrl` ON `homepage_module_prefs` (`sourceUrl`)")
+
+            // 2. 创建 homepage_user_modules 表（无外键约束，因为 sourceUrl 可能引用 book_sources 或 rssSources）
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `homepage_user_modules` (
+                    `id` TEXT NOT NULL PRIMARY KEY,
+                    `sourceUrl` TEXT NOT NULL,
+                    `moduleKey` TEXT NOT NULL,
+                    `type` TEXT NOT NULL,
+                    `title` TEXT NOT NULL,
+                    `args` TEXT,
+                    `layoutConfig` TEXT,
+                    `url` TEXT,
+                    `isEnabled` INTEGER NOT NULL DEFAULT 1,
+                    `customSetId` TEXT,
+                    `sortOrder` INTEGER NOT NULL DEFAULT 0,
+                    `sourceType` TEXT NOT NULL DEFAULT 'book'
+                )
+                """.trimIndent()
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_homepage_user_modules_sourceUrl` ON `homepage_user_modules` (`sourceUrl`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_homepage_user_modules_customSetId` ON `homepage_user_modules` (`customSetId`)")
+
+            // 3. 创建 homepage_custom_set_members 表
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `homepage_custom_set_members` (
+                    `customSetId` TEXT NOT NULL,
+                    `sourceUrl` TEXT NOT NULL,
+                    `moduleKey` TEXT NOT NULL,
+                    `sortOrder` INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY(`customSetId`, `sourceUrl`, `moduleKey`),
+                    FOREIGN KEY(`sourceUrl`) REFERENCES `book_sources`(`bookSourceUrl`) ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent()
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_homepage_custom_set_members_sourceUrl` ON `homepage_custom_set_members` (`sourceUrl`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_homepage_custom_set_members_customSetId` ON `homepage_custom_set_members` (`customSetId`)")
+
+            // 4. 开启外键约束（Room 在数据库打开时会自动开启，但迁移期间需要手动确保）
+            db.execSQL("PRAGMA foreign_keys = ON")
+
+            // 5. 数据迁移：从旧 homepage_modules 表迁移到新表
+            //    注意：迁移前先确保只迁移 book 类型书源的模块（RSS 源模块的 sourceUrl 不在 book_sources 表中，
+            //    外键约束会导致插入失败，因此 RSS 源模块跳过外键关联，仅迁移到 user_modules 表）
+
+            // 5a. 迁移用户偏好（所有模块的 isEnabled/customTitle/sortOrder）
+            //     仅迁移 sourceUrl 在 book_sources 表中存在的记录（满足外键约束）
+            db.execSQL(
+                """
+                INSERT OR IGNORE INTO `homepage_module_prefs` (`sourceUrl`, `moduleKey`, `isEnabled`, `customTitle`, `sortOrder`, `customSetId`)
+                SELECT `sourceUrl`, `moduleKey`, `isEnabled`, `customTitle`, `sortOrder`,
+                    CASE WHEN `customSetId` LIKE 'src_%' OR `customSetId` LIKE 'rss_%' THEN NULL
+                         ELSE `customSetId` END
+                FROM `homepage_modules`
+                WHERE `sourceUrl` IN (SELECT `bookSourceUrl` FROM `book_sources`)
+                """.trimIndent()
+            )
+
+            // 5b. 迁移用户手动创建的模块（isUserCreated = 1）
+            //     仅迁移 sourceUrl 在 book_sources 表中存在的记录
+            db.execSQL(
+                """
+                INSERT OR IGNORE INTO `homepage_user_modules` 
+                    (`id`, `sourceUrl`, `moduleKey`, `type`, `title`, `args`, `layoutConfig`, `url`, `isEnabled`, `customSetId`, `sortOrder`, `sourceType`)
+                SELECT `id`, `sourceUrl`, `moduleKey`, `type`, 
+                    COALESCE(`customTitle`, `title`),
+                    `args`, `layoutConfig`, `url`, `isEnabled`,
+                    CASE WHEN `customSetId` LIKE 'src_%' OR `customSetId` LIKE 'rss_%' THEN NULL
+                         ELSE `customSetId` END,
+                    `sortOrder`, 'book'
+                FROM `homepage_modules`
+                WHERE `isUserCreated` = 1
+                AND `sourceUrl` IN (SELECT `bookSourceUrl` FROM `book_sources`)
+                """.trimIndent()
+            )
+
+            // 5c. 迁移自定义集成员关系
+            //     旧表中 customSetId 为 cs_ 前缀的模块，表示用户将书源模块分配到了自定义集
+            //     仅迁移书源同步模块（isUserCreated = 0）的分配关系
+            //     因为用户创建模块已经在 user_modules 表中有 customSetId 字段
+            db.execSQL(
+                """
+                INSERT OR IGNORE INTO `homepage_custom_set_members` (`customSetId`, `sourceUrl`, `moduleKey`, `sortOrder`)
+                SELECT `customSetId`, `sourceUrl`, `moduleKey`, `sortOrder`
+                FROM `homepage_modules`
+                WHERE `isUserCreated` = 0
+                AND `customSetId` LIKE 'cs_%'
+                AND `sourceUrl` IN (SELECT `bookSourceUrl` FROM `book_sources`)
+                """.trimIndent()
+            )
+
+            // 6. 迁移 RSS 源的用户创建模块（sourceUrl 不在 book_sources 表中）
+            //    homepage_user_modules 表无外键约束，可直接插入
+            db.execSQL(
+                """
+                INSERT OR IGNORE INTO `homepage_user_modules` 
+                    (`id`, `sourceUrl`, `moduleKey`, `type`, `title`, `args`, `layoutConfig`, `url`, `isEnabled`, `customSetId`, `sortOrder`, `sourceType`)
+                SELECT `id`, `sourceUrl`, `moduleKey`, `type`, 
+                    COALESCE(`customTitle`, `title`),
+                    `args`, `layoutConfig`, `url`, `isEnabled`,
+                    CASE WHEN `customSetId` LIKE 'src_%' OR `customSetId` LIKE 'rss_%' THEN NULL
+                         ELSE `customSetId` END,
+                    `sortOrder`, 'rss'
+                FROM `homepage_modules`
+                WHERE `isUserCreated` = 1
+                AND `sourceUrl` NOT IN (SELECT `bookSourceUrl` FROM `book_sources`)
+                """.trimIndent()
+            )
         }
     }
 

@@ -249,14 +249,13 @@ fun HomepageModuleManageSheet(
                         if (isCurrentSetCustom && currentSetId != null) {
                             // 自定义集：跳转到从其他集添加模块页面
                             showCustomSetAddModules = currentSetId
-                        } else if (page.setUrl.startsWith("rss_")) {
+                        } else if (HomepageViewModel.isRssSourceSetId(page.setUrl)) {
                             // 订阅源集：跳转到订阅源模块详情页
-                            val sourceUrl = page.setUrl.removePrefix("rss_")
+                            val sourceUrl = HomepageViewModel.sourceUrlFromSetId(page.setUrl)
                             browsingRssSourceUrl = sourceUrl
                         } else {
                             // 书源集：跳转到书源模块详情页，选择分类添加模块
-                            // 从集 URL 中提取书源 URL（集 ID 格式为 src_<书源URL>）
-                            val sourceUrl = page.setUrl.removePrefix("src_")
+                            val sourceUrl = HomepageViewModel.sourceUrlFromSetId(page.setUrl)
                             browsingSourceUrl = sourceUrl
                         }
                     },

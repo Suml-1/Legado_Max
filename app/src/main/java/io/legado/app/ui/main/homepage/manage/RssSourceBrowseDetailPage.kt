@@ -107,7 +107,7 @@ fun RssSourceBrowseDetailPage(
     var selectedTab by remember { mutableStateOf(0) }
 
     // 计算当前 RSS 源的集 ID（rss_<sourceUrl>），用于「已加入」Tab 筛选
-    val rssSetId = remember(sourceUrl) { "rss_$sourceUrl" }
+    val rssSetId = remember(sourceUrl) { HomepageViewModel.rssSourceSetId(sourceUrl) }
     val effectiveTargetSetId = targetSetId ?: rssSetId
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -157,7 +157,7 @@ private fun JoinedModulesTab(
     // 获取当前集已加入的模块
     // 统一按集归属过滤（与 SetList.moduleCount 一致）；未指定集时默认使用订阅源集
     val joinedModules = remember(sourceUrl, targetSetId, allModules) {
-        val setId = targetSetId ?: "rss_$sourceUrl"
+        val setId = targetSetId ?: HomepageViewModel.rssSourceSetId(sourceUrl)
         allModules.filter { module -> module.customSetId == setId }
     }
 

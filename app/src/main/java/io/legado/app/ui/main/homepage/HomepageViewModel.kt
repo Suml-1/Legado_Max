@@ -5,16 +5,15 @@ import android.text.Html
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
-import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.BookSourceHomepageLite
 import io.legado.app.data.entities.BookSourceExploreLite
-import io.legado.app.data.entities.RssArticle
+import io.legado.app.data.entities.HomepageModulePref
+import io.legado.app.data.entities.HomepageUserModule
 import io.legado.app.data.entities.RssSource
-import io.legado.app.data.entities.RssSourceLite
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.HomepageModulesRepository
 import io.legado.app.domain.gateway.HomepageModulesGateway
 import io.legado.app.domain.model.BookShelfState
-import io.legado.app.domain.model.CustomSetItem
 import io.legado.app.domain.model.HomepageModuleType
 import io.legado.app.domain.model.ModuleDef
 import io.legado.app.domain.model.ModuleItem
@@ -28,7 +27,6 @@ import io.legado.app.help.source.sortUrls
 import io.legado.app.model.rss.Rss
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
-import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.stackTraceStr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,7 +36,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -47,34 +44,23 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * 首页 ViewModel
+ * 首页 ViewModel（方案D重构版）
  *
- * 负责首页的数据加载、状态管理和业务逻辑，包括：
- * - 模块内容的异步加载与状态管理（加载中/成功/错误/空）
- * - 书源模块的同步与增量更新（基于 MD5 哈希的变更检测）
- * - 自定义集的创建、编辑、删除和排序
- * - 模块的启用/禁用、排序、编辑和删除
- * - 书架状态查询与书籍添加
- * - 发现页分类（ExploreKind）的获取
+ * 核心架构变更：
+ * - 书源同步模块从 homepage_modules 表消除，改为从书源 homepageModules JSON 实时解析
+ * - 用户偏好（显隐/排序/自定义标题/集归属）存储在 homepage_module_prefs 表（FK CASCADE）
+ * - 用户手动创建模块存储在 homepage_user_modules 表（应用层级联清理）
+ * - 自定义集成员关系存储在 homepage_custom_set_members 表（FK CASCADE）
+ * - 书源集不再独立存储，由书源 Flow 自动生成
  *
- * 架构特点：
- * - 使用多层 combine Flow 构建响应式 UI 状态
- * - 通过 _configVersion StateFlow 触发流重算（写入后递增）
- * - 模块 ID 编码格式：setId::sourceUrl::moduleKey
- * - 集 ID 前缀：src_（书源集）、cs_（用户自定义集）
- * - 每个集仅允许一个瀑布流或无限网格模块（无限流互斥约束）
+ * 与发现页一致的关联机制：Room Flow 自动响应书源变更。
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomepageViewModel(application: Application) : BaseViewModel(application) {
 
-    /**
-     * 模块加载参数封装类
-     * 用于 combine 操作的参数传递
-     */
     private data class ModuleLoadParams(
         val modules: List<HomepageModuleUi>,
         val layout: Int,
@@ -83,47 +69,59 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         val tabIndex: Int
     )
 
+    /**
+     * 合成后的模块数据（从书源JSON解析 + 用户偏好 + 用户模块合并后）
+     */
+    private data class MergedModule(
+        val globalId: String,
+        val sourceUrl: String,
+        val moduleKey: String,
+        val type: String,
+        val title: String,
+        val args: String?,
+        val layoutConfig: String?,
+        val url: String?,
+        val isEnabled: Boolean,
+        val customSetId: String?,
+        val sortOrder: Int,
+        val isUserCreated: Boolean,
+        val sourceType: String,
+    )
+
     companion object {
         private const val CUSTOM_SET_URL_PREFIX = "custom://"
-        private const val HOMEPAGE_DEFAULT_GRID_ROWS = 2
-        private const val HOMEPAGE_MAX_BUTTON_GROUP_KINDS = 5
 
-        /** 将自定义集 ID 转换为 URL 格式 */
+        /** 书源集 ID 前缀 */
+        const val BOOK_SOURCE_SET_PREFIX = "src_"
+        /** 订阅源集 ID 前缀 */
+        const val RSS_SOURCE_SET_PREFIX = "rss_"
+
         fun customSetUrl(id: String) = "$CUSTOM_SET_URL_PREFIX$id"
-        /** 判断 URL 是否为自定义集 */
         fun isCustomSetUrl(url: String) = url.startsWith(CUSTOM_SET_URL_PREFIX)
-        /** 从 URL 中提取自定义集 ID */
         fun customSetIdFromUrl(url: String): String = url.removePrefix(CUSTOM_SET_URL_PREFIX)
 
-        /**
-         * 判断模块是否为无限流类型（瀑布流或无限网格）
-         * 无限流模块每个集仅允许存在一个
-         */
+        /** 构造书源集 ID */
+        fun bookSourceSetId(sourceUrl: String) = "$BOOK_SOURCE_SET_PREFIX$sourceUrl"
+        /** 构造订阅源集 ID */
+        fun rssSourceSetId(sourceUrl: String) = "$RSS_SOURCE_SET_PREFIX$sourceUrl"
+        /** 判断是否为书源集 ID */
+        fun isBookSourceSetId(setId: String) = setId.startsWith(BOOK_SOURCE_SET_PREFIX)
+        /** 判断是否为订阅源集 ID */
+        fun isRssSourceSetId(setId: String) = setId.startsWith(RSS_SOURCE_SET_PREFIX)
+        /** 判断是否为源集 ID（书源集或订阅源集） */
+        fun isSourceSetId(setId: String) = isBookSourceSetId(setId) || isRssSourceSetId(setId)
+        /** 从源集 ID 中提取源 URL */
+        fun sourceUrlFromSetId(setId: String): String =
+            setId.removePrefix(BOOK_SOURCE_SET_PREFIX).removePrefix(RSS_SOURCE_SET_PREFIX)
+
         fun isInfinite(type: String?, layoutConfig: String?): Boolean {
             return type == HomepageModuleType.Waterfall.key
                     || type == HomepageModuleType.InfiniteGrid.key
         }
 
-        /** 从书源的 homepageModules JSON 解析模块定义列表 */
         private fun parseModuleDefs(sourceUrl: String, json: String): List<ModuleDef> =
             GSON.fromJsonArray<ModuleDef>(json).getOrDefault(emptyList())
                 .map { it.copy(sourceUrl = sourceUrl) }
-
-        /** 计算 JSON 字符串的 MD5 哈希值，用于增量同步的变更检测 */
-        private fun jsonHash(json: String): String {
-            val digest = MessageDigest.getInstance("MD5").digest(json.toByteArray(Charsets.UTF_8))
-            return digest.joinToString("") { "%02x".format(it) }
-        }
-
-        /** 按集分组并保持顺序（自定义集优先，书源集随后） */
-        private fun List<ModuleItem>.groupBySourceOrdered(): Map<String, List<ModuleItem>> {
-            val result = linkedMapOf<String, MutableList<ModuleItem>>()
-            for (module in this) {
-                val key = module.customSetId?.let { customSetUrl(it) } ?: module.sourceUrl
-                result.getOrPut(key) { mutableListOf() }.add(module)
-            }
-            return result
-        }
     }
 
     private val gateway: HomepageModulesGateway =
@@ -137,10 +135,8 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
 
     private val loadJobs = ConcurrentHashMap<String, Job>()
 
-
     private val _isRefreshing = MutableStateFlow(false)
     private val _refreshingSetName = MutableStateFlow<String?>(null)
-    /** 刷新期间需要加载的模块 ID 集合，确保加载与完成检测使用同一份清单 */
     private val _refreshingModuleIds = MutableStateFlow<Set<String>>(emptySet())
     private val _isManageMode = MutableStateFlow(false)
     private val _configVersion = MutableStateFlow(0L)
@@ -148,74 +144,222 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
     private val _bookSourcesCache = MutableStateFlow<Map<String, BookSourceExploreLite>>(emptyMap())
     private val _rssSourceNames = MutableStateFlow<Map<String, String>>(emptyMap())
     private val _layoutConfigCache = MutableStateFlow<Map<String, Map<String, String>>>(emptyMap())
-    
-    /** 当前选中的书源集Tab索引（用于分源Tab模式下的预加载控制） */
+
     private val _currentTabIndex = MutableStateFlow(0)
-    /** 当前选中的书源集列表（用于分源Tab模式下的预加载控制） */
     private val _currentSets = MutableStateFlow<List<HomepageSourceManageUi>>(emptyList())
 
-    private val localModulesFlow = gateway.flowEnabled()
-    val allModulesCache = gateway.flowAll().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    // ==================== 新数据源：实时视图层 ====================
+
+    private val homepageSourcesFlow = appDb.bookSourceDao.flowHomepageSourcesLite()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val modulePrefsFlow = appDb.homepageModulePrefDao.flowAll()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val userModulesFlow = appDb.homepageUserModuleDao.flowEnabled()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val customSetMembersFlow = appDb.homepageCustomSetMemberDao.flowAll()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     val customSetsFlow = gateway.flowCustomSets()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    /**
-     * 用于首页布局和管理界面的自定义集列表（同步读取最新排序）。
-     *
-     * 每次 _configVersion 变化时，直接从数据库重新读取自定义集列表，
-     * 确保排序变更后 rawModulesFlow 和 setsFlow 能立即获取到最新的排序顺序。
-     * 这解决了 customSetsFlow (Room Flow) 异步发射延迟导致界面不即时更新的问题。
-     */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val customSetsSync = _configVersion.mapLatest {
         gateway.flowCustomSets().first()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val orderedModuleDefsFlow = combine(localModulesFlow, _configVersion) { modules, _ ->
-        modules.groupBySourceOrdered()
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+    /**
+     * 合成所有模块数据：书源JSON解析模块 + 用户偏好 + 用户创建模块
+     */
+    private val mergedModulesFlow = combine(
+        homepageSourcesFlow,
+        modulePrefsFlow,
+        userModulesFlow,
+        customSetMembersFlow,
+        _configVersion
+    ) { sources, prefs, userModules, members, _ ->
+        val prefsMap = prefs.associateBy { "${it.sourceUrl}::${it.moduleKey}" }
 
+        val result = mutableListOf<MergedModule>()
+
+        // 1. 从书源 JSON 实时解析同步模块
+        for (source in sources) {
+            val json = source.homepageModules ?: continue
+            val defs = parseModuleDefs(source.bookSourceUrl, json)
+            for ((index, def) in defs.withIndex()) {
+                val prefKey = "${source.bookSourceUrl}::${def.key}"
+                val pref = prefsMap[prefKey]
+                val customSetAssignment = members.firstOrNull {
+                    it.sourceUrl == source.bookSourceUrl && it.moduleKey == def.key
+                }
+
+                result.add(MergedModule(
+                    globalId = ModuleDef.globalIdOf(source.bookSourceUrl, def.key),
+                    sourceUrl = source.bookSourceUrl,
+                    moduleKey = def.key,
+                    type = def.type,
+                    title = pref?.customTitle ?: def.title,
+                    args = def.args,
+                    layoutConfig = def.layoutConfig,
+                    url = def.url,
+                    isEnabled = pref?.isEnabled ?: true,
+                    customSetId = customSetAssignment?.customSetId ?: pref?.customSetId,
+                    sortOrder = pref?.sortOrder ?: index,
+                    isUserCreated = false,
+                    sourceType = "book",
+                ))
+            }
+        }
+
+        // 2. 加入用户手动创建模块
+        for (um in userModules) {
+            result.add(MergedModule(
+                globalId = um.id,
+                sourceUrl = um.sourceUrl,
+                moduleKey = um.moduleKey,
+                type = um.type,
+                title = um.title,
+                args = um.args,
+                layoutConfig = um.layoutConfig,
+                url = um.url,
+                isEnabled = um.isEnabled,
+                customSetId = um.customSetId,
+                sortOrder = um.sortOrder,
+                isUserCreated = true,
+                sourceType = um.sourceType,
+            ))
+        }
+
+        result
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** 替代旧的 gateway.flowAll()，供管理界面使用 */
+    val allModulesCache = mergedModulesFlow.map { merged ->
+        merged.map { mm ->
+            ModuleItem(
+                id = mm.globalId,
+                sourceUrl = mm.sourceUrl,
+                moduleKey = mm.moduleKey,
+                type = mm.type,
+                title = mm.title,
+                args = mm.args,
+                layoutConfig = mm.layoutConfig,
+                url = mm.url,
+                isEnabled = mm.isEnabled,
+                customSetId = mm.customSetId,
+                isUserCreated = mm.isUserCreated,
+                sortOrder = mm.sortOrder,
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /**
+     * 构建首页展示用的模块列表（含内容加载状态）
+     */
     private val rawModulesFlow = combine(
-        orderedModuleDefsFlow,
+        mergedModulesFlow,
         _moduleContentStates,
-        _bookSourcesCache,
+        homepageSourcesFlow,
         customSetsSync,
-        // 将 _configVersion 纳入 combine，确保 hiddenSetUrls 变化时触发重算
-        combine(_layoutConfigCache, _configVersion) { cache, _ -> cache }
-    ) { grouped, contentStates, sourcesCache, customSets, configCache ->
+        combine(_rssSourceNames, combine(_layoutConfigCache, _configVersion) { cache, _ -> cache }) { rssNames, cache -> rssNames to cache }
+    ) { merged, contentStates, sources, customSets, pair ->
+        val rssNames = pair.first
+        val configCache = pair.second
+        val sourceMap = sources.associateBy { it.bookSourceUrl }
         val setNames = customSets.associate { it.id to it.name }
         val sortedSetIds = customSets.sortedBy { it.sortOrder }.map { it.id }
         val hidden = hiddenSetUrls
 
-        sortedSetIds.flatMap { setId ->
-            // 计算集 URL（与 setsFlow 中的逻辑保持一致）
-            // 书源集（src_）和订阅源集（rss_）都视为源集
-            val isSourceSet = setId.startsWith("src_") || setId.startsWith("rss_")
-            val setUrl = if (isSourceSet) setId else customSetUrl(setId)
-            // 跳过已隐藏的集
-            if (setUrl in hidden) return@flatMap emptyList()
-            val mods = grouped[customSetUrl(setId)] ?: emptyList()
-            mods.map { module ->
-                val source = sourcesCache[module.sourceUrl]
-                val sourceName = source?.bookSourceName ?: module.sourceUrl
-                val setName = module.customSetId?.let { setNames[it] } ?: sourceName
-                val exploreUrl = module.url ?: source?.exploreUrl
-                val configMap = configCache[module.id] ?: emptyMap()
+        val result = mutableListOf<HomepageModuleUi>()
 
-                HomepageModuleUi(
-                    sourceUrl = module.sourceUrl,
-                    setName = setName,
-                    globalId = module.id,
-                    type = HomepageModuleType.fromKey(module.type),
-                    title = module.displayTitle,
-                    exploreUrl = exploreUrl,
-                    customSetId = module.customSetId,
-                    layoutConfig = module.layoutConfig,
-                    state = contentStates[module.id] ?: ModuleLoadState.Loading,
-                    config = configMap
+        // 1. 按书源集分组（每个有 homepageModules 的书源自动成为一个集）
+        for (source in sources) {
+            val setUrl = bookSourceSetId(source.bookSourceUrl)
+            if (setUrl in hidden) continue
+            val mods = merged.filter { it.sourceUrl == source.bookSourceUrl && it.customSetId == null }
+            for (mm in mods) {
+                val configMap = configCache[mm.globalId] ?: emptyMap()
+                result.add(
+                    HomepageModuleUi(
+                        sourceUrl = mm.sourceUrl,
+                        setName = source.bookSourceName,
+                        globalId = mm.globalId,
+                        type = HomepageModuleType.fromKey(mm.type),
+                        title = mm.title,
+                        exploreUrl = mm.url ?: source.exploreUrl,
+                        customSetId = mm.customSetId,
+                        layoutConfig = mm.layoutConfig,
+                        state = contentStates[mm.globalId] ?: ModuleLoadState.Loading,
+                        config = configMap
+                    )
                 )
             }
         }
+
+        // 2. 按订阅源集分组（用户创建的 RSS 模块，customSetId 为 rss_ 前缀）
+        val rssSetIds = merged
+            .filter { it.sourceType == "rss" && it.customSetId?.startsWith(RSS_SOURCE_SET_PREFIX) == true }
+            .map { it.customSetId!! }
+            .distinct()
+        for (setId in rssSetIds) {
+            if (setId in hidden) continue
+            val sourceUrl = sourceUrlFromSetId(setId)
+            val setName = rssNames[sourceUrl] ?: sourceUrl
+            val mods = merged.filter { it.customSetId == setId }
+            for (mm in mods) {
+                val configMap = configCache[mm.globalId] ?: emptyMap()
+                result.add(
+                    HomepageModuleUi(
+                        sourceUrl = mm.sourceUrl,
+                        setName = setName,
+                        globalId = mm.globalId,
+                        type = HomepageModuleType.fromKey(mm.type),
+                        title = mm.title,
+                        exploreUrl = mm.url,
+                        customSetId = mm.customSetId,
+                        layoutConfig = mm.layoutConfig,
+                        state = contentStates[mm.globalId] ?: ModuleLoadState.Loading,
+                        config = configMap
+                    )
+                )
+            }
+        }
+
+        // 3. 按自定义集分组
+        for (setId in sortedSetIds) {
+            val setUrl = customSetUrl(setId)
+            if (setUrl in hidden) continue
+            val setName = setNames[setId] ?: setId
+            val members = customSetMembersFlow.value.filter { it.customSetId == setId }
+            val memberModules = merged.filter { mm ->
+                members.any { it.sourceUrl == mm.sourceUrl && it.moduleKey == mm.moduleKey && !mm.isUserCreated }
+            }
+            val userModulesInSet = merged.filter { mm ->
+                mm.isUserCreated && mm.customSetId == setId
+            }
+            for (mm in memberModules + userModulesInSet) {
+                val configMap = configCache[mm.globalId] ?: emptyMap()
+                val source = sourceMap[mm.sourceUrl]
+                result.add(
+                    HomepageModuleUi(
+                        sourceUrl = mm.sourceUrl,
+                        setName = setName,
+                        globalId = mm.globalId,
+                        type = HomepageModuleType.fromKey(mm.type),
+                        title = mm.title,
+                        exploreUrl = mm.url ?: source?.exploreUrl,
+                        customSetId = mm.customSetId,
+                        layoutConfig = mm.layoutConfig,
+                        state = contentStates[mm.globalId] ?: ModuleLoadState.Loading,
+                        config = configMap
+                    )
+                )
+            }
+        }
+
+        result
     }
 
     private val displayModulesFlow = combine(
@@ -229,14 +373,6 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    /**
-     * 更新模块中书籍的书架状态
-     *
-     * 统一处理 Loaded 和 RankingTabs 两种状态，确保书架状态变化时所有书籍都能正确更新。
-     *
-     * @param module 首页模块 UI 数据
-     * @param resolveState 根据书籍信息计算新的书架状态
-     */
     private fun updateModuleShelfState(
         module: HomepageModuleUi,
         resolveState: (HomepageBookItemUi) -> BookShelfState
@@ -281,45 +417,70 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         HomepageConfig.homepageSourceHidden = GSON.toJson(urls)
     }
 
-    /**
-     * 集列表管理界面的数据流。
-     *
-     * 使用 customSetsSync（同步读取）替代 customSetsFlow（异步 Room Flow），
-     * 确保拖动排序后集列表能即时反映最新顺序，解决异步发射延迟问题。
-     * 
-     * 将 _configVersion 纳入 combine，确保 hiddenSetUrls 变化时触发重算，
-     * 解决开关切换后 isSelected 状态不更新的问题。
-     */
-    val setsFlow = combine(customSetsSync, allModulesCache, _configVersion) { sets, modules, _ ->
+    val setsFlow = combine(
+        homepageSourcesFlow,
+        customSetsSync,
+        mergedModulesFlow,
+        _configVersion,
+        _rssSourceNames
+    ) { sources, customSets, modules, _, rssNames ->
         val hidden = hiddenSetUrls
-        sets.map { cs ->
-            // 书源集（src_ 前缀）和订阅源集（rss_ 前缀）使用原始 ID 作为 URL
-            // 自定义集使用 custom:// 前缀
-            val isSourceSet = cs.id.startsWith("src_") || cs.id.startsWith("rss_")
-            val setUrl = if (isSourceSet) cs.id else customSetUrl(cs.id)
+        val result = mutableListOf<HomepageSourceManageUi>()
+
+        // 书源集
+        for (source in sources) {
+            val setUrl = bookSourceSetId(source.bookSourceUrl)
+            val count = modules.count { it.sourceUrl == source.bookSourceUrl && it.customSetId == null }
+            result.add(HomepageSourceManageUi(
+                sourceUrl = setUrl,
+                sourceName = source.bookSourceName,
+                isSelected = setUrl !in hidden,
+                moduleCount = count,
+                isCustomSet = false,
+                sourceType = "book",
+            ))
+        }
+
+        // 订阅源集（从用户创建的 RSS 模块中提取 rss_ 前缀集）
+        val rssSetIds = modules
+            .filter { it.sourceType == "rss" && it.customSetId?.startsWith(RSS_SOURCE_SET_PREFIX) == true }
+            .map { it.customSetId!! }
+            .distinct()
+        for (setId in rssSetIds) {
+            val sourceUrl = sourceUrlFromSetId(setId)
+            val count = modules.count { it.customSetId == setId }
+            result.add(HomepageSourceManageUi(
+                sourceUrl = setId,
+                sourceName = rssNames[sourceUrl] ?: sourceUrl,
+                isSelected = setId !in hidden,
+                moduleCount = count,
+                isCustomSet = false,
+                sourceType = "rss",
+            ))
+        }
+
+        // 自定义集
+        for (cs in customSets) {
+            val setUrl = customSetUrl(cs.id)
             val count = modules.count { it.customSetId == cs.id }
-            val sourceType = when {
-                cs.id.startsWith("src_") -> "book"
-                cs.id.startsWith("rss_") -> "rss"
-                else -> null
-            }
-            HomepageSourceManageUi(
+            result.add(HomepageSourceManageUi(
                 sourceUrl = setUrl,
                 sourceName = cs.name,
                 isSelected = setUrl !in hidden,
                 moduleCount = count,
-                isCustomSet = !isSourceSet,
-                sourceType = sourceType,
-            )
+                isCustomSet = true,
+                sourceType = null,
+            ))
         }
+
+        result
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val browseSourcesFlow = combine(
         _bookSourcesCache,
-        allModulesCache,
+        mergedModulesFlow,
         _configVersion
     ) { sources, modules, _ ->
-        // 保持 flowExploreSources() 查询的 customOrder 排序，不重新排序
         sources.values.map { source ->
             val count = modules.count { it.sourceUrl == source.bookSourceUrl }
             HomepageSourceManageUi(
@@ -332,12 +493,10 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    /** 首页布局模式（0: 混合列表, 1: 分源Tab），响应式跟随配置变化 */
     val layoutMode: StateFlow<Int> = _configVersion
         .map { HomepageConfig.homepageLayoutMode }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomepageConfig.homepageLayoutMode)
 
-    /** 首页预加载模式（0: 仅当前集, 1: 当前集+相邻集），响应式跟随配置变化 */
     val preloadMode: StateFlow<Int> = _configVersion
         .map { HomepageConfig.homepagePreload }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomepageConfig.homepagePreload)
@@ -391,9 +550,8 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomepageUiState())
 
     init {
-        // Parse and cache module layoutConfig
         viewModelScope.launch {
-            localModulesFlow.collect { modules ->
+            mergedModulesFlow.collect { modules ->
                 val cache = mutableMapOf<String, Map<String, String>>()
                 for (module in modules) {
                     val configStr = module.layoutConfig ?: continue
@@ -402,7 +560,7 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                         if (json != null) {
                             val map = mutableMapOf<String, String>()
                             json.forEach { (k, v) -> map["layout_$k"] = v.toString() }
-                            cache[module.id] = map
+                            cache[module.globalId] = map
                         }
                     } catch (_: Exception) {
                     }
@@ -411,26 +569,18 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
             }
         }
 
-        // 跟踪所有启用了发现功能的书源（用于浏览书源模块列表）
-        // 注意：此处仅填充缓存，不自动同步模块。模块仅在用户主动添加后才出现。
-        // 使用 BookSourceExploreLite DTO 替代全量 BookSource，避免大量书源时 OOM
         viewModelScope.launch {
             appDb.bookSourceDao.flowExploreSourcesLite().collect { sources ->
                 _bookSourcesCache.value = sources.associateBy { it.bookSourceUrl }
             }
         }
 
-        // 跟踪所有订阅源名称（用于管理界面显示订阅源名称而非 URL）
-        // 使用 RssSourceLite DTO 替代全量 RssSource，仅加载必要字段
         viewModelScope.launch {
             appDb.rssSourceDao.flowAllLite().collect { sources ->
                 _rssSourceNames.value = sources.associate { it.sourceUrl to it.sourceName }
             }
         }
 
-        // Auto-load modules when they appear in Loading state
-        // 根据预加载设置过滤要加载的模块
-        // 将 _currentSets 和 _currentTabIndex 纳入 combine，确保Tab切换时触发重新加载
         viewModelScope.launch {
             combine(
                 uiState.map { it.modules },
@@ -441,48 +591,41 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
             ) { modules, layout, preload, sets, tabIndex ->
                 ModuleLoadParams(modules, layout, preload, sets, tabIndex)
             }.collect { params ->
-                // 计算应该加载的模块ID集合
                 val shouldLoadIds = computeShouldLoadModuleIds(
-                    params.modules, 
-                    params.layout, 
+                    params.modules,
+                    params.layout,
                     params.preload
                 )
-                
+
                 params.modules.forEach { ui ->
                     if (ui.state is ModuleLoadState.Loading && loadJobs[ui.globalId]?.isActive != true) {
-                        // 刷新期间只加载目标集的模块，正常浏览时由预加载机制控制
                         val shouldLoad = if (_isRefreshing.value) {
                             ui.globalId in _refreshingModuleIds.value
                         } else {
                             ui.globalId in shouldLoadIds
                         }
                         if (shouldLoad) {
-                            val module = gateway.getById(ui.globalId)
-                            if (module != null) loadModule(module)
+                            val mm = mergedModulesFlow.value.find { it.globalId == ui.globalId }
+                            if (mm != null) loadModule(mm)
                         }
                     }
                 }
             }
         }
 
-        // 监听模块状态变化，更新刷新状态
         viewModelScope.launch {
             _moduleContentStates.collect { states ->
-                // 如果正在刷新，检查是否目标模块都加载完成
                 if (_isRefreshing.value) {
                     val targetIds = _refreshingModuleIds.value
                     val allLoaded = if (targetIds.isNotEmpty()) {
-                        // 检查刷新目标模块是否都加载完成（统一使用 _refreshingModuleIds）
                         targetIds.all { id ->
                             val state = states[id]
                             state != null && state !is ModuleLoadState.Loading
                         }
                     } else {
-                        // 未指定目标时检查全部
                         states.values.none { it is ModuleLoadState.Loading } && states.isNotEmpty()
                     }
                     if (allLoaded) {
-                        // 最小刷新动画时长，防止 PullToRefreshBox 动画被提前中断
                         kotlinx.coroutines.delay(400)
                         _isRefreshing.value = false
                         _refreshingSetName.value = null
@@ -491,7 +634,6 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                 }
             }
         }
-
     }
 
     override fun onCleared() {
@@ -500,90 +642,41 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         loadJobs.clear()
     }
 
-    private suspend fun syncModulesFromSource(source: BookSource) {
-        val json = source.homepageModules ?: return
-        ensureSetForSource(source.bookSourceUrl, source.bookSourceName)
-        val parsedDefs = parseModuleDefs(source.bookSourceUrl, json)
-        val newHash = jsonHash(json)
-
-        val existingModules = gateway.flowBySource(source.bookSourceUrl).first()
-        val existingById = existingModules.associateBy { it.id }
-        val parsedIds = parsedDefs.map { it.globalId }.toSet()
-
-        val toUpsert = mutableListOf<ModuleItem>()
-        for (i in parsedDefs.indices) {
-            val def = parsedDefs[i]
-            val existing = existingById[def.globalId]
-            if (existing != null) {
-                if (existing.isUserCreated) continue
-                if (existing.sourceJsonHash == newHash) continue
-                toUpsert.add(
-                    existing.copy(
-                        type = def.type, title = def.title, args = def.args, url = def.url,
-                        sourceJsonHash = newHash, syncedAt = System.currentTimeMillis()
-                    )
-                )
-            } else {
-                toUpsert.add(
-                    ModuleItem(
-                        id = def.globalId,
-                        sourceUrl = source.bookSourceUrl,
-                        moduleKey = def.key,
-                        type = def.type,
-                        title = def.title,
-                        args = def.args,
-                        url = def.url,
-                        isEnabled = true,
-                        customSetId = "src_${source.bookSourceUrl}",
-                        sortOrder = i,
-                        sourceJsonHash = newHash,
-                        syncedAt = System.currentTimeMillis()
-                    )
-                )
-            }
-        }
-        if (toUpsert.isNotEmpty()) gateway.upsertAll(toUpsert)
-        if (parsedIds.isNotEmpty()) gateway.deleteStale(source.bookSourceUrl, parsedIds.toList())
-    }
-
-    private fun loadModule(module: ModuleItem) {
-        loadJobs[module.id]?.cancel()
-        if (module.type == HomepageModuleType.ButtonGroup.key) {
-            loadJobs[module.id] = viewModelScope.launch {
+    private fun loadModule(mm: MergedModule) {
+        loadJobs[mm.globalId]?.cancel()
+        if (mm.type == HomepageModuleType.ButtonGroup.key) {
+            loadJobs[mm.globalId] = viewModelScope.launch {
                 kotlin.runCatching {
-                    // 从 args 提取分类标题（兼容新旧两种格式）
-                    val selectedTitles = parseKindTitlesFromArgs(module.args)
+                    val selectedTitles = parseKindTitlesFromArgs(mm.args)
                     if (selectedTitles.isNullOrEmpty()) {
                         emptyList<ExploreKind>()
                     } else {
-                        // 检查是否为订阅源
-                        val rssSource = appDb.rssSourceDao.getByKey(module.sourceUrl)
+                        val rssSource = appDb.rssSourceDao.getByKey(mm.sourceUrl)
                         if (rssSource != null) {
                             val allKinds = rssSource.sortUrls().map { (title, url) ->
                                 ExploreKind(title = title, url = url)
                             }
                             selectedTitles.mapNotNull { t -> allKinds.find { it.title == t } }
                         } else {
-                            val source = appDb.bookSourceDao.getBookSource(module.sourceUrl)
+                            val source = appDb.bookSourceDao.getBookSource(mm.sourceUrl)
                                 ?: throw Exception("Source not found")
                             val allKinds = withContext(Dispatchers.IO) { source.exploreKinds() }
                             selectedTitles.mapNotNull { t -> allKinds.find { it.title == t } }
                         }
                     }
                 }.onSuccess { kinds ->
-                    _moduleContentStates.update { it + (module.id to ModuleLoadState.Buttons(kinds)) }
+                    _moduleContentStates.update { it + (mm.globalId to ModuleLoadState.Buttons(kinds)) }
                 }.onFailure { e ->
-                    _moduleContentStates.update { it + (module.id to ModuleLoadState.Error(e.stackTraceStr)) }
+                    _moduleContentStates.update { it + (mm.globalId to ModuleLoadState.Error(e.stackTraceStr)) }
                 }
-            }.also { it.invokeOnCompletion { loadJobs.remove(module.id) } }
+            }.also { it.invokeOnCompletion { loadJobs.remove(mm.globalId) } }
             return
         }
-        // 排行榜多分类模式：args 包含多个 {t:标题, u:URL} 对象
-        val isRanking = module.type == HomepageModuleType.Ranking.key || module.type == HomepageModuleType.GridRanking.key
-        val rankingCategoryPairs = if (isRanking) parseRankingCategories(module.args) else null
+        val isRanking = mm.type == HomepageModuleType.Ranking.key || mm.type == HomepageModuleType.GridRanking.key
+        val rankingCategoryPairs = if (isRanking) parseRankingCategories(mm.args) else null
 
         if (rankingCategoryPairs != null && rankingCategoryPairs.size >= 2) {
-            val rssSource = appDb.rssSourceDao.getByKey(module.sourceUrl)
+            val rssSource = appDb.rssSourceDao.getByKey(mm.sourceUrl)
             val initialTabs = rankingCategoryPairs.map { (title, url) ->
                 RankingTabData(
                     title = title,
@@ -593,27 +686,23 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                     isLoadingMore = false
                 )
             }
-            _moduleContentStates.update { it + (module.id to ModuleLoadState.RankingTabs(initialTabs)) }
+            _moduleContentStates.update { it + (mm.globalId to ModuleLoadState.RankingTabs(initialTabs)) }
             if (rankingCategoryPairs.isNotEmpty()) {
                 val (title, url) = rankingCategoryPairs[0]
-                loadRankingTab(module.id, module.sourceUrl, rssSource, 0, title, url, page = 1)
+                loadRankingTab(mm.globalId, mm.sourceUrl, rssSource, 0, title, url, page = 1)
             }
             return
         }
-        loadJobs[module.id] = viewModelScope.launch {
+        loadJobs[mm.globalId] = viewModelScope.launch {
             kotlin.runCatching {
-                // 检查是否为订阅源模块
-                val rssSource = appDb.rssSourceDao.getByKey(module.sourceUrl)
+                val rssSource = appDb.rssSourceDao.getByKey(mm.sourceUrl)
                 if (rssSource != null) {
-                    // 订阅源加载：获取文章列表
-                    val sortUrl = module.url ?: rssSource.sourceUrl
-                    val sortName = module.title.ifBlank { rssSource.sourceName }
+                    val sortUrl = mm.url ?: rssSource.sourceUrl
+                    val sortName = mm.title.ifBlank { rssSource.sourceName }
                     val (articles, _) = withContext(Dispatchers.IO) {
                         Rss.getArticlesAwait(sortName, sortUrl, rssSource, page = 1)
                     }
-                    // 转换为 SearchBook 以复用现有 UI
                     val books = articles.map { article ->
-                        // 描述规则：去除 HTML 标签得到纯文本
                         val introText = article.description?.let {
                             Html.fromHtml(it, Html.FROM_HTML_MODE_LEGACY).toString().trim()
                         }
@@ -630,24 +719,23 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                     }
                     books to false
                 } else {
-                    // 书源加载（原有逻辑）
                     val effectiveUrl = if (isRanking) {
-                        parseRankingCategories(module.args)?.firstOrNull()?.second?.ifBlank { null }
-                            ?: module.url
+                        parseRankingCategories(mm.args)?.firstOrNull()?.second?.ifBlank { null }
+                            ?: mm.url
                     } else {
-                        module.url
+                        mm.url
                     }
                     val result = exploreBooksUseCase.execute(
-                        sourceUrl = module.sourceUrl,
+                        sourceUrl = mm.sourceUrl,
                         moduleUrl = effectiveUrl,
-                        args = module.args,
+                        args = mm.args,
                         page = 1
                     )
                     result.books to result.hasMore
                 }
             }.onSuccess { (books, hasMore) ->
                 _moduleContentStates.update {
-                    it + (module.id to ModuleLoadState.Loaded(
+                    it + (mm.globalId to ModuleLoadState.Loaded(
                         books = books.map { book ->
                             HomepageBookItemUi(
                                 book = book,
@@ -662,9 +750,9 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                     ))
                 }
             }.onFailure { e ->
-                _moduleContentStates.update { it + (module.id to ModuleLoadState.Error(e.stackTraceStr)) }
+                _moduleContentStates.update { it + (mm.globalId to ModuleLoadState.Error(e.stackTraceStr)) }
             }
-        }.also { it.invokeOnCompletion { loadJobs.remove(module.id) } }
+        }.also { it.invokeOnCompletion { loadJobs.remove(mm.globalId) } }
     }
 
     fun loadMoreModule(globalId: String) {
@@ -674,19 +762,20 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         _moduleContentStates.update { it + (globalId to currentState.copy(isLoadingMore = true)) }
         viewModelScope.launch {
             kotlin.runCatching {
-                val module = gateway.getById(globalId) ?: throw Exception("Module not found")
-                val isRanking = module.type == HomepageModuleType.Ranking.key ||
-                        module.type == HomepageModuleType.GridRanking.key
+                val mm = mergedModulesFlow.value.find { it.globalId == globalId }
+                    ?: throw Exception("Module not found")
+                val isRanking = mm.type == HomepageModuleType.Ranking.key ||
+                        mm.type == HomepageModuleType.GridRanking.key
                 val effectiveUrl = if (isRanking) {
-                    parseRankingCategories(module.args)?.firstOrNull()?.second?.ifBlank { null }
-                        ?: module.url
+                    parseRankingCategories(mm.args)?.firstOrNull()?.second?.ifBlank { null }
+                        ?: mm.url
                 } else {
-                    module.url
+                    mm.url
                 }
                 exploreBooksUseCase.execute(
-                    sourceUrl = module.sourceUrl,
+                    sourceUrl = mm.sourceUrl,
                     moduleUrl = effectiveUrl,
-                    args = module.args,
+                    args = mm.args,
                     page = nextPage
                 )
             }.onSuccess { result ->
@@ -721,51 +810,40 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
 
     fun refreshButtonGroup(globalId: String) {
         viewModelScope.launch {
-            val module = gateway.getById(globalId) ?: return@launch
-            loadModule(module)
+            val mm = mergedModulesFlow.value.find { it.globalId == globalId } ?: return@launch
+            loadModule(mm)
         }
     }
 
     fun onKindUrlClick(sourceUrl: String, url: String, title: String) =
         _effects.tryEmit(HomepageEffect.NavigateToExploreShow(title, sourceUrl, url))
 
-    /**
-     * 切换排行榜 Tab 时按需加载当前选中分类的内容（懒加载优化）
-     *
-     * 仅加载选中的分类 Tab。如果预加载功能开启（preloadMode == 1），
-     * 还会预先加载相邻分类 Tab 的内容以提升切换体验。
-     */
     fun selectRankingTab(globalId: String, index: Int) {
-        // 更新 selectedIndex
         val prevState = _moduleContentStates.value[globalId] as? ModuleLoadState.RankingTabs ?: return
         _moduleContentStates.update { states ->
             val current = states[globalId] as? ModuleLoadState.RankingTabs ?: return@update states
             states + (globalId to current.copy(selectedIndex = index))
         }
-        // 按需加载：只加载当前选中的 Tab
         val tab = prevState.tabs.getOrNull(index) ?: return
 
         viewModelScope.launch {
-            val module = gateway.getById(globalId) ?: return@launch
-            val rssSource = appDb.rssSourceDao.getByKey(module.sourceUrl)
-            // 重新获取最新状态（可能已被 refresh 清空）
+            val mm = mergedModulesFlow.value.find { it.globalId == globalId } ?: return@launch
+            val rssSource = appDb.rssSourceDao.getByKey(mm.sourceUrl)
             val state = _moduleContentStates.value[globalId] as? ModuleLoadState.RankingTabs ?: return@launch
             val currentTab = state.tabs.getOrNull(index) ?: return@launch
-            // 加载当前 Tab（如果尚未加载）
             if (currentTab.books == null && currentTab.errorMessage == null) {
                 val tabJobKey = "${globalId}_tab_$index"
                 if (loadJobs[tabJobKey]?.isActive != true) {
-                    loadRankingTab(globalId, module.sourceUrl, rssSource, index, currentTab.title, currentTab.exploreUrl ?: "", page = 1)
+                    loadRankingTab(globalId, mm.sourceUrl, rssSource, index, currentTab.title, currentTab.exploreUrl ?: "", page = 1)
                 }
             }
-            // 预加载相邻 Tab（预加载开启时）
             if (preloadMode.value == 1) {
                 listOf(index - 1, index + 1).forEach { adjacentIndex ->
                     val adjacentTab = state.tabs.getOrNull(adjacentIndex) ?: return@forEach
                     if (adjacentTab.books == null && adjacentTab.errorMessage == null) {
                         val adjJobKey = "${globalId}_tab_$adjacentIndex"
                         if (loadJobs[adjJobKey]?.isActive != true) {
-                            loadRankingTab(globalId, module.sourceUrl, rssSource, adjacentIndex, adjacentTab.title, adjacentTab.exploreUrl ?: "", page = 1)
+                            loadRankingTab(globalId, mm.sourceUrl, rssSource, adjacentIndex, adjacentTab.title, adjacentTab.exploreUrl ?: "", page = 1)
                         }
                     }
                 }
@@ -773,7 +851,6 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    // ==================== 多分类 Tab 加载 ====================
     private fun loadRankingTab(
         moduleId: String,
         sourceUrl: String,
@@ -784,7 +861,6 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         page: Int = 1
     ) {
         val jobKey = "${moduleId}_tab_$index"
-        // 取消之前的加载任务
         loadJobs[jobKey]?.cancel()
         loadJobs[jobKey] = viewModelScope.launch {
             kotlin.runCatching {
@@ -861,7 +937,6 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
 
         val nextPage = tab.page + 1
 
-        // 重试逻辑：即使 hasMore=false，如果已有书籍且不是空列表，允许重试
         val effectiveHasMore = if (!tab.hasMore && tab.books != null && tab.books.isNotEmpty()) {
             true
         } else {
@@ -869,7 +944,6 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         }
         if (!effectiveHasMore) return
 
-        // 更新状态
         _moduleContentStates.update { states ->
             val current = states[globalId] as? ModuleLoadState.RankingTabs ?: return@update states
             val updatedTabs = current.tabs.toMutableList()
@@ -882,11 +956,11 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         }
 
         viewModelScope.launch {
-            val module = gateway.getById(globalId) ?: return@launch
-            val rssSource = appDb.rssSourceDao.getByKey(module.sourceUrl)
+            val mm = mergedModulesFlow.value.find { it.globalId == globalId } ?: return@launch
+            val rssSource = appDb.rssSourceDao.getByKey(mm.sourceUrl)
             loadRankingTab(
                 moduleId = globalId,
-                sourceUrl = module.sourceUrl,
+                sourceUrl = mm.sourceUrl,
                 rssSource = rssSource,
                 index = tabIndex,
                 title = tab.title,
@@ -896,19 +970,13 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    /**
-     * 刷新首页模块内容（重新加载已存在的模块数据，不自动从书源同步新模块）
-     * @param setName 可选的书源集名称，如果指定则只刷新该集的模块
-     */
     fun onRefresh(setName: String? = null) {
         viewModelScope.launch {
             _isRefreshing.value = true
             _refreshingSetName.value = setName
             loadJobs.values.forEach { it.cancel() }
             loadJobs.clear()
-            // 仅重新加载已有模块的内容，不从书源自动同步
             if (setName != null) {
-                // 只刷新指定书源集的模块
                 val setModules = uiState.value.modules.filter { it.setName == setName }
                 val setModuleIds = setModules.map { it.globalId }.toSet()
                 _refreshingModuleIds.value = setModuleIds
@@ -916,29 +984,14 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                     states.filterKeys { it !in setModuleIds }
                 }
             } else {
-                // 刷新所有模块
                 _refreshingModuleIds.value = uiState.value.modules.map { it.globalId }.toSet()
                 _moduleContentStates.value = emptyMap()
             }
-            // isRefreshing 由 auto-load collector 在所有模块加载完成后自动置为 false
         }
     }
 
     fun retryModule(globalId: String) {
         _moduleContentStates.update { it + (globalId to ModuleLoadState.Loading) }
-    }
-
-    /**
-     * 确保书源对应的集存在（不存在则自动创建）
-     * 集 ID 格式：src_<书源URL>，集名称为书源名称
-     * @return 集 ID
-     */
-    private suspend fun ensureSetForSource(sourceUrl: String, sourceName: String): String {
-        val setId = "src_$sourceUrl"
-        if (gateway.getCustomSetById(setId) == null) gateway.upsertCustomSet(
-            CustomSetItem(id = setId, name = sourceName)
-        )
-        return setId
     }
 
     fun getCurrentBookShelfState(book: SearchBook): BookShelfState {
@@ -957,7 +1010,6 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
 
     fun onBookClick(book: SearchBook) {
         viewModelScope.launch {
-            // RSS 订阅源文章不保存搜索历史（SearchBook 有 BookSource 外键约束）
             if (!appDb.rssSourceDao.has(book.origin)) {
                 saveSearchBooksUseCase.save(book)
             }
@@ -981,67 +1033,50 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    /**
-     * 计算应该加载的模块ID集合
-     *
-     * 根据布局模式和预加载设置，确定哪些模块应该被加载：
-     * - 混合列表模式（layoutMode == 0）：加载所有模块
-     * - 分源Tab模式（layoutMode == 1）：
-     *   - 预加载关闭（preloadMode == 0）：只加载当前书源集的模块
-     *   - 预加载开启（preloadMode == 1）：加载当前书源集 + 相邻书源集的模块
-     *
-     * @param modules 所有模块列表
-     * @param layoutMode 布局模式
-     * @param preloadMode 预加载模式
-     * @return 应该加载的模块ID集合
-     */
     private fun computeShouldLoadModuleIds(
         modules: List<HomepageModuleUi>,
         layoutMode: Int,
         preloadMode: Int
     ): Set<String> {
-        // 混合列表模式：加载所有模块
         if (layoutMode == 0) {
             return modules.map { it.globalId }.toSet()
         }
-        
-        // 分源Tab模式：根据预加载设置过滤
+
         val currentSets = _currentSets.value
         val currentTabIndex = _currentTabIndex.value
-        
+
         if (currentSets.isEmpty()) {
-            // 没有集信息时，不加载任何模块，等待 SourceTabLayout 更新后再加载
             return emptySet()
         }
-        
-        // 计算要加载的集索引范围
+
         val indicesToLoad = if (preloadMode == 1) {
-            // 预加载开启：当前集 + 相邻集（前后各一个）
             val start = (currentTabIndex - 1).coerceAtLeast(0)
             val end = (currentTabIndex + 1).coerceAtMost(currentSets.lastIndex)
             (start..end).toList()
         } else {
-            // 预加载关闭：仅当前集
             listOf(currentTabIndex.coerceIn(0, currentSets.lastIndex))
         }
-        
-        // 获取要加载的集的 sourceUrl
+
         val setUrlsToLoad = indicesToLoad.mapNotNull { index ->
             currentSets.getOrNull(index)?.sourceUrl
         }
-        
-        // 过滤出属于这些集的模块
+
         return modules.filter { module ->
-            // 检查模块是否属于要加载的集
-            // 自定义集：module.customSetId 对应 setUrl（去掉 custom:// 前缀）
-            // 书源集：module.customSetId == setUrl
             setUrlsToLoad.any { setUrl ->
-                if (setUrl.startsWith("custom://")) {
-                    val setId = customSetIdFromUrl(setUrl)
-                    module.customSetId == setId
-                } else {
-                    // 书源集 URL 格式为 src_<书源URL>
-                    module.customSetId == setUrl
+                when {
+                    setUrl.startsWith("custom://") -> {
+                        val setId = customSetIdFromUrl(setUrl)
+                        module.customSetId == setId
+                    }
+                    setUrl.startsWith(BOOK_SOURCE_SET_PREFIX) -> {
+                        // 书源集：模块 customSetId 为 null（在书源集中）或等于 setUrl
+                        module.customSetId == setUrl || (module.customSetId == null && setUrl == bookSourceSetId(module.sourceUrl))
+                    }
+                    setUrl.startsWith(RSS_SOURCE_SET_PREFIX) -> {
+                        // 订阅源集：模块 customSetId 等于 setUrl
+                        module.customSetId == setUrl
+                    }
+                    else -> false
                 }
             }
         }.map { it.globalId }.toSet()
@@ -1053,24 +1088,16 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         _isManageMode.value = !_isManageMode.value
     }
 
-    /** 设置首页布局模式（0: 混合列表, 1: 分源Tab） */
     fun setLayoutMode(mode: Int) {
         HomepageConfig.homepageLayoutMode = mode
         notifyConfigChanged()
     }
 
-    /** 设置首页预加载模式（0: 仅当前集, 1: 当前集+相邻集） */
     fun setPreloadMode(mode: Int) {
         HomepageConfig.homepagePreload = mode
         notifyConfigChanged()
     }
 
-    /**
-     * 更新当前选中的书源集Tab索引和集列表（用于分源Tab模式下的预加载控制）
-     *
-     * @param tabIndex 当前选中的Tab索引
-     * @param sets 当前显示的书源集列表（已选中且有模块的集）
-     */
     fun updateCurrentTab(tabIndex: Int, sets: List<HomepageSourceManageUi>) {
         _currentTabIndex.value = tabIndex
         _currentSets.value = sets
@@ -1088,15 +1115,16 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
     }
 
     fun getSourceModules(sourceUrl: String, setId: String?): List<HomepageModuleManageUi> {
-        val source = _bookSourcesCache.value[sourceUrl] ?: return emptyList()
-        val json = source.homepageModules ?: return emptyList()
+        // 优先从书源缓存获取（BrowseBookSources 页面使用），回退到首页书源流
+        val exploreSource = _bookSourcesCache.value[sourceUrl]
+        val homepageSource = homepageSourcesFlow.value.find { it.bookSourceUrl == sourceUrl }
+        val json = exploreSource?.homepageModules ?: homepageSource?.homepageModules ?: return emptyList()
+        val sourceName = exploreSource?.bookSourceName ?: homepageSource?.bookSourceName ?: sourceUrl
         val defs = parseModuleDefs(sourceUrl, json)
         val existing = allModulesCache.value.filter { it.sourceUrl == sourceUrl }
-        val targetSetId = setId ?: "src_$sourceUrl"
-        val sourceName = _bookSourcesCache.value[sourceUrl]?.bookSourceName ?: sourceUrl
         return defs.map { def ->
-            val globalId = ModuleDef.globalIdOf(sourceUrl, def.key, targetSetId)
-            val existingMod = existing.find { it.id == globalId }
+            val globalId = ModuleDef.globalIdOf(sourceUrl, def.key, setId ?: bookSourceSetId(sourceUrl))
+            val existingMod = existing.find { it.id == globalId || (it.sourceUrl == sourceUrl && it.moduleKey == def.key) }
             HomepageModuleManageUi(
                 id = globalId,
                 sourceUrl = sourceUrl,
@@ -1114,68 +1142,81 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
+    /**
+     * 同步书源模块（方案D中此操作不再需要——书源JSON变更后Flow自动重发）
+     * 保留方法签名以兼容 UI 调用，实际为空操作。
+     */
     fun syncSourceModules(sourceUrl: String) {
-        viewModelScope.launch {
-            val source = _bookSourcesCache.value[sourceUrl] ?: return@launch
-            val fullSource = appDb.bookSourceDao.getBookSource(source.bookSourceUrl) ?: return@launch
-            syncModulesFromSource(fullSource)
-            notifyConfigChanged()
-        }
+        // 方案D：无需手动同步，书源 JSON 变更后 Room Flow 自动重发
+        notifyConfigChanged()
     }
 
+    /**
+     * 切换模块显隐（写入偏好表）
+     */
     fun toggleModule(moduleId: String, enabled: Boolean) {
         viewModelScope.launch {
-            gateway.setEnabled(moduleId, enabled)
+            val mm = mergedModulesFlow.value.find { it.globalId == moduleId } ?: return@launch
+            if (mm.isUserCreated) {
+                // 用户创建模块：更新 user_modules 表
+                appDb.homepageUserModuleDao.setEnabled(moduleId, enabled)
+            } else {
+                // 书源同步模块：更新偏好表
+                appDb.homepageModulePrefDao.upsert(
+                    HomepageModulePref(
+                        sourceUrl = mm.sourceUrl,
+                        moduleKey = mm.moduleKey,
+                        isEnabled = enabled,
+                        customTitle = modulePrefsFlow.value.find {
+                            it.sourceUrl == mm.sourceUrl && it.moduleKey == mm.moduleKey
+                        }?.customTitle,
+                        sortOrder = modulePrefsFlow.value.find {
+                            it.sourceUrl == mm.sourceUrl && it.moduleKey == mm.moduleKey
+                        }?.sortOrder ?: 0,
+                        customSetId = mm.customSetId,
+                    )
+                )
+            }
             notifyConfigChanged()
         }
     }
 
+    /**
+     * 加入书源同步模块（启用偏好）
+     */
     fun joinModule(sourceUrl: String, setId: String?, def: ModuleDef) {
         viewModelScope.launch {
-            // 确保书源集存在（自动创建以书源命名的集）
-            val effectiveSetId = setId ?: run {
-                val source = _bookSourcesCache.value[sourceUrl]
-                ensureSetForSource(sourceUrl, source?.bookSourceName ?: sourceUrl)
-            }
-            val globalId = ModuleDef.globalIdOf(sourceUrl, def.key, effectiveSetId)
-            val existing = gateway.getById(globalId)
-            if (existing != null) {
-                gateway.setEnabled(globalId, true)
-                gateway.setCustomSetId(globalId, effectiveSetId)
+            // 方案D：书源模块已从JSON实时解析，joinModule = 设置偏好为启用
+            val existingPref = appDb.homepageModulePrefDao.get(sourceUrl, def.key)
+            if (existingPref != null) {
+                appDb.homepageModulePrefDao.setEnabled(sourceUrl, def.key, true)
+                if (setId != null) {
+                    appDb.homepageModulePrefDao.setCustomSetId(sourceUrl, def.key, setId)
+                }
             } else {
-                gateway.upsertAll(listOf(
-                    ModuleItem(
-                        id = globalId,
+                appDb.homepageModulePrefDao.upsert(
+                    HomepageModulePref(
                         sourceUrl = sourceUrl,
                         moduleKey = def.key,
-                        type = def.type,
-                        title = def.title,
-                        args = def.args,
-                        layoutConfig = def.layoutConfig,
-                        url = def.url,
                         isEnabled = true,
-                        customSetId = effectiveSetId,
-                        isUserCreated = true,
-                        sortOrder = allModulesCache.value.count { it.customSetId == effectiveSetId },
-                        syncedAt = System.currentTimeMillis()
+                        customSetId = setId,
                     )
-                ))
+                )
             }
             notifyConfigChanged()
         }
     }
 
+    /**
+     * 添加自定义模块（用户手动创建，写入 user_modules 表）
+     */
     fun addCustomModule(sourceUrl: String, setId: String?, def: ModuleDef) {
         viewModelScope.launch {
-            // 确保书源集存在（自动创建以书源命名的集）
-            val effectiveSetId = setId ?: run {
-                val source = _bookSourcesCache.value[sourceUrl]
-                ensureSetForSource(sourceUrl, source?.bookSourceName ?: sourceUrl)
-            }
             val key = def.key.ifBlank { "custom_${System.currentTimeMillis()}" }
+            val effectiveSetId = setId ?: bookSourceSetId(sourceUrl)
             val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId)
-            gateway.upsertAll(listOf(
-                ModuleItem(
+            appDb.homepageUserModuleDao.upsert(
+                HomepageUserModule(
                     id = globalId,
                     sourceUrl = sourceUrl,
                     moduleKey = key,
@@ -1186,11 +1227,10 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                     url = def.url,
                     isEnabled = true,
                     customSetId = effectiveSetId,
-                    isUserCreated = true,
                     sortOrder = allModulesCache.value.count { it.customSetId == effectiveSetId },
-                    syncedAt = System.currentTimeMillis()
+                    sourceType = "book",
                 )
-            ))
+            )
             notifyConfigChanged()
         }
     }
@@ -1202,15 +1242,11 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         kindTitles: List<String>
     ) {
         viewModelScope.launch {
-            // 确保书源集存在（自动创建以书源命名的集）
-            val effectiveSetId = setId ?: run {
-                val source = _bookSourcesCache.value[sourceUrl]
-                ensureSetForSource(sourceUrl, source?.bookSourceName ?: sourceUrl)
-            }
+            val effectiveSetId = setId ?: bookSourceSetId(sourceUrl)
             val key = "bg_${System.currentTimeMillis()}"
             val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId)
-            gateway.upsertAll(listOf(
-                ModuleItem(
+            appDb.homepageUserModuleDao.upsert(
+                HomepageUserModule(
                     id = globalId,
                     sourceUrl = sourceUrl,
                     moduleKey = key,
@@ -1219,26 +1255,15 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                     args = GSON.toJson(kindTitles.map { mapOf("t" to it, "u" to "") }),
                     isEnabled = true,
                     customSetId = effectiveSetId,
-                    isUserCreated = true,
                     sortOrder = allModulesCache.value.count { it.customSetId == effectiveSetId },
-                    syncedAt = System.currentTimeMillis()
+                    sourceType = "book",
                 )
-            ))
+            )
             notifyConfigChanged()
         }
     }
 
-    /**
-     * 获取书源的发现分类列表（支持 JS 动态生成的分类）
-     *
-     * 使用 suspend 版本的 exploreKinds()，能够执行 @js: 或 <js> 脚本
-     * 动态生成分类列表，并缓存结果。
-     *
-     * @param sourceUrl 书源 URL
-     * @return 发现分类列表，每项为 (分类标题, 分类URL) 对
-     */
     suspend fun getExploreKinds(sourceUrl: String): List<ExploreKind> {
-        val source = _bookSourcesCache.value[sourceUrl] ?: return emptyList()
         return runCatching {
             withContext(Dispatchers.IO) {
                 appDb.bookSourceDao.getBookSource(sourceUrl)?.exploreKinds() ?: emptyList()
@@ -1246,15 +1271,6 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         }.getOrDefault(emptyList())
     }
 
-    /**
-     * 获取订阅源的分类列表（支持 JS 动态生成的分类）
-     *
-     * 使用 RssSource.sortUrls() 解析 sortUrl 字段中的分类定义，
-     * 若 sortUrl 为空或无效则返回含空标题的默认条目。
-     *
-     * @param sourceUrl 订阅源 URL
-     * @return 分类列表，每项为 (分类标题, 分类URL) 对
-     */
     suspend fun getRssKinds(sourceUrl: String): List<Pair<String, String>> {
         val source = appDb.rssSourceDao.getByKey(sourceUrl) ?: return emptyList()
         return runCatching {
@@ -1262,41 +1278,13 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         }.getOrDefault(listOf(Pair("", sourceUrl)))
     }
 
-    /**
-     * 确保订阅源对应的集存在（不存在则自动创建）
-     * 集 ID 格式：rss_<订阅源URL>，集名称为订阅源名称
-     * @return 集 ID
-     */
-    private suspend fun ensureRssSetForSource(sourceUrl: String, sourceName: String): String {
-        val setId = "rss_$sourceUrl"
-        if (gateway.getCustomSetById(setId) == null) gateway.upsertCustomSet(
-            CustomSetItem(id = setId, name = sourceName)
-        )
-        return setId
-    }
-
-    /**
-     * 添加订阅源首页模块
-     *
-     * 与 addCustomModule 完全一致的结构，差异仅为：
-     * - 使用 rss_ 前缀创建集 ID 以避免与书源集（src_）冲突
-     * - 从 RssSource 表获取源名称
-     *
-     * @param sourceUrl 订阅源 URL
-     * @param setId 目标集 ID，为 null 时自动创建
-     * @param def 模块定义
-     */
     fun addRssCustomModule(sourceUrl: String, setId: String?, def: ModuleDef) {
         viewModelScope.launch {
-            // 确保订阅源集存在（自动创建以订阅源命名的集）
-            val effectiveSetId = setId ?: run {
-                val rssSource = appDb.rssSourceDao.getByKey(sourceUrl)
-                ensureRssSetForSource(sourceUrl, rssSource?.sourceName?.ifBlank { null } ?: sourceUrl)
-            }
+            val effectiveSetId = setId ?: rssSourceSetId(sourceUrl)
             val key = def.key.ifBlank { "rss_${System.currentTimeMillis()}" }
             val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId)
-            gateway.upsertAll(listOf(
-                ModuleItem(
+            appDb.homepageUserModuleDao.upsert(
+                HomepageUserModule(
                     id = globalId,
                     sourceUrl = sourceUrl,
                     moduleKey = key,
@@ -1307,25 +1295,14 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                     url = def.url,
                     isEnabled = true,
                     customSetId = effectiveSetId,
-                    isUserCreated = true,
                     sortOrder = allModulesCache.value.count { it.customSetId == effectiveSetId },
-                    syncedAt = System.currentTimeMillis()
+                    sourceType = "rss",
                 )
-            ))
+            )
             notifyConfigChanged()
         }
     }
 
-    /**
-     * 从分类创建订阅源按钮组模块
-     *
-     * 与 addButtonGroupFromKinds 类似，但使用订阅源专用的集管理逻辑。
-     *
-     * @param sourceUrl 订阅源 URL
-     * @param setId 目标集 ID，为 null 时自动创建 rss_ 前缀集
-     * @param title 按钮组标题
-     * @param kindTitles 选中的分类标题列表
-     */
     fun addRssButtonGroupFromKinds(
         sourceUrl: String,
         setId: String?,
@@ -1333,15 +1310,11 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         kindTitles: List<String>
     ) {
         viewModelScope.launch {
-            // 确保订阅源集存在（自动创建以订阅源命名的集）
-            val effectiveSetId = setId ?: run {
-                val rssSource = appDb.rssSourceDao.getByKey(sourceUrl)
-                ensureRssSetForSource(sourceUrl, rssSource?.sourceName?.ifBlank { null } ?: sourceUrl)
-            }
+            val effectiveSetId = setId ?: rssSourceSetId(sourceUrl)
             val key = "bg_${System.currentTimeMillis()}"
             val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId)
-            gateway.upsertAll(listOf(
-                ModuleItem(
+            appDb.homepageUserModuleDao.upsert(
+                HomepageUserModule(
                     id = globalId,
                     sourceUrl = sourceUrl,
                     moduleKey = key,
@@ -1350,24 +1323,14 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                     args = GSON.toJson(kindTitles.map { mapOf("t" to it, "u" to "") }),
                     isEnabled = true,
                     customSetId = effectiveSetId,
-                    isUserCreated = true,
                     sortOrder = allModulesCache.value.count { it.customSetId == effectiveSetId },
-                    syncedAt = System.currentTimeMillis()
+                    sourceType = "rss",
                 )
-            ))
+            )
             notifyConfigChanged()
         }
     }
 
-    /**
-     * 从分类创建书源排行榜组（Ranking / GridRanking）
-     *
-     * @param sourceUrl 书源 URL
-     * @param setId 目标集 ID
-     * @param title 排行榜组标题
-     * @param categories 选中的分类列表，每项为 (标题, URL)
-     * @param rankingType 排行榜类型 ranking 或 gridRanking
-     */
     fun addRankingGroupFromKinds(
         sourceUrl: String,
         setId: String?,
@@ -1376,15 +1339,12 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         rankingType: String = HomepageModuleType.Ranking.key
     ) {
         viewModelScope.launch {
-            val effectiveSetId = setId ?: run {
-                val source = _bookSourcesCache.value[sourceUrl]
-                ensureSetForSource(sourceUrl, source?.bookSourceName ?: sourceUrl)
-            }
+            val effectiveSetId = setId ?: bookSourceSetId(sourceUrl)
             val key = "rg_${System.currentTimeMillis()}"
             val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId)
             val args = categories.map { mapOf("t" to it.first, "u" to it.second) }
-            gateway.upsertAll(listOf(
-                ModuleItem(
+            appDb.homepageUserModuleDao.upsert(
+                HomepageUserModule(
                     id = globalId,
                     sourceUrl = sourceUrl,
                     moduleKey = key,
@@ -1393,18 +1353,14 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                     args = GSON.toJson(args),
                     isEnabled = true,
                     customSetId = effectiveSetId,
-                    isUserCreated = true,
                     sortOrder = allModulesCache.value.count { it.customSetId == effectiveSetId },
-                    syncedAt = System.currentTimeMillis()
+                    sourceType = "book",
                 )
-            ))
+            )
             notifyConfigChanged()
         }
     }
 
-    /**
-     * 从分类创建订阅源排行榜组（Ranking / GridRanking）
-     */
     fun addRssRankingGroupFromKinds(
         sourceUrl: String,
         setId: String?,
@@ -1413,15 +1369,12 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         rankingType: String = HomepageModuleType.Ranking.key
     ) {
         viewModelScope.launch {
-            val effectiveSetId = setId ?: run {
-                val rssSource = appDb.rssSourceDao.getByKey(sourceUrl)
-                ensureRssSetForSource(sourceUrl, rssSource?.sourceName?.ifBlank { null } ?: sourceUrl)
-            }
+            val effectiveSetId = setId ?: rssSourceSetId(sourceUrl)
             val key = "rg_${System.currentTimeMillis()}"
             val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId)
             val args = categories.map { mapOf("t" to it.first, "u" to it.second) }
-            gateway.upsertAll(listOf(
-                ModuleItem(
+            appDb.homepageUserModuleDao.upsert(
+                HomepageUserModule(
                     id = globalId,
                     sourceUrl = sourceUrl,
                     moduleKey = key,
@@ -1430,19 +1383,14 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                     args = GSON.toJson(args),
                     isEnabled = true,
                     customSetId = effectiveSetId,
-                    isUserCreated = true,
                     sortOrder = allModulesCache.value.count { it.customSetId == effectiveSetId },
-                    syncedAt = System.currentTimeMillis()
+                    sourceType = "rss",
                 )
-            ))
+            )
             notifyConfigChanged()
         }
     }
 
-    /**
-     * 解析排行榜模块 args 中的多分类数据
-     * @return 解析成功返回 (标题, URL) 列表，至少 2 个元素才认为是多分类模式；否则返回 null
-     */
     private fun parseRankingCategories(args: String?): List<Pair<String, String>>? {
         if (args.isNullOrBlank()) return null
         return try {
@@ -1458,20 +1406,14 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    /**
-     * 兼容新旧两种 args 格式提取分类标题
-     * 新: [{"t":"title1","u":"url1"},...]  旧: ["title1","title2"]
-     */
     private fun parseKindTitlesFromArgs(args: String?): List<String>? {
         if (args.isNullOrBlank()) return null
-        // 先尝试新格式 [{t, u}]
         try {
             val list = GSON.fromJsonArray<Map<String, String>>(args).getOrNull()
             if (list != null && list.isNotEmpty()) {
                 return list.mapNotNull { it["t"] }
             }
         } catch (_: Exception) { }
-        // 回退旧格式 ["title1","title2"]
         return try {
             GSON.fromJsonArray<String>(args).getOrNull()
         } catch (_: Exception) {
@@ -1481,80 +1423,95 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
 
     fun updateModule(globalId: String, def: ModuleDef) {
         viewModelScope.launch {
-            val existing = gateway.getById(globalId) ?: return@launch
-            val targetSetId = existing.customSetId ?: "src_${existing.sourceUrl}"
-            // Check infinite module constraint
-            if (isInfinite(def.type, def.layoutConfig)) {
-                val hasOther = allModulesCache.value.any {
-                    it.customSetId == targetSetId &&
-                            it.id != globalId &&
-                            isInfinite(it.type, it.layoutConfig)
-                }
-                if (hasOther) {
-                    _effects.tryEmit(HomepageEffect.ShowSnackbar("每个集只能有一个无限流模块"))
-                    return@launch
-                }
-            }
-            gateway.upsertAll(listOf(
-                existing.copy(
-                    customTitle = def.title.takeIf { it != existing.title },
-                    type = def.type,
-                    url = def.url,
-                    args = def.args,
-                    layoutConfig = def.layoutConfig,
-                    isUserCreated = true,
-                    syncedAt = System.currentTimeMillis()
+            val mm = mergedModulesFlow.value.find { it.globalId == globalId } ?: return@launch
+            if (mm.isUserCreated) {
+                // 用户创建模块：更新 user_modules 表
+                appDb.homepageUserModuleDao.upsert(
+                    HomepageUserModule(
+                        id = globalId,
+                        sourceUrl = mm.sourceUrl,
+                        moduleKey = mm.moduleKey,
+                        type = def.type,
+                        title = def.title,
+                        args = def.args,
+                        layoutConfig = def.layoutConfig,
+                        url = def.url,
+                        isEnabled = mm.isEnabled,
+                        customSetId = mm.customSetId,
+                        sortOrder = mm.sortOrder,
+                        sourceType = mm.sourceType,
+                    )
                 )
-            ))
+            } else {
+                // 书源同步模块：更新偏好表中的 customTitle
+                val existingPref = appDb.homepageModulePrefDao.get(mm.sourceUrl, mm.moduleKey)
+                appDb.homepageModulePrefDao.upsert(
+                    HomepageModulePref(
+                        sourceUrl = mm.sourceUrl,
+                        moduleKey = mm.moduleKey,
+                        isEnabled = mm.isEnabled,
+                        customTitle = def.title.takeIf { it != mm.title },
+                        sortOrder = existingPref?.sortOrder ?: mm.sortOrder,
+                        customSetId = mm.customSetId,
+                    )
+                )
+            }
             notifyConfigChanged()
         }
     }
 
-    /**
-     * 删除模块。
-     *
-     * - 从源集（src_/rss_）删除：同时删除所有自定义集中的副本
-     * - 从自定义集删除：仅删除当前副本，不影响源集及其他自定义集中的模块
-     */
     fun deleteModule(globalId: String) {
         viewModelScope.launch {
-            val module = allModulesCache.value.find { it.id == globalId }
-            if (module != null) {
-                val isSourceModule = module.customSetId?.let {
-                    it.startsWith("src_") || it.startsWith("rss_")
-                } == true
-                if (isSourceModule) {
-                    // 从源集删除：删除所有相同 (sourceUrl, moduleKey) 的模块（含源集和所有副本）
-                    gateway.deleteBySourceAndKey(module.sourceUrl, module.moduleKey)
-                    // 清除所有被删模块的 content state
-                    val deletedIds = allModulesCache.value
-                        .filter { it.sourceUrl == module.sourceUrl && it.moduleKey == module.moduleKey }
-                        .map { it.id }
-                    _moduleContentStates.update { states ->
-                        var result = states
-                        deletedIds.forEach { result = result - it }
-                        result
-                    }
-                    deletedIds.forEach { loadJobs.remove(it)?.cancel() }
-                } else {
-                    // 从自定义集删除：仅删除当前模块
-                    gateway.delete(globalId)
-                    _moduleContentStates.update { it - globalId }
-                    loadJobs.remove(globalId)?.cancel()
-                }
+            val mm = mergedModulesFlow.value.find { it.globalId == globalId } ?: return@launch
+            if (mm.isUserCreated) {
+                // 用户创建模块：从 user_modules 表删除
+                appDb.homepageUserModuleDao.delete(globalId)
             } else {
-                gateway.delete(globalId)
-                _moduleContentStates.update { it - globalId }
-                loadJobs.remove(globalId)?.cancel()
+                // 书源同步模块：设置偏好为禁用
+                appDb.homepageModulePrefDao.upsert(
+                    HomepageModulePref(
+                        sourceUrl = mm.sourceUrl,
+                        moduleKey = mm.moduleKey,
+                        isEnabled = false,
+                        customTitle = modulePrefsFlow.value.find {
+                            it.sourceUrl == mm.sourceUrl && it.moduleKey == mm.moduleKey
+                        }?.customTitle,
+                        sortOrder = modulePrefsFlow.value.find {
+                            it.sourceUrl == mm.sourceUrl && it.moduleKey == mm.moduleKey
+                        }?.sortOrder ?: 0,
+                        customSetId = mm.customSetId,
+                    )
+                )
+                // 如果有自定义集成员关系，也删除
+                appDb.homepageCustomSetMemberDao.deleteBySource(mm.sourceUrl)
             }
+            _moduleContentStates.update { it - globalId }
+            loadJobs.remove(globalId)?.cancel()
             notifyConfigChanged()
         }
     }
 
     fun reorderModules(orderedIds: List<String>) {
         viewModelScope.launch {
-            val orders = orderedIds.mapIndexed { index, id -> id to index }.toMap()
-            gateway.batchSetSortOrders(orders)
+            // 方案D：按模块类型分别更新排序
+            orderedIds.forEachIndexed { index, id ->
+                val mm = mergedModulesFlow.value.find { it.globalId == id } ?: return@forEachIndexed
+                if (mm.isUserCreated) {
+                    appDb.homepageUserModuleDao.setSortOrder(id, index)
+                } else {
+                    val existingPref = appDb.homepageModulePrefDao.get(mm.sourceUrl, mm.moduleKey)
+                    appDb.homepageModulePrefDao.upsert(
+                        HomepageModulePref(
+                            sourceUrl = mm.sourceUrl,
+                            moduleKey = mm.moduleKey,
+                            isEnabled = existingPref?.isEnabled ?: true,
+                            customTitle = existingPref?.customTitle,
+                            sortOrder = index,
+                            customSetId = existingPref?.customSetId,
+                        )
+                    )
+                }
+            }
             notifyConfigChanged()
         }
     }
@@ -1565,14 +1522,28 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                 customSetIdFromUrl(url) to index
             }.toMap()
             gateway.batchSetCustomSetSortOrders(orders)
-            // notifyConfigChanged 触发 customSetsForLayout 重新从数据库读取最新排序
             notifyConfigChanged()
         }
     }
 
     fun setCustomSetTitle(moduleId: String, title: String?) {
         viewModelScope.launch {
-            gateway.setCustomSetTitle(moduleId, title)
+            val mm = mergedModulesFlow.value.find { it.globalId == moduleId } ?: return@launch
+            if (mm.isUserCreated) {
+                appDb.homepageUserModuleDao.setTitle(moduleId, title ?: mm.title)
+            } else {
+                val existingPref = appDb.homepageModulePrefDao.get(mm.sourceUrl, mm.moduleKey)
+                appDb.homepageModulePrefDao.upsert(
+                    HomepageModulePref(
+                        sourceUrl = mm.sourceUrl,
+                        moduleKey = mm.moduleKey,
+                        isEnabled = existingPref?.isEnabled ?: true,
+                        customTitle = title,
+                        sortOrder = existingPref?.sortOrder ?: 0,
+                        customSetId = existingPref?.customSetId,
+                    )
+                )
+            }
             notifyConfigChanged()
         }
     }
@@ -1591,87 +1562,50 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    /**
-     * 删除自定义集或书源集。
-     *
-     * - 自定义集：删除集及其包含的模块
-     * - 书源集（src_ 前缀）：删除集、书源集中的模块，以及所有自定义集中来自该书源的模块副本
-     */
     fun deleteCustomSet(id: String) {
         viewModelScope.launch {
-            // 判断是否为书源集（src_ 前缀）或订阅源集（rss_ 前缀）
-            val isSourceSet = id.startsWith("src_") || id.startsWith("rss_")
-            
-            if (isSourceSet) {
-                // 源集：提取源URL，删除所有来自该源的模块
-                val sourceUrl = id.removePrefix("src_").removePrefix("rss_")
-                val moduleIds = allModulesCache.value
-                    .filter { it.sourceUrl == sourceUrl }
-                    .map { it.id }
-                gateway.deleteCustomSet(id)
-                // 删除所有来自该书源的模块（包括书源集和自定义集中的副本）
-                moduleIds.forEach { mid -> gateway.delete(mid) }
-                moduleIds.forEach { mid ->
-                    _moduleContentStates.update { it - mid }
-                    loadJobs.remove(mid)?.cancel()
-                }
-            } else {
-                // 自定义集：只删除属于该集的模块
-                val moduleIds = allModulesCache.value
-                    .filter { it.customSetId == id }
-                    .map { it.id }
-                gateway.deleteCustomSet(id)
-                moduleIds.forEach { mid ->
-                    _moduleContentStates.update { it - mid }
-                    loadJobs.remove(mid)?.cancel()
-                }
+            // 删除自定义集的成员关系
+            appDb.homepageCustomSetMemberDao.deleteByCustomSet(id)
+            // 删除该集中用户创建的模块
+            appDb.homepageUserModuleDao.deleteByCustomSet(id)
+            // 删除自定义集本身
+            gateway.deleteCustomSet(id)
+            // 清理内容状态
+            val deletedModuleIds = allModulesCache.value.filter { it.customSetId == id }.map { it.id }
+            deletedModuleIds.forEach { mid ->
+                _moduleContentStates.update { it - mid }
+                loadJobs.remove(mid)?.cancel()
             }
             notifyConfigChanged()
         }
     }
 
-    /**
-     * 将模块分配到自定义集或从自定义集移除
-     *
-     * - 分配到自定义集（customSetId != null）：在目标集中创建模块副本，不删除原模块
-     * - 从自定义集移除（customSetId == null）：删除自定义集中的模块副本，不影响源集模块
-     *
-     * @param moduleId 模块 ID
-     * @param customSetId 目标集 ID，为 null 表示从自定义集移除
-     */
     fun assignModuleToCustomSet(moduleId: String, customSetId: String?) {
         viewModelScope.launch {
-            val existing = gateway.getById(moduleId) ?: return@launch
+            val mm = mergedModulesFlow.value.find { it.globalId == moduleId } ?: return@launch
             if (customSetId == null) {
-                // 从自有集移除：直接删除该模块（它是源集模块的副本）
-                val inSourceSet = existing.customSetId?.let { it.startsWith("src_") || it.startsWith("rss_") } == true
-                if (inSourceSet) {
-                    // 模块在书源集中，仅禁用
-                    gateway.setEnabled(moduleId, false)
+                // 从自定义集移除
+                if (mm.isUserCreated) {
+                    // 用户创建模块：设置 customSetId 为 null（回到源集）
+                    appDb.homepageUserModuleDao.setCustomSetId(moduleId, null)
                 } else {
-                    // 模块在自定义集中，直接删除（源集中的原始模块不受影响）
-                    gateway.delete(moduleId)
+                    // 书源同步模块：删除成员关系
+                    appDb.homepageCustomSetMemberDao.delete(mm.customSetId ?: "", mm.sourceUrl, mm.moduleKey)
                 }
             } else {
-                // 分配到自定义集：在目标集中创建副本，保留原模块
-                val newId = ModuleDef.globalIdOf(existing.sourceUrl, existing.moduleKey, customSetId)
-                // 检查目标集中是否已存在该模块
-                val targetExisting = gateway.getById(newId)
-                if (targetExisting != null) {
-                    // 目标集中已存在，仅启用
-                    gateway.setEnabled(newId, true)
+                // 分配到自定义集
+                if (mm.isUserCreated) {
+                    appDb.homepageUserModuleDao.setCustomSetId(moduleId, customSetId)
                 } else {
-                    // 在目标集中创建新副本，不删除原模块
-                    gateway.upsertAll(listOf(
-                        existing.copy(
-                            id = newId,
+                    // 书源同步模块：创建成员关系
+                    appDb.homepageCustomSetMemberDao.upsert(
+                        io.legado.app.data.entities.HomepageCustomSetMember(
                             customSetId = customSetId,
-                            isEnabled = true,
-                            isUserCreated = true,
-                            sortOrder = allModulesCache.value.count { it.customSetId == customSetId },
-                            syncedAt = System.currentTimeMillis()
+                            sourceUrl = mm.sourceUrl,
+                            moduleKey = mm.moduleKey,
+                            sortOrder = customSetMembersFlow.value.count { it.customSetId == customSetId },
                         )
-                    ))
+                    )
                 }
             }
             notifyConfigChanged()

@@ -10,6 +10,7 @@ import androidx.room.Update
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourceExploreLite
+import io.legado.app.data.entities.BookSourceHomepageLite
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.help.config.SourceConfig
 import io.legado.app.utils.cnCompare
@@ -400,6 +401,9 @@ interface BookSourceDao {
 
     @Query("select * from book_sources where enabled = 1 and homepageModules is not null and homepageModules != '' order by customOrder asc")
     fun flowHomepageSources(): Flow<List<BookSource>>
+
+    @Query("SELECT bookSourceUrl, bookSourceName, bookSourceGroup, exploreUrl, homepageModules FROM book_sources WHERE enabled = 1 AND homepageModules IS NOT NULL AND homepageModules != '' ORDER BY customOrder ASC")
+    fun flowHomepageSourcesLite(): Flow<List<BookSourceHomepageLite>>
 
     @Query("select * from book_sources where enabled = 1 and exploreUrl is not null and exploreUrl != '' order by customOrder asc")
     fun flowExploreSources(): Flow<List<BookSource>>

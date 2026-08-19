@@ -36,6 +36,7 @@ import io.legado.app.utils.writeToOutputStream
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -530,7 +531,11 @@ object Backup {
             onProgress?.invoke(BackupInfoHelper.getDisplayName("homepage.json"))
             val data = mapOf(
                 "modules" to appDb.homepageModuleDao.all,
-                "customSets" to appDb.homepageCustomSetDao.all
+                "customSets" to appDb.homepageCustomSetDao.all,
+                // 方案D新表数据
+                "modulePrefs" to appDb.homepageModulePrefDao.flowAll().first(),
+                "userModules" to appDb.homepageUserModuleDao.flowAll().first(),
+                "customSetMembers" to appDb.homepageCustomSetMemberDao.flowAll().first()
             )
             FileUtils.createFileIfNotExist(backupPath + File.separator + "homepage.json")
                 .writeText(GSON.toJson(data))

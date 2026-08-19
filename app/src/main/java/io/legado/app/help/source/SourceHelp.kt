@@ -103,6 +103,11 @@ object SourceHelp {
         appCtx.removePref("${PreferKey.exploreShowColumn}_${key}")
         // 清理跳转确认记忆
         OpenUrlConfirmMemory.forget(appCtx, key)
+        // 清理首页用户创建模块（homepage_module_prefs 和 homepage_custom_set_members
+        // 通过外键 CASCADE 自动清理，homepage_user_modules 无外键需异步清理）
+        Coroutine.async {
+            appDb.homepageUserModuleDao.deleteBySource(key)
+        }
     }
 
     fun deleteBookSource(key: String) {
@@ -131,6 +136,10 @@ object SourceHelp {
         appDb.cacheDao.deleteSourceVariables(key)
         // 清理跳转确认记忆
         OpenUrlConfirmMemory.forget(appCtx, key)
+        // 清理首页用户创建模块（RSS 源模块不在 book_sources 表中，无外键 CASCADE，异步清理）
+        Coroutine.async {
+            appDb.homepageUserModuleDao.deleteBySource(key)
+        }
     }
 
     fun deleteRssSource(key: String) {

@@ -336,6 +336,10 @@ object Restore {
                 val obj = GSON.fromJsonObject<Map<String, JsonElement>>(json).getOrNull()
                 if (obj != null) {
                     appDb.homepageModuleDao.deleteAll()
+                    // 同时清理方案D新表
+                    appDb.homepageModulePrefDao.deleteAll()
+                    appDb.homepageUserModuleDao.deleteAll()
+                    appDb.homepageCustomSetMemberDao.deleteAll()
                     (obj["modules"] as? JsonArray)?.let { array ->
                         val modules = GSON.fromJsonArray<HomepageModule>(array.toString()).getOrNull()
                         modules?.let { appDb.homepageModuleDao.upsertAll(it) }
@@ -344,6 +348,19 @@ object Restore {
                     (obj["customSets"] as? JsonArray)?.let { array ->
                         val sets = GSON.fromJsonArray<HomepageCustomSet>(array.toString()).getOrNull()
                         sets?.forEach { set -> appDb.homepageCustomSetDao.upsert(set) }
+                    }
+                    // 恢复方案D新表数据
+                    (obj["modulePrefs"] as? JsonArray)?.let { array ->
+                        val prefs = GSON.fromJsonArray<io.legado.app.data.entities.HomepageModulePref>(array.toString()).getOrNull()
+                        prefs?.let { appDb.homepageModulePrefDao.upsertAll(it) }
+                    }
+                    (obj["userModules"] as? JsonArray)?.let { array ->
+                        val modules = GSON.fromJsonArray<io.legado.app.data.entities.HomepageUserModule>(array.toString()).getOrNull()
+                        modules?.let { appDb.homepageUserModuleDao.upsertAll(it) }
+                    }
+                    (obj["customSetMembers"] as? JsonArray)?.let { array ->
+                        val members = GSON.fromJsonArray<io.legado.app.data.entities.HomepageCustomSetMember>(array.toString()).getOrNull()
+                        members?.let { appDb.homepageCustomSetMemberDao.upsertAll(it) }
                     }
                 }
             }
@@ -733,6 +750,10 @@ object Restore {
             val obj = GSON.fromJsonObject<Map<String, JsonElement>>(json).getOrNull()
             if (obj != null) {
                 appDb.homepageModuleDao.deleteAll()
+                // 同时清理方案D新表
+                appDb.homepageModulePrefDao.deleteAll()
+                appDb.homepageUserModuleDao.deleteAll()
+                appDb.homepageCustomSetMemberDao.deleteAll()
                 (obj["modules"] as? JsonArray)?.let { array ->
                     val modules = GSON.fromJsonArray<HomepageModule>(array.toString()).getOrNull()
                     modules?.let { appDb.homepageModuleDao.upsertAll(it) }
@@ -741,6 +762,19 @@ object Restore {
                 (obj["customSets"] as? JsonArray)?.let { array ->
                     val sets = GSON.fromJsonArray<HomepageCustomSet>(array.toString()).getOrNull()
                     sets?.forEach { set -> appDb.homepageCustomSetDao.upsert(set) }
+                }
+                // 恢复方案D新表数据
+                (obj["modulePrefs"] as? JsonArray)?.let { array ->
+                    val prefs = GSON.fromJsonArray<io.legado.app.data.entities.HomepageModulePref>(array.toString()).getOrNull()
+                    prefs?.let { appDb.homepageModulePrefDao.upsertAll(it) }
+                }
+                (obj["userModules"] as? JsonArray)?.let { array ->
+                    val modules = GSON.fromJsonArray<io.legado.app.data.entities.HomepageUserModule>(array.toString()).getOrNull()
+                    modules?.let { appDb.homepageUserModuleDao.upsertAll(it) }
+                }
+                (obj["customSetMembers"] as? JsonArray)?.let { array ->
+                    val members = GSON.fromJsonArray<io.legado.app.data.entities.HomepageCustomSetMember>(array.toString()).getOrNull()
+                    members?.let { appDb.homepageCustomSetMemberDao.upsertAll(it) }
                 }
             }
         }

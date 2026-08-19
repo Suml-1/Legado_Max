@@ -19,7 +19,10 @@ import io.legado.app.data.dao.CookieDao
 import io.legado.app.data.dao.CoverGalleryDao
 import io.legado.app.data.dao.DictRuleDao
 import io.legado.app.data.dao.HomepageCustomSetDao
+import io.legado.app.data.dao.HomepageCustomSetMemberDao
 import io.legado.app.data.dao.HomepageModuleDao
+import io.legado.app.data.dao.HomepageModulePrefDao
+import io.legado.app.data.dao.HomepageUserModuleDao
 import io.legado.app.data.dao.HttpTTSDao
 import io.legado.app.data.dao.KeyboardAssistsDao
 import io.legado.app.data.dao.ReadRecordDao
@@ -50,7 +53,10 @@ import io.legado.app.data.entities.CoverGalleryImage
 import io.legado.app.data.entities.DictRule
 import io.legado.app.data.entities.DirectLinkUploadRule
 import io.legado.app.data.entities.HomepageCustomSet
+import io.legado.app.data.entities.HomepageCustomSetMember
 import io.legado.app.data.entities.HomepageModule
+import io.legado.app.data.entities.HomepageModulePref
+import io.legado.app.data.entities.HomepageUserModule
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.KeyboardAssist
 import io.legado.app.data.entities.ReplaceRule
@@ -84,7 +90,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 100,
+    version = 101,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -94,7 +100,8 @@ val appDb by lazy {
         RuleSub::class, DictRule::class, KeyboardAssist::class, Server::class,
         UrlRecord::class, DirectLinkUploadRule::class, UploadHistory::class,
         CoverGalleryGroup::class, CoverGalleryImage::class, SourceRecycleBin::class,
-        HomepageModule::class, HomepageCustomSet::class],
+        HomepageModule::class, HomepageCustomSet::class,
+        HomepageModulePref::class, HomepageUserModule::class, HomepageCustomSetMember::class],
     views = [BookSourcePart::class],
     autoMigrations = [
         AutoMigration(from = 43, to = 44),
@@ -181,6 +188,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val coverGalleryDao: CoverGalleryDao
     abstract val homepageModuleDao: HomepageModuleDao
     abstract val homepageCustomSetDao: HomepageCustomSetDao
+    abstract val homepageModulePrefDao: HomepageModulePrefDao
+    abstract val homepageUserModuleDao: HomepageUserModuleDao
+    abstract val homepageCustomSetMemberDao: HomepageCustomSetMemberDao
 
     companion object {
 

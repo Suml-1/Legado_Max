@@ -161,7 +161,7 @@ private fun JoinedModulesTab(
     // 获取当前集已加入的模块
     // 统一按集归属过滤（与 SetList.moduleCount 一致）；未指定集时默认使用书源集
     val joinedModules = remember(sourceUrl, targetSetId, allModules) {
-        val setId = targetSetId ?: "src_$sourceUrl"
+        val setId = targetSetId ?: HomepageViewModel.bookSourceSetId(sourceUrl)
         allModules.filter { module -> module.customSetId == setId }
     }
 
