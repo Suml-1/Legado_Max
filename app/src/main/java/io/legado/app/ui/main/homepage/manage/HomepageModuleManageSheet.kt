@@ -96,7 +96,11 @@ fun HomepageModuleManageSheet(
     // 根据导航状态确定当前应显示的页面（优先级从高到低）
     val currentPage: ManageScreen = when {
         showCustomSetAddModules != null -> ManageScreen.CustomSetAddModules(showCustomSetAddModules!!)
-        browsingSourceUrl != null -> ManageScreen.SourceBrowseDetail(browsingSourceUrl!!, selectingSetUrl)
+        browsingSourceUrl != null -> ManageScreen.SourceBrowseDetail(
+            browsingSourceUrl!!,
+            // 只有自定义集才传 setUrl，书源集传 null（模块只能添加到该书源自己的集）
+            selectingSetUrl?.takeIf { HomepageViewModel.isCustomSetUrl(it) }
+        )
         browsingRssSourceUrl != null -> ManageScreen.RssSourceBrowseDetail(browsingRssSourceUrl!!)
         showSourceBrowser -> ManageScreen.BrowseSources
         showRssSourceBrowser -> ManageScreen.BrowseRssSources
@@ -279,7 +283,9 @@ fun HomepageModuleManageSheet(
                 is ManageScreen.RssSourceBrowseDetail -> RssSourceBrowseDetailPage(
                     sourceUrl = page.sourceUrl,
                     sourceName = state.sourceNames[page.sourceUrl] ?: page.sourceUrl,
-                    targetSetId = null,
+                    // 只有自定义集才传 targetSetId，订阅源集传 null
+                    targetSetId = selectingSetUrl?.takeIf { HomepageViewModel.isCustomSetUrl(it) }
+                        ?.let { HomepageViewModel.customSetIdFromUrl(it) },
                     allModules = state.allJoinedModules,
                     actions = actions,
                     onEditModule = { moduleId, moduleDef ->
@@ -289,13 +295,12 @@ fun HomepageModuleManageSheet(
                 )
 
                 // 书源模块详情页：展示某书源的所有模块，可添加到指定集
+                // 注意：只有自定义集才传 setUrl，书源集传 null（模块添加到该书源自己的集）
                 is ManageScreen.SourceBrowseDetail -> SourceBrowseDetailPage(
                     sourceUrl = page.sourceUrl,
                     sourceName = state.sourceNames[page.sourceUrl] ?: page.sourceUrl,
-                    targetSetId = page.setUrl?.let {
-                        // 自定义集提取 ID，书源集直接使用集 URL 作为 ID
-                        if (HomepageViewModel.isCustomSetUrl(it)) HomepageViewModel.customSetIdFromUrl(it) else it
-                    },
+                    targetSetId = page.setUrl?.takeIf { HomepageViewModel.isCustomSetUrl(it) }
+                        ?.let { HomepageViewModel.customSetIdFromUrl(it) },
                     allModules = state.allJoinedModules,
                     actions = actions,
                     onEditModule = { moduleId, moduleDef ->

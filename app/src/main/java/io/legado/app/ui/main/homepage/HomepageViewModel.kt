@@ -298,16 +298,16 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
             }
         }
 
-        // 2. 按订阅源集分组（用户创建的 RSS 模块，customSetId 为 rss_ 前缀）
+        // 2. 按订阅源集分组（用户创建的 RSS 模块，customSetId 为 rss_ 前缀或 null）
         val rssSetIds = merged
-            .filter { it.sourceType == "rss" && it.customSetId?.startsWith(RSS_SOURCE_SET_PREFIX) == true }
-            .map { it.customSetId!! }
+            .filter { it.sourceType == "rss" && (it.customSetId == null || it.customSetId?.startsWith(RSS_SOURCE_SET_PREFIX) == true) }
+            .map { it.customSetId ?: rssSourceSetId(it.sourceUrl) }
             .distinct()
         for (setId in rssSetIds) {
             if (setId in hidden) continue
             val sourceUrl = sourceUrlFromSetId(setId)
             val setName = rssNames[sourceUrl] ?: sourceUrl
-            val mods = merged.filter { it.customSetId == setId }
+            val mods = merged.filter { it.customSetId == setId || (it.customSetId == null && it.sourceUrl == sourceUrl) }
             for (mm in mods) {
                 val configMap = configCache[mm.globalId] ?: emptyMap()
                 result.add(
@@ -441,14 +441,14 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
             ))
         }
 
-        // 订阅源集（从用户创建的 RSS 模块中提取 rss_ 前缀集）
+        // 订阅源集（从用户创建的 RSS 模块中提取 rss_ 前缀集或 null）
         val rssSetIds = modules
-            .filter { it.sourceType == "rss" && it.customSetId?.startsWith(RSS_SOURCE_SET_PREFIX) == true }
-            .map { it.customSetId!! }
+            .filter { it.sourceType == "rss" && (it.customSetId == null || it.customSetId?.startsWith(RSS_SOURCE_SET_PREFIX) == true) }
+            .map { it.customSetId ?: rssSourceSetId(it.sourceUrl) }
             .distinct()
         for (setId in rssSetIds) {
             val sourceUrl = sourceUrlFromSetId(setId)
-            val count = modules.count { it.customSetId == setId }
+            val count = modules.count { it.customSetId == setId || (it.customSetId == null && it.sourceUrl == sourceUrl) }
             result.add(HomepageSourceManageUi(
                 sourceUrl = setId,
                 sourceName = rssNames[sourceUrl] ?: sourceUrl,
@@ -1216,8 +1216,8 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
     fun addCustomModule(sourceUrl: String, setId: String?, def: ModuleDef) {
         viewModelScope.launch {
             val key = def.key.ifBlank { "custom_${System.currentTimeMillis()}" }
-            val effectiveSetId = setId ?: bookSourceSetId(sourceUrl)
-            val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId)
+            val effectiveSetId = setId  // null 表示在书源集中
+            val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId ?: bookSourceSetId(sourceUrl))
             appDb.homepageUserModuleDao.upsert(
                 HomepageUserModule(
                     id = globalId,
@@ -1245,9 +1245,9 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         kindTitles: List<String>
     ) {
         viewModelScope.launch {
-            val effectiveSetId = setId ?: bookSourceSetId(sourceUrl)
+            val effectiveSetId = setId  // null 表示在书源集中
             val key = "bg_${System.currentTimeMillis()}"
-            val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId)
+            val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId ?: bookSourceSetId(sourceUrl))
             appDb.homepageUserModuleDao.upsert(
                 HomepageUserModule(
                     id = globalId,
@@ -1283,9 +1283,9 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
 
     fun addRssCustomModule(sourceUrl: String, setId: String?, def: ModuleDef) {
         viewModelScope.launch {
-            val effectiveSetId = setId ?: rssSourceSetId(sourceUrl)
+            val effectiveSetId = setId  // null 表示在订阅源集中
             val key = def.key.ifBlank { "rss_${System.currentTimeMillis()}" }
-            val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId)
+            val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId ?: rssSourceSetId(sourceUrl))
             appDb.homepageUserModuleDao.upsert(
                 HomepageUserModule(
                     id = globalId,
@@ -1313,9 +1313,9 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         kindTitles: List<String>
     ) {
         viewModelScope.launch {
-            val effectiveSetId = setId ?: rssSourceSetId(sourceUrl)
+            val effectiveSetId = setId  // null 表示在订阅源集中
             val key = "bg_${System.currentTimeMillis()}"
-            val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId)
+            val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId ?: rssSourceSetId(sourceUrl))
             appDb.homepageUserModuleDao.upsert(
                 HomepageUserModule(
                     id = globalId,
@@ -1342,9 +1342,9 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         rankingType: String = HomepageModuleType.Ranking.key
     ) {
         viewModelScope.launch {
-            val effectiveSetId = setId ?: bookSourceSetId(sourceUrl)
+            val effectiveSetId = setId  // null 表示在书源集中
             val key = "rg_${System.currentTimeMillis()}"
-            val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId)
+            val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId ?: bookSourceSetId(sourceUrl))
             val args = categories.map { mapOf("t" to it.first, "u" to it.second) }
             appDb.homepageUserModuleDao.upsert(
                 HomepageUserModule(
@@ -1372,9 +1372,9 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         rankingType: String = HomepageModuleType.Ranking.key
     ) {
         viewModelScope.launch {
-            val effectiveSetId = setId ?: rssSourceSetId(sourceUrl)
+            val effectiveSetId = setId  // null 表示在订阅源集中
             val key = "rg_${System.currentTimeMillis()}"
-            val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId)
+            val globalId = ModuleDef.globalIdOf(sourceUrl, key, effectiveSetId ?: rssSourceSetId(sourceUrl))
             val args = categories.map { mapOf("t" to it.first, "u" to it.second) }
             appDb.homepageUserModuleDao.upsert(
                 HomepageUserModule(
