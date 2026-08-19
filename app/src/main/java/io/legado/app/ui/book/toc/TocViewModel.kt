@@ -62,12 +62,15 @@ class TocViewModel(application: Application) : BaseViewModel(application) {
             bookData.value?.apply {
                 setReverseToc(!getReverseToc())
                 val toc = appDb.bookChapterDao.getChapterList(bookUrl)
+                // 先用旧 index 创建迁移器, 记住旧缓存文件名
+                val migrator = BookHelp.createChapterCacheMigrator(this, toc)
+                // 反转并重新编号 (toc.reversed() 共享对象引用, 必须在创建 migrator 之后修改 index)
                 val newToc = toc.reversed()
                 newToc.forEachIndexed { index, bookChapter ->
                     bookChapter.index = index
                 }
-                //倒序后章节序号变化会导致缓存文件名变化, 先迁移缓存文件
-                BookHelp.createChapterCacheMigrator(this, toc).migrate(newToc)
+                //倒序后章节序号变化会导致缓存文件名变化, 迁移缓存文件
+                migrator.migrate(newToc)
                 appDb.bookChapterDao.insert(*newToc.toTypedArray())
             }
         }.onSuccess {
