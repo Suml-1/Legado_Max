@@ -502,6 +502,7 @@
     <string name="error_get_web_content">Failed to access website:%s</string>
     <string name="error_read_file">Failed to read file</string>
     <string name="error_load_toc">Failed to load chapters list</string>
+    <string name="toc_load_failed_using_cache">TOC load failed, showing cached chapters</string>
     <string name="error_get_data">Failed to get data</string>
     <string name="error_load_msg">Failed to load\n%s</string>
     <string name="net_error_10001">No network</string>

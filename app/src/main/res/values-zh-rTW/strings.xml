@@ -475,6 +475,7 @@
     <string name="error_get_web_content">瀏覽網站失敗：%s</string>
     <string name="error_read_file">文件讀取失敗</string>
     <string name="error_load_toc">載入目錄失敗</string>
+    <string name="toc_load_failed_using_cache">目錄載入失敗，已使用本地快取目錄</string>
     <string name="error_get_data">獲取資料失敗！</string>
     <string name="error_load_msg">載入失敗\n%s</string>
     <string name="net_error_10001">沒有網路</string>

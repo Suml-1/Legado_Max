@@ -501,6 +501,7 @@
     <string name="error_get_web_content">访问网站失败：%s</string>
     <string name="error_read_file">文件读取失败</string>
     <string name="error_load_toc">加载目录失败</string>
+    <string name="toc_load_failed_using_cache">目录加载失败，已使用本地缓存目录</string>
     <string name="error_get_data">获取数据失败！</string>
     <string name="error_load_msg">加载失败\n%s</string>
     <string name="net_error_10001">没有网络</string>

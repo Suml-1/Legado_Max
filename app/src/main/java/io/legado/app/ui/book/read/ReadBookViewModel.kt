@@ -272,6 +272,13 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
                         return true
                     }.onFailure {
                         currentCoroutineContext().ensureActive()
+                        // 目录加载失败时, 如果数据库中已有旧章节记录, 保留旧目录让用户能阅读已缓存内容
+                        val dbCount = appDb.bookChapterDao.getChapterCount(book.bookUrl)
+                        if (dbCount > 0) {
+                            ReadBook.onChapterListUpdated(book)
+                            ReadBook.upMsg(context.getString(R.string.toc_load_failed_using_cache))
+                            return true
+                        }
                         ReadBook.upMsg(context.getString(R.string.error_load_toc))
                         return false
                     }
@@ -331,8 +338,14 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
             }
         } catch (e: Throwable) {
             currentCoroutineContext().ensureActive()
-            // 如果还没进入正文就出错了，返回失败；若已进入正文则忽略后续加载错误
+            // 如果还没进入正文就出错了, 若数据库已有旧章节则保留旧目录, 让用户能阅读已缓存内容
             if (!hasEnteredContent) {
+                val dbCount = appDb.bookChapterDao.getChapterCount(book.bookUrl)
+                if (dbCount > 0) {
+                    ReadBook.onChapterListUpdated(book, isIncremental = false)
+                    ReadBook.upMsg(context.getString(R.string.toc_load_failed_using_cache))
+                    return Pair(true, false)
+                }
                 ReadBook.upMsg(context.getString(R.string.error_load_toc))
                 return Pair(false, false)
             }
