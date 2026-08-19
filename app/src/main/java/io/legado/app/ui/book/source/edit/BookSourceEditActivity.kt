@@ -679,7 +679,7 @@ class BookSourceEditActivity :
 
     /**
      * 保存书源。若书源 URL 发生变更且书架上有该书源的书，
-     * 询问用户是否将关联书籍迁移到新 URL，避免书籍变成无源状态。
+     * 自动将关联书籍迁移到新 URL，并 toast 提醒用户。
      */
     private fun saveSource(
         source: BookSource,
@@ -699,23 +699,12 @@ class BookSourceEditActivity :
                 lifecycleScope.launch {
                     val hasBooks = withContext(IO) { appDb.bookDao.hasBookByOrigin(oldUrl) }
                     if (hasBooks) {
-                        alert(R.string.migrate_book_origin_title) {
-                            setMessage(R.string.migrate_book_origin_msg)
-                            positiveButton(R.string.migrate_book_origin_yes) {
-                                lifecycleScope.launch {
-                                    withContext(IO) {
-                                        appDb.bookDao.updateOrigin(oldUrl, savedSource.bookSourceUrl)
-                                    }
-                                    onSuccess?.invoke(savedSource)
-                                }
-                            }
-                            negativeButton(R.string.migrate_book_origin_no) {
-                                onSuccess?.invoke(savedSource)
-                            }
+                        withContext(IO) {
+                            appDb.bookDao.updateOrigin(oldUrl, savedSource.bookSourceUrl)
                         }
-                    } else {
-                        onSuccess?.invoke(savedSource)
+                        toastOnUi(R.string.migrate_book_origin_done)
                     }
+                    onSuccess?.invoke(savedSource)
                 }
             } else {
                 onSuccess?.invoke(savedSource)

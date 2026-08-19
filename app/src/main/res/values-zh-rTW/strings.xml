@@ -92,10 +92,7 @@
     <string name="offline_cache_t">離線快取</string>
     <string name="offline_cache_s">快取選擇的章節到本機</string>
     <string name="change_origin">換源</string>
-    <string name="migrate_book_origin_title">遷移關聯書籍</string>
-    <string name="migrate_book_origin_msg">偵測到書源網址變更，是否將書架上該書源的書籍關聯到新網址？</string>
-    <string name="migrate_book_origin_yes">遷移</string>
-    <string name="migrate_book_origin_no">不遷移</string>
+    <string name="migrate_book_origin_done">書源網址變更，已自動遷移書架上該書源的關聯書籍</string>
     <string name="about_description">
         \u3000\u3000這是一款使用Kotlin全新開發的開源的閱讀軟體，歡迎您的加入。
     </string>

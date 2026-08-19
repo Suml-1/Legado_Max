@@ -107,10 +107,7 @@
     <string name="offline_cache_t">离线缓存</string>
     <string name="offline_cache_s">缓存选择的章节到本地</string>
     <string name="change_origin">换源</string>
-    <string name="migrate_book_origin_title">迁移关联书籍</string>
-    <string name="migrate_book_origin_msg">检测到书源地址变更，是否将书架上该书源的书籍关联到新地址？</string>
-    <string name="migrate_book_origin_yes">迁移</string>
-    <string name="migrate_book_origin_no">不迁移</string>
+    <string name="migrate_book_origin_done">书源地址变更，已自动迁移书架上该书源的关联书籍</string>
     <string name="about_description">
         \u3000\u3000这是一款使用 Kotlin 全新开发的开源的阅读软件，欢迎您的加入。
     </string>
