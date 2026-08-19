@@ -278,7 +278,7 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         for (source in sources) {
             val setUrl = bookSourceSetId(source.bookSourceUrl)
             if (setUrl in hidden) continue
-            val mods = merged.filter { it.sourceUrl == source.bookSourceUrl && it.customSetId == null }
+            val mods = merged.filter { it.sourceUrl == source.bookSourceUrl && (it.customSetId == null || it.customSetId == bookSourceSetId(source.bookSourceUrl)) }
             for (mm in mods) {
                 val configMap = configCache[mm.globalId] ?: emptyMap()
                 result.add(
@@ -430,7 +430,7 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         // 书源集
         for (source in sources) {
             val setUrl = bookSourceSetId(source.bookSourceUrl)
-            val count = modules.count { it.sourceUrl == source.bookSourceUrl && it.customSetId == null }
+            val count = modules.count { it.sourceUrl == source.bookSourceUrl && (it.customSetId == null || it.customSetId == bookSourceSetId(source.bookSourceUrl)) }
             result.add(HomepageSourceManageUi(
                 sourceUrl = setUrl,
                 sourceName = source.bookSourceName,
@@ -1187,11 +1187,14 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
     fun joinModule(sourceUrl: String, setId: String?, def: ModuleDef) {
         viewModelScope.launch {
             // 方案D：书源模块已从JSON实时解析，joinModule = 设置偏好为启用
+            // 注意：书源集模块的 customSetId 保持 null（表示在书源集中），
+            // 仅当分配到自定义集时才设置 customSetId
+            val effectiveSetId = setId?.takeIf { HomepageViewModel.isCustomSetUrl(it) }
             val existingPref = appDb.homepageModulePrefDao.get(sourceUrl, def.key)
             if (existingPref != null) {
                 appDb.homepageModulePrefDao.setEnabled(sourceUrl, def.key, true)
-                if (setId != null) {
-                    appDb.homepageModulePrefDao.setCustomSetId(sourceUrl, def.key, setId)
+                if (effectiveSetId != null) {
+                    appDb.homepageModulePrefDao.setCustomSetId(sourceUrl, def.key, effectiveSetId)
                 }
             } else {
                 appDb.homepageModulePrefDao.upsert(
@@ -1199,7 +1202,7 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                         sourceUrl = sourceUrl,
                         moduleKey = def.key,
                         isEnabled = true,
-                        customSetId = setId,
+                        customSetId = effectiveSetId,
                     )
                 )
             }

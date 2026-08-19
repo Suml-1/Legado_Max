@@ -28,6 +28,7 @@ fun AppModalBottomSheet(
     title: String,
     modifier: Modifier = Modifier,
     skipPartiallyExpanded: Boolean = true,
+    innerScrollEnabled: Boolean = true,
     startAction: (@Composable () -> Unit)? = null,
     endAction: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
@@ -44,12 +45,19 @@ fun AppModalBottomSheet(
             contentColor = MaterialTheme.colorScheme.onSurface
         ) {
             // 内容区域自适应高度，超长时支持滚动，样式与 BookBottomSheet 保持一致
+            // 当内部内容已包含 LazyColumn 等可滚动组件时，应传入 innerScrollEnabled=false
+            // 以避免嵌套滚动冲突
+            val baseModifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp)
+            val contentModifier = if (innerScrollEnabled) {
+                baseModifier.verticalScroll(scrollState)
+            } else {
+                baseModifier
+            }
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 16.dp)
-                    .verticalScroll(scrollState)
+                modifier = contentModifier
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),

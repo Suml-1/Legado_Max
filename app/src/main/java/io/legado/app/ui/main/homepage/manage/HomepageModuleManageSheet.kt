@@ -174,8 +174,7 @@ fun HomepageModuleManageSheet(
         ?.let { HomepageViewModel.customSetIdFromUrl(it) }
 
     // AnimatedContent 内的 LazyColumn 需要有限高度约束才能正常渲染。
-    // 使用屏幕高度的 80% 作为容器高度（与 ExploreKindSelectSheet 策略一致），
-    // 配合 AppModalBottomSheet 的 verticalScroll 实现内容溢出时滚动。
+    // 使用屏幕高度的 80% 作为容器高度（与 ExploreKindSelectSheet 策略一致）。
     val contentHeight = LocalConfiguration.current.screenHeightDp.dp * 0.8f
 
     AppModalBottomSheet(
@@ -183,6 +182,7 @@ fun HomepageModuleManageSheet(
         onDismissRequest = handleDismiss,
         title = title,
         skipPartiallyExpanded = true,
+        innerScrollEnabled = false,
         startAction = if (canGoBack) {
             {
                 IconButton(onClick = { handleBack() }) {
@@ -576,8 +576,13 @@ private fun belongsToSet(module: HomepageModuleManageUi, setUrl: String): Boolea
         // 自定义集：通过集 ID 匹配
         val setId = HomepageViewModel.customSetIdFromUrl(setUrl)
         module.customSetId == setId
-    } else {
-        // 书源集：setUrl 即为集 ID（如 src_http://...），直接匹配 customSetId
+    } else if (HomepageViewModel.isBookSourceSetId(setUrl)) {
+        // 书源集：customSetId 为 null（在书源集中）或等于 setUrl
+        module.customSetId == null || module.customSetId == setUrl
+    } else if (HomepageViewModel.isRssSourceSetId(setUrl)) {
+        // 订阅源集：customSetId 等于 setUrl
         module.customSetId == setUrl
+    } else {
+        false
     }
 }

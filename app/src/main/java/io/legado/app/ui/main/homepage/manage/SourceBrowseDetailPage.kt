@@ -159,10 +159,16 @@ private fun JoinedModulesTab(
     onEditModule: (String, ModuleDef) -> Unit,
 ) {
     // 获取当前集已加入的模块
-    // 统一按集归属过滤（与 SetList.moduleCount 一致）；未指定集时默认使用书源集
+    // 书源集：customSetId 为 null 或 src_ 前缀；自定义集：customSetId 等于集 ID
     val joinedModules = remember(sourceUrl, targetSetId, allModules) {
         val setId = targetSetId ?: HomepageViewModel.bookSourceSetId(sourceUrl)
-        allModules.filter { module -> module.customSetId == setId }
+        if (HomepageViewModel.isCustomSetUrl(setId)) {
+            // 自定义集：精确匹配 customSetId
+            allModules.filter { module -> module.customSetId == HomepageViewModel.customSetIdFromUrl(setId) }
+        } else {
+            // 书源集：匹配 customSetId 为 null 或 src_ 前缀
+            allModules.filter { module -> module.sourceUrl == sourceUrl && (module.customSetId == null || module.customSetId == setId) }
+        }
     }
 
     // 本地排序列表，拖拽时即时更新
