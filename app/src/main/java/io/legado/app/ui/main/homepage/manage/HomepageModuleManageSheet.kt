@@ -457,7 +457,16 @@ fun HomepageModuleManageSheet(
             isEditMode = false,
             canSelectInfinite = !hasInfiniteModule,
             onConfirm = { moduleDef ->
-                val sourceUrl = selectingSetUrl ?: ""
+                // 从选中集 URL 中提取 sourceUrl
+                // 自定义集：无法确定 sourceUrl，使用 moduleDef 中的 sourceUrl
+                // 书源集/订阅源集：从 setUrl 中提取
+                val sourceUrl = selectingSetUrl?.let { url ->
+                    when {
+                        HomepageViewModel.isCustomSetUrl(url) -> moduleDef.sourceUrl
+                        HomepageViewModel.isSourceSetId(url) -> HomepageViewModel.sourceUrlFromSetId(url)
+                        else -> url
+                    }
+                } ?: moduleDef.sourceUrl
                 val setId = currentSetId
                 actions.onAddCustomModule(sourceUrl, setId, moduleDef)
                 addDialogPrefill = null
@@ -582,11 +591,14 @@ private fun belongsToSet(module: HomepageModuleManageUi, setUrl: String): Boolea
         val setId = HomepageViewModel.customSetIdFromUrl(setUrl)
         module.customSetId == setId
     } else if (HomepageViewModel.isBookSourceSetId(setUrl)) {
-        // 书源集：customSetId 为 null（在书源集中）或等于 setUrl
-        module.customSetId == null || module.customSetId == setUrl
+        // 书源集：customSetId 为 null（在书源集中）且 sourceUrl 匹配，
+        // 或 customSetId 等于 setUrl（已分配到此书源集）
+        val sourceUrl = HomepageViewModel.sourceUrlFromSetId(setUrl)
+        module.sourceUrl == sourceUrl && (module.customSetId == null || module.customSetId == setUrl)
     } else if (HomepageViewModel.isRssSourceSetId(setUrl)) {
-        // 订阅源集：customSetId 等于 setUrl
-        module.customSetId == setUrl
+        // 订阅源集：sourceUrl 匹配且 customSetId 为 null 或等于 setUrl
+        val sourceUrl = HomepageViewModel.sourceUrlFromSetId(setUrl)
+        module.sourceUrl == sourceUrl && (module.customSetId == null || module.customSetId == setUrl)
     } else {
         false
     }

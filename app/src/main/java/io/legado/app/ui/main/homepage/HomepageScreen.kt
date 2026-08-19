@@ -586,11 +586,21 @@ private fun SourceTabLayout(
             val currentModules = remember(modules, currentSet) {
                 val filtered = modules.filter { module ->
                     if (currentSet?.isCustomSet == true) {
+                        // 自定义集：通过集 ID 匹配
                         val setId = HomepageViewModel.customSetIdFromUrl(currentSet.sourceUrl)
                         module.customSetId == setId
+                    } else if (currentSet != null && HomepageViewModel.isBookSourceSetId(currentSet.sourceUrl)) {
+                        // 书源集：sourceUrl 匹配且 customSetId 为 null 或等于集 ID
+                        val sourceUrl = HomepageViewModel.sourceUrlFromSetId(currentSet.sourceUrl)
+                        module.sourceUrl == sourceUrl &&
+                        (module.customSetId == null || module.customSetId == currentSet.sourceUrl)
+                    } else if (currentSet != null && HomepageViewModel.isRssSourceSetId(currentSet.sourceUrl)) {
+                        // 订阅源集：sourceUrl 匹配且 customSetId 为 null 或等于集 ID
+                        val sourceUrl = HomepageViewModel.sourceUrlFromSetId(currentSet.sourceUrl)
+                        module.sourceUrl == sourceUrl &&
+                        (module.customSetId == null || module.customSetId == currentSet.sourceUrl)
                     } else {
-                        // 书源集：集 URL 格式为 src_<书源URL>，模块的 customSetId 也是 src_<书源URL>
-                        module.customSetId == currentSet?.sourceUrl
+                        false
                     }
                 }
                 // 无限类型模块排在底部

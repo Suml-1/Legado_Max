@@ -155,10 +155,18 @@ private fun JoinedModulesTab(
     onEditModule: (String, ModuleDef) -> Unit,
 ) {
     // 获取当前集已加入的模块
-    // 统一按集归属过滤（与 SetList.moduleCount 一致）；未指定集时默认使用订阅源集
+    // 统一按集归属过滤；未指定集时默认使用订阅源集（rss_ 前缀）
     val joinedModules = remember(sourceUrl, targetSetId, allModules) {
-        val setId = targetSetId ?: HomepageViewModel.rssSourceSetId(sourceUrl)
-        allModules.filter { module -> module.customSetId == setId }
+        if (targetSetId != null) {
+            // 自定义集：精确匹配 customSetId
+            allModules.filter { module -> module.customSetId == targetSetId }
+        } else {
+            // 订阅源集：customSetId 为 null 或等于 rss_ 前缀集 ID
+            val setId = HomepageViewModel.rssSourceSetId(sourceUrl)
+            allModules.filter { module ->
+                module.sourceUrl == sourceUrl && (module.customSetId == null || module.customSetId == setId)
+            }
+        }
     }
 
     var localModules by remember(joinedModules) { mutableStateOf(joinedModules) }

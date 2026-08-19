@@ -62,9 +62,13 @@ fun CustomSetAddModulesPage(
     onAssignModule: (String, String?) -> Unit,
     onBack: () -> Unit,
 ) {
-    // 仅显示源集模块（书源集或订阅源集），避免显示副本导致重复
+    // 显示源集模块（书源集 customSetId 为 null，订阅源集 customSetId 为 null 或 rss_ 前缀）
     val sourceModules = remember(allModules) {
-        allModules.filter { it.customSetId?.let { cid -> HomepageViewModel.isSourceSetId(cid) } == true }
+        allModules.filter { module ->
+            // 排除已在自定义集中的模块
+            module.customSetId == null ||
+            module.customSetId?.let { cid -> HomepageViewModel.isSourceSetId(cid) } == true
+        }
     }
     // 按书源分组展示
     val groupedModules = remember(sourceModules) {

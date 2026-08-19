@@ -163,12 +163,12 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val customSetsFlow = gateway.flowCustomSets()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val customSetsSync = _configVersion.mapLatest {
         gateway.flowCustomSets().first()
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /**
      * 合成所有模块数据：书源JSON解析模块 + 用户偏好 + 用户创建模块
@@ -278,7 +278,7 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         for (source in sources) {
             val setUrl = bookSourceSetId(source.bookSourceUrl)
             if (setUrl in hidden) continue
-            val mods = merged.filter { it.sourceUrl == source.bookSourceUrl && (it.customSetId == null || it.customSetId == bookSourceSetId(source.bookSourceUrl)) }
+            val mods = merged.filter { it.sourceUrl == source.bookSourceUrl && (it.customSetId == null || it.customSetId == setUrl) && it.isEnabled }
             for (mm in mods) {
                 val configMap = configCache[mm.globalId] ?: emptyMap()
                 result.add(
@@ -300,14 +300,14 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
 
         // 2. 按订阅源集分组（用户创建的 RSS 模块，customSetId 为 rss_ 前缀或 null）
         val rssSetIds = merged
-            .filter { it.sourceType == "rss" && (it.customSetId == null || it.customSetId?.startsWith(RSS_SOURCE_SET_PREFIX) == true) }
+            .filter { it.sourceType == "rss" && it.isEnabled && (it.customSetId == null || it.customSetId?.startsWith(RSS_SOURCE_SET_PREFIX) == true) }
             .map { it.customSetId ?: rssSourceSetId(it.sourceUrl) }
             .distinct()
         for (setId in rssSetIds) {
             if (setId in hidden) continue
             val sourceUrl = sourceUrlFromSetId(setId)
             val setName = rssNames[sourceUrl] ?: sourceUrl
-            val mods = merged.filter { it.customSetId == setId || (it.customSetId == null && it.sourceUrl == sourceUrl) }
+            val mods = merged.filter { it.isEnabled && (it.customSetId == setId || (it.customSetId == null && it.sourceUrl == sourceUrl)) }
             for (mm in mods) {
                 val configMap = configCache[mm.globalId] ?: emptyMap()
                 result.add(
@@ -334,10 +334,10 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
             val setName = setNames[setId] ?: setId
             val members = customSetMembersFlow.value.filter { it.customSetId == setId }
             val memberModules = merged.filter { mm ->
-                members.any { it.sourceUrl == mm.sourceUrl && it.moduleKey == mm.moduleKey && !mm.isUserCreated }
+                mm.isEnabled && members.any { it.sourceUrl == mm.sourceUrl && it.moduleKey == mm.moduleKey && !mm.isUserCreated }
             }
             val userModulesInSet = merged.filter { mm ->
-                mm.isUserCreated && mm.customSetId == setId
+                mm.isUserCreated && mm.customSetId == setId && mm.isEnabled
             }
             for (mm in memberModules + userModulesInSet) {
                 val configMap = configCache[mm.globalId] ?: emptyMap()
@@ -430,7 +430,7 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         // 书源集
         for (source in sources) {
             val setUrl = bookSourceSetId(source.bookSourceUrl)
-            val count = modules.count { it.sourceUrl == source.bookSourceUrl && (it.customSetId == null || it.customSetId == bookSourceSetId(source.bookSourceUrl)) }
+            val count = modules.count { it.sourceUrl == source.bookSourceUrl && (it.customSetId == null || it.customSetId == setUrl) }
             result.add(HomepageSourceManageUi(
                 sourceUrl = setUrl,
                 sourceName = source.bookSourceName,
@@ -474,7 +474,7 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
         }
 
         result
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val browseSourcesFlow = combine(
         _bookSourcesCache,
@@ -491,7 +491,7 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                 isCustomSet = false,
             )
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val layoutMode: StateFlow<Int> = _configVersion
         .map { HomepageConfig.homepageLayoutMode }
@@ -533,7 +533,7 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
             allJoinedModules = allJoined,
             sourceNames = sourceNames,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomepageManageUiState())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, HomepageManageUiState())
 
     val uiState: StateFlow<HomepageUiState> = combine(
         displayModulesFlow,
@@ -547,7 +547,7 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
             isManageMode = isManageMode,
             manageState = manageState,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomepageUiState())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, HomepageUiState())
 
     init {
         viewModelScope.launch {
@@ -1073,8 +1073,8 @@ class HomepageViewModel(application: Application) : BaseViewModel(application) {
                         module.customSetId == setUrl || (module.customSetId == null && setUrl == bookSourceSetId(module.sourceUrl))
                     }
                     setUrl.startsWith(RSS_SOURCE_SET_PREFIX) -> {
-                        // 订阅源集：模块 customSetId 等于 setUrl
-                        module.customSetId == setUrl
+                        // 订阅源集：模块 customSetId 为 null 或等于 setUrl
+                        module.customSetId == setUrl || (module.customSetId == null && setUrl == rssSourceSetId(module.sourceUrl))
                     }
                     else -> false
                 }
