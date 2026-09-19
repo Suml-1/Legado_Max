@@ -1667,11 +1667,16 @@ class TextChapterLayout(
         }
         // 九宫格"强制"策略：把左右邻字向外推开一个正文字距。加宽写进 widthsArray 参与断行与两端
         // 对齐，列末尾再按 trimEnd 扣回来，保证背景本身不被撑宽（见 computeNeighborPush）
+        // 标题左对齐（且没有被"居中"分支接管）时行首就是正文列左边界，行首匹配要靠整行右移让出背景
+        val titleStartAligned = isTitle && !isMiddleTitle && !isRightTitle &&
+            !emptyContent && !isVolumeTitle &&
+            imageStyle?.uppercase() != Book.imgStyleSingle
         val neighborPush = computeNeighborPush(
             text,
             collectForcedBleedSegments(charStyles),
             textPaint,
             paragraphIndentLength(text, isTitle),
+            titleStartAligned,
         ) { index -> widthsArray.getOrElse(index) { 0f } }
         columnTrimEnd = neighborPush?.trimEnd
         columnIndentExtra = neighborPush?.indentAdd ?: 0f
@@ -1739,6 +1744,12 @@ class TextChapterLayout(
             val (words, widths) = measureTextSplit(lineText, widthsArray, lineStart)
             val desiredWidth = widths.fastSum()
             textLine.text = lineText
+            // 标题左对齐时行首匹配让出的外扩量加在整行起始偏移上（只有首行会被行首匹配影响）
+            val titleStartExtra = if (isTitle && lineIndex == 0) {
+                neighborPush?.lineStartAdd ?: 0f
+            } else {
+                0f
+            }
             when (lineIndex) {
                 0 if layout.lineCount > 1 && !isTitle && isFirstLine -> {
                     // 多行的第一行 非标题
@@ -1759,7 +1770,7 @@ class TextChapterLayout(
                                 (visibleWidth - desiredWidth) / 2
                             }
                             isRightTitle -> visibleWidth - desiredWidth
-                            else -> 0f
+                            else -> titleStartExtra
                         }
                     } else {
                         0f
@@ -1780,7 +1791,7 @@ class TextChapterLayout(
                                 (visibleWidth - desiredWidth) / 2
                             }
                             isRightTitle -> visibleWidth - desiredWidth
-                            else -> 0f
+                            else -> titleStartExtra
                         }
                         addCharsToLineNatural(
                             book, absStartX, textLine, words,
@@ -2168,6 +2179,12 @@ class TextChapterLayout(
          * 两端对齐的缩进列是按固定宽度重建的，读不到 [widthAdd]，所以额外带一份。
          */
         var indentAdd: Float = 0f
+
+        /**
+         * 行首额外右移量：匹配从**本行第一列**开始（行首没有邻字可推）时，把外扩量加到
+         * 整行的起始偏移上，背景的左侧边缘就落在文字起始位置（见 [computeNeighborPush]）。
+         */
+        var lineStartAdd: Float = 0f
     }
 
     /** 参与"邻字外推"计算的一段九宫格强制高亮（只保留与背景图外扩相关的字段） */
@@ -2254,6 +2271,11 @@ class TextChapterLayout(
      * 抵扣（抵扣后背景的左侧边缘会压进缩进里，这一段看上去缩进比别的段落小）。改为**按外扩量把缩进
      * 后的文字整体右移**：缩进的让出量写进 [NeighborPush.indentAdd]，背景边缘正好落在缩进后的文字
      * 起始位置，且与匹配文字的距离保持不变。
+     *
+     * 另一种"行首没有邻字"的情况同理：匹配从本行第一列开始（标题左对齐时最常见，行首右边就是正文列
+     * 左边界），左侧没有列可以加宽。此时若该行确实顶着正文列左边界（[lineStartAligned]），把外扩量
+     * 记进 [NeighborPush.lineStartAdd]，由调用方加到整行的起始偏移上——背景左侧边缘落在文字起始位置，
+     * 不会溢出到页边距里被裁掉。居中的行不需要（外扩量落在行首外的空白里，视觉上本来就是完整的）。
      */
     private fun computeNeighborPush(
         text: CharSequence,
@@ -2261,6 +2283,8 @@ class TextChapterLayout(
         textPaint: TextPaint,
         /** 段落首行的缩进长度（0 = 无缩进），左邻字落在缩进里时改用"整段右移" */
         indentLength: Int = 0,
+        /** 该行文字是否紧贴正文列左边界（行首匹配时要把整行右移，见 [NeighborPush.lineStartAdd]） */
+        lineStartAligned: Boolean = false,
         advance: (Int) -> Float,
     ): NeighborPush? {
         if (segments.isEmpty()) return null
@@ -2308,6 +2332,14 @@ class TextChapterLayout(
                         push.widthAdd[index] = maxOf(push.widthAdd[index], size)
                         applied = true
                     }
+                }
+            } else if (lineStartAligned) {
+                // 匹配从本行第一列开始（标题左对齐）：左侧没有列可以加宽，外扩量交给整行起始偏移，
+                // 背景的左侧边缘就落在文字起始位置（与匹配文字的距离 = 外扩量，保持不变）
+                val extra = (sides[0] + spacing).coerceAtLeast(0f)
+                if (extra > 0f) {
+                    push.lineStartAdd = maxOf(push.lineStartAdd, extra)
+                    applied = true
                 }
             }
             // 右侧：加在匹配区最后一个字上（它后面的字才会被推开），因此记下要扣回背景的量
