@@ -54,4 +54,44 @@ class HighlightRuleStoreSanitizeTest {
         val summary = rule().copy(bgImage = "assets://bg/a.png", bgImageFit = 3).styleSummary()
         assertTrue(summary.contains("背景图(九宫格)"))
     }
+
+    @Test
+    fun `旧版左右上下间距迁移到四边并清空旧字段`() {
+        val sanitized = HighlightRuleStore.sanitizeRule(
+            rule().copy(bgSpacingH = 0.3f, bgSpacingV = -0.2f),
+        )
+        assertEquals(0.3f, sanitized.bgSpacingLeft)
+        assertEquals(0.3f, sanitized.bgSpacingRight)
+        assertEquals(-0.2f, sanitized.bgSpacingTop)
+        assertEquals(-0.2f, sanitized.bgSpacingBottom)
+        assertEquals(0f, sanitized.bgSpacingH)
+        assertEquals(0f, sanitized.bgSpacingV)
+    }
+
+    @Test
+    fun `四边间距已设置时不被旧字段覆盖`() {
+        val sanitized = HighlightRuleStore.sanitizeRule(
+            rule().copy(bgSpacingH = 0.5f, bgSpacingV = 0.4f, bgSpacingBottom = 0.25f),
+        )
+        assertEquals(0f, sanitized.bgSpacingLeft)
+        assertEquals(0f, sanitized.bgSpacingRight)
+        assertEquals(0f, sanitized.bgSpacingTop)
+        assertEquals(0.25f, sanitized.bgSpacingBottom)
+        assertEquals(0f, sanitized.bgSpacingH)
+        assertEquals(0f, sanitized.bgSpacingV)
+    }
+
+    @Test
+    fun `上下间距正向可到 1em 负向仍限 -0_5em`() {
+        val sanitized = HighlightRuleStore.sanitizeRule(
+            rule().copy(bgSpacingTop = 1f, bgSpacingBottom = -0.5f),
+        )
+        assertEquals(1f, sanitized.bgSpacingTop)
+        assertEquals(-0.5f, sanitized.bgSpacingBottom)
+        val outOfRange = HighlightRuleStore.sanitizeRule(
+            rule().copy(bgSpacingTop = 1.2f, bgSpacingBottom = -0.6f),
+        )
+        assertEquals(0f, outOfRange.bgSpacingTop)
+        assertEquals(0f, outOfRange.bgSpacingBottom)
+    }
 }

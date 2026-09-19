@@ -855,7 +855,8 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         }
         return "左${editingRule.npLeft.percent()} 上${editingRule.npTop.percent()} " +
             "右${editingRule.npRight.percent()} 下${editingRule.npBottom.percent()}\n" +
-            "$strategy 间距 ${formatEm(editingRule.bgSpacingH)}/${formatEm(editingRule.bgSpacingV)}"
+            "$strategy 间距 左${formatEm(editingRule.bgSpacingLeft)} 右${formatEm(editingRule.bgSpacingRight)} " +
+            "上${formatEm(editingRule.bgSpacingTop)} 下${formatEm(editingRule.bgSpacingBottom)}"
     }
 
     /** 间距的展示格式：固定两位小数并带 em 单位 */
@@ -867,9 +868,12 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
      * 四条分割比例滑条（左/上/右/下）含义与 .9.png 的拉伸标记一致：分割线一侧为固定不拉伸的
      * 边框区；左右两侧相加、上下两侧相加均不超过 100%，拖动超限时压回当前滑条自身。
      *
-     * 另有「外扩策略」开关（严格/智能/强制）与左右/上下间距两条滑条：策略决定自动外扩量
+     * 另有「外扩策略」开关（严格/智能/强制）与左右/上下四边的间距滑条：策略决定自动外扩量
      * （严格不外扩、智能只占用邻接空白、强制按四角厚度外扩并推开邻字），
-     * 间距为正表示把背景向外撑大、为负向内收。
+     * 间距按四个方向独立可调，为正表示把背景向外撑大、为负向内收。
+     *
+     * 取消按钮左侧另有一个左对齐的「重置」：把本弹窗内的全部取值回退到默认（分割比例 0.1、
+     * 智能外扩、四边间距 0），只改弹窗内的临时值，仍需「确定」才写入规则。
      */
     private fun showNineSliceAdjustDialog() {
         val bgImage = editingRule.bgImage?.takeIf { it.isNotBlank() } ?: return
@@ -880,8 +884,10 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         var npRight = editingRule.npRight.coerceIn(0f, 1f)
         var npBottom = editingRule.npBottom.coerceIn(0f, 1f)
         var bleedMode = HighlightRule.resolvedBleedMode(editingRule.bgBleedMode)
-        var spacingH = editingRule.bgSpacingH
-        var spacingV = editingRule.bgSpacingV
+        var spacingLeft = editingRule.bgSpacingLeft
+        var spacingRight = editingRule.bgSpacingRight
+        var spacingTop = editingRule.bgSpacingTop
+        var spacingBottom = editingRule.bgSpacingBottom
 
         val preview = NineSlicePreviewView(requireContext(), bitmap, npLeft, npTop, npRight, npBottom).apply {
             layoutParams = LinearLayout.LayoutParams(
@@ -898,6 +904,10 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
 
         // 已创建的滑条按 key 记录，供对侧滑条查询上限（左右/上下两两联动）
         val bars = HashMap<String, SeekBar>(4)
+        // 重置时四个比例要一起归位，中途会被"相加不超过 100%"压回，故重置期间跳过该限制
+        var resetting = false
+        // 各间距滑条的回退动作，供重置按钮统一调用
+        val resetActions = ArrayList<() -> Unit>(4)
         fun limitOf(oppositeKey: String): Int {
             val opposite = bars[oppositeKey] ?: return 100
             return 100 - opposite.progress
@@ -923,7 +933,7 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
                 setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
                         val limit = limitOf(oppositeKey)
-                        if (progress > limit) {
+                        if (!resetting && progress > limit) {
                             // 压回后再次触发本回调（fromUser=false），在该分支完成刷新
                             sb?.progress = limit
                             return
@@ -971,12 +981,13 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         sliderRow("上", "top", "bottom", npTop) { npTop = it; preview.npTop = it }
         sliderRow("下", "bottom", "top", npBottom) { npBottom = it; preview.npBottom = it }
 
-        // em 滑条：以 0.01em 为一格，[rangeMin, rangeMax] 为可调区间
+        // em 滑条：以 0.01em 为一格，[rangeMin, rangeMax] 为可调区间，[default] 为重置回退值
         fun emSliderRow(
             label: String,
             initial: Float,
             rangeMin: Float,
             rangeMax: Float,
+            default: Float,
             onValue: (Float) -> Unit,
         ) {
             fun toProgress(value: Float) = ((value - rangeMin) * 100).roundToInt()
@@ -1002,6 +1013,7 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
                     override fun onStopTrackingTouch(sb: SeekBar?) = Unit
                 })
             }
+            resetActions.add { seekBar.progress = toProgress(default).coerceIn(0, seekBar.max) }
             fun adjustButton(text: String, delta: Int) = TextView(requireContext()).apply {
                 this.text = text
                 textSize = 22f
@@ -1096,16 +1108,47 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         })
 
         container.addView(TextView(requireContext()).apply {
-            text = "间距：正数把背景向外撑大、离文字更远，负数让背景向内收，0 表示紧贴文字边界。" +
-                "间距与策略的外扩量叠加，可用它补偿图片自带的透明留白。"
+            text = "间距：四个方向分别可调，正数把背景向外撑大、离文字更远，负数让背景向内收，" +
+                "0 表示紧贴文字边界。间距与策略的外扩量叠加，可用它补偿图片自带的透明留白。"
             textSize = 11f
             setTextColor(primaryTextColor)
             setPadding(0, (8 * density).toInt(), 0, 0)
         })
-        emSliderRow("左右间距", spacingH, -1f, 1f) { spacingH = it }
-        emSliderRow("上下间距", spacingV, -0.5f, 0.5f) { spacingV = it }
+        emSliderRow(
+            "左间距", spacingLeft,
+            HighlightRuleStore.MIN_BG_SPACING_H, HighlightRuleStore.MAX_BG_SPACING_H, 0f,
+        ) { spacingLeft = it }
+        emSliderRow(
+            "右间距", spacingRight,
+            HighlightRuleStore.MIN_BG_SPACING_H, HighlightRuleStore.MAX_BG_SPACING_H, 0f,
+        ) { spacingRight = it }
+        emSliderRow(
+            "上间距", spacingTop,
+            HighlightRuleStore.MIN_BG_SPACING_V, HighlightRuleStore.MAX_BG_SPACING_V, 0f,
+        ) { spacingTop = it }
+        emSliderRow(
+            "下间距", spacingBottom,
+            HighlightRuleStore.MIN_BG_SPACING_V, HighlightRuleStore.MAX_BG_SPACING_V, 0f,
+        ) { spacingBottom = it }
 
-        android.app.AlertDialog.Builder(requireContext())
+        // 重置：弹窗内所有值回到默认（四边分割比例 0.1、智能外扩、四边间距 0）
+        fun applyDefaults() {
+            resetting = true
+            val defaultNp = (HighlightRuleStore.DEFAULT_NP_RATIO * 100).roundToInt()
+            // 顺序与限制无关（重置期间跳过"相加不超过 100%"的压回），只求四个都落到默认值
+            bars["right"]?.progress = defaultNp
+            bars["left"]?.progress = defaultNp
+            bars["bottom"]?.progress = defaultNp
+            bars["top"]?.progress = defaultNp
+            resetting = false
+            resetActions.forEach { it() }
+            bleedMode = HighlightRule.BLEED_SMART
+            strategyText.text = strategyNames[bleedMode]
+            strategyHint.text = strategyHints[bleedMode]
+            preview.invalidate()
+        }
+
+        val dialog = android.app.AlertDialog.Builder(requireContext())
             .setTitle("九宫格调整")
             // 行数较多，套一层滚动容器，小屏上不会挤掉确定/取消按钮
             .setView(android.widget.ScrollView(requireContext()).apply { addView(container) })
@@ -1115,13 +1158,34 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
                 editingRule.npRight = npRight
                 editingRule.npBottom = npBottom
                 editingRule.bgBleedMode = bleedMode
-                editingRule.bgSpacingH = spacingH
-                editingRule.bgSpacingV = spacingV
+                editingRule.bgSpacingLeft = spacingLeft
+                editingRule.bgSpacingRight = spacingRight
+                editingRule.bgSpacingTop = spacingTop
+                editingRule.bgSpacingBottom = spacingBottom
+                // 四边间距已成为唯一来源，旧字段清零，避免下次加载又被当成"未设置"再迁移一次
+                editingRule.bgSpacingH = 0f
+                editingRule.bgSpacingV = 0f
                 updateNpAdjustRow()
                 updatePreview()
             }
             .setNegativeButton(android.R.string.cancel, null)
-            .show()
+            // 重置留在弹窗内：用 neutral 占位，点击事件在 onShow 里手动接管（否则默认会关闭弹窗）
+            .setNeutralButton(R.string.reset, null)
+            .create()
+        dialog.setOnShowListener {
+            val resetButton = dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL)
+            resetButton?.setOnClickListener { applyDefaults() }
+            // 让重置靠左对齐：在它之后插入一个撑满剩余宽度的空白视图，取消/确定仍贴着右边
+            val buttonBar = resetButton?.parent as? LinearLayout
+            if (buttonBar != null) {
+                buttonBar.addView(
+                    View(requireContext()),
+                    buttonBar.indexOfChild(resetButton) + 1,
+                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f),
+                )
+            }
+        }
+        dialog.show()
     }
 
     /** 九宫格调整预览：居中显示背景图并叠加四条红色分割线，分割线随滑条实时移动 */

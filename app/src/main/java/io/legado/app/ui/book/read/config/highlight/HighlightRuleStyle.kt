@@ -24,10 +24,14 @@ data class HighlightRuleStyle(
     val npBottom: Float = 0.1f,
     /** 九宫格外扩策略，取值 HighlightRule.BLEED_*，已在 [from] 中解析为确定值 */
     val bgBleedMode: Int = HighlightRule.BLEED_SMART,
-    /** 背景图左右间距（em），正数向外撑大、负数向内收 */
-    val bgSpacingH: Float = 0f,
-    /** 背景图上下间距（em），正数向外撑大、负数向内收 */
-    val bgSpacingV: Float = 0f,
+    /** 背景图左间距（em），正数向外撑大、负数向内收 */
+    val bgSpacingLeft: Float = 0f,
+    /** 背景图右间距（em），正数向外撑大、负数向内收 */
+    val bgSpacingRight: Float = 0f,
+    /** 背景图上间距（em），正数向外撑大、负数向内收 */
+    val bgSpacingTop: Float = 0f,
+    /** 背景图下间距（em），正数向外撑大、负数向内收 */
+    val bgSpacingBottom: Float = 0f,
     /** 高亮字体路径，空串表示跟随阅读字体 */
     val font: String = "",
 ) {
@@ -58,8 +62,10 @@ data class HighlightRuleStyle(
             npRight = rule.npRight,
             npBottom = rule.npBottom,
             bgBleedMode = HighlightRule.resolvedBleedMode(rule.bgBleedMode),
-            bgSpacingH = rule.bgSpacingH,
-            bgSpacingV = rule.bgSpacingV,
+            bgSpacingLeft = rule.bgSpacingLeft,
+            bgSpacingRight = rule.bgSpacingRight,
+            bgSpacingTop = rule.bgSpacingTop,
+            bgSpacingBottom = rule.bgSpacingBottom,
             font = rule.font.orEmpty(),
         )
     }

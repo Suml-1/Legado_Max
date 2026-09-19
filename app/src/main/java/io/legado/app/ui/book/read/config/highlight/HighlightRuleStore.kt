@@ -32,9 +32,10 @@ object HighlightRuleStore {
     const val MAX_BG_SPACING_H = 1f
 
     /** 背景图上下间距（em）的合法区间，超出视为未设置。
-     *  垂直方向空间受行距限制，收得太狠会把背景连同文字一起收没，故只给 ±0.5em */
+     *  垂直方向向内收受行距限制，收得太狠会把背景连同文字一起收没，故下限只给 -0.5em；
+     *  向外撑大不受行距限制（只是可能压到上下行），正向给到 1em */
     const val MIN_BG_SPACING_V = -0.5f
-    const val MAX_BG_SPACING_V = 0.5f
+    const val MAX_BG_SPACING_V = 1f
 
     /**
      * 高亮规则备份文件的完整数据结构。
@@ -108,32 +109,58 @@ object HighlightRuleStore {
         return defaultRules.toMutableList()
     }
 
-    fun sanitizeRule(rule: HighlightRule, fallbackGroup: String = HighlightRuleGroupStore.DEFAULT_GROUP): HighlightRule = rule.copy(
-        name = rule.name.trim(),
-        pattern = rule.pattern.trim(),
-        sampleText = rule.sampleText.trim(),
-        group = rule.group.takeIf { it.isNotBlank() } ?: fallbackGroup,
-        scope = rule.scope?.trim()?.takeIf { it.isNotBlank() },
-        excludeScope = rule.excludeScope?.trim()?.takeIf { it.isNotBlank() },
-        layoutScope = rule.layoutScope?.trim()?.takeIf { it.isNotBlank() },
-        // GSON 用 Unsafe 实例化 data class 时不调用构造函数，
-        // 老规则 JSON 缺失 themeScope 字段时反序列化得到 0，应视为全部生效而非 coerceIn(1,3)=1（仅亮色）
-        themeScope = if (rule.themeScope in 1..3) rule.themeScope else HighlightRule.THEME_ALL,
-        // 九宫格分割比例只在 0-1 内有意义，越界视为未设置过该字段，回落到默认比例
-        npLeft = rule.npLeft.takeIf { it in 0f..1f } ?: DEFAULT_NP_RATIO,
-        npTop = rule.npTop.takeIf { it in 0f..1f } ?: DEFAULT_NP_RATIO,
-        npRight = rule.npRight.takeIf { it in 0f..1f } ?: DEFAULT_NP_RATIO,
-        npBottom = rule.npBottom.takeIf { it in 0f..1f } ?: DEFAULT_NP_RATIO,
-        // 间距越界视为未设置，回落到 0（紧贴文字）；左右与上下的区间不同
-        bgSpacingH = rule.bgSpacingH.takeIf { it in MIN_BG_SPACING_H..MAX_BG_SPACING_H } ?: 0f,
-        bgSpacingV = rule.bgSpacingV.takeIf { it in MIN_BG_SPACING_V..MAX_BG_SPACING_V } ?: 0f,
-        // 外扩策略只认三个枚举值，其余（含老规则缺字段得到的 0 以外的值）回落到 null 表示智能
-        bgBleedMode = rule.bgBleedMode?.takeIf {
-            it == HighlightRule.BLEED_STRICT ||
-                it == HighlightRule.BLEED_SMART ||
-                it == HighlightRule.BLEED_FORCE
-        },
-    )
+    fun sanitizeRule(rule: HighlightRule, fallbackGroup: String = HighlightRuleGroupStore.DEFAULT_GROUP): HighlightRule {
+        val sanitized = migrateLegacySpacing(rule)
+        return sanitized.copy(
+            name = sanitized.name.trim(),
+            pattern = sanitized.pattern.trim(),
+            sampleText = sanitized.sampleText.trim(),
+            group = sanitized.group.takeIf { it.isNotBlank() } ?: fallbackGroup,
+            scope = sanitized.scope?.trim()?.takeIf { it.isNotBlank() },
+            excludeScope = sanitized.excludeScope?.trim()?.takeIf { it.isNotBlank() },
+            layoutScope = sanitized.layoutScope?.trim()?.takeIf { it.isNotBlank() },
+            // GSON 用 Unsafe 实例化 data class 时不调用构造函数，
+            // 老规则 JSON 缺失 themeScope 字段时反序列化得到 0，应视为全部生效而非 coerceIn(1,3)=1（仅亮色）
+            themeScope = if (sanitized.themeScope in 1..3) sanitized.themeScope else HighlightRule.THEME_ALL,
+            // 九宫格分割比例只在 0-1 内有意义，越界视为未设置过该字段，回落到默认比例
+            npLeft = sanitized.npLeft.takeIf { it in 0f..1f } ?: DEFAULT_NP_RATIO,
+            npTop = sanitized.npTop.takeIf { it in 0f..1f } ?: DEFAULT_NP_RATIO,
+            npRight = sanitized.npRight.takeIf { it in 0f..1f } ?: DEFAULT_NP_RATIO,
+            npBottom = sanitized.npBottom.takeIf { it in 0f..1f } ?: DEFAULT_NP_RATIO,
+            // 四边间距越界视为未设置，回落到 0（紧贴文字）；左右与上下的区间不同。
+            // 迁移后旧字段固定清零，不再参与后续读写
+            bgSpacingH = 0f,
+            bgSpacingV = 0f,
+            bgSpacingLeft = sanitized.bgSpacingLeft.takeIf { it in MIN_BG_SPACING_H..MAX_BG_SPACING_H } ?: 0f,
+            bgSpacingRight = sanitized.bgSpacingRight.takeIf { it in MIN_BG_SPACING_H..MAX_BG_SPACING_H } ?: 0f,
+            bgSpacingTop = sanitized.bgSpacingTop.takeIf { it in MIN_BG_SPACING_V..MAX_BG_SPACING_V } ?: 0f,
+            bgSpacingBottom = sanitized.bgSpacingBottom.takeIf { it in MIN_BG_SPACING_V..MAX_BG_SPACING_V } ?: 0f,
+            // 外扩策略只认三个枚举值，其余（含老规则缺字段得到的 0 以外的值）回落到 null 表示智能
+            bgBleedMode = sanitized.bgBleedMode?.takeIf {
+                it == HighlightRule.BLEED_STRICT ||
+                    it == HighlightRule.BLEED_SMART ||
+                    it == HighlightRule.BLEED_FORCE
+            },
+        )
+    }
+
+    /**
+     * 把旧版的"左右间距/上下间距"（bgSpacingH/bgSpacingV）迁移到四边独立参数。
+     *
+     * 只有四边都还是默认值 0 时才迁移：编辑过间距的规则四边一定有非 0 值，不会被旧值覆盖；
+     * 迁移与读取都幂等，重复调用不会叠加。
+     */
+    private fun migrateLegacySpacing(rule: HighlightRule): HighlightRule {
+        val allSidesUnset = rule.bgSpacingLeft == 0f && rule.bgSpacingRight == 0f &&
+            rule.bgSpacingTop == 0f && rule.bgSpacingBottom == 0f
+        if (!allSidesUnset || (rule.bgSpacingH == 0f && rule.bgSpacingV == 0f)) return rule
+        return rule.copy(
+            bgSpacingLeft = rule.bgSpacingH,
+            bgSpacingRight = rule.bgSpacingH,
+            bgSpacingTop = rule.bgSpacingV,
+            bgSpacingBottom = rule.bgSpacingV,
+        )
+    }
 
     fun backupData(context: Context): BackupData {
         val rules = load(context)
@@ -182,7 +209,8 @@ object HighlightRuleStore {
             } else {
                 backupRules
             }
-            save(context, restoredRules)
+            // 恢复前走一遍清洗：老备份只有"左右/上下间距"，需迁移到四边参数渲染才读得到
+            save(context, restoredRules.map { sanitizeRule(it) })
             // 三个旧开关跟随规则数据恢复：规则键缺失的损坏备份不误关开关
             context.putPrefBoolean(PreferKey.highlightRuleDialog, backupData.dialogEnabled)
             context.putPrefBoolean(PreferKey.highlightRuleBookTitle, backupData.bookTitleEnabled)

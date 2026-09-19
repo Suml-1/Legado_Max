@@ -34,10 +34,24 @@ data class HighlightRule(
      * 为空表示 [BLEED_SMART]（智能）：可空是为了区分"用户显式选了严格"与"老规则没有这个字段"。
      */
     var bgBleedMode: Int? = null,
-    /** 背景图左右间距（em，随字号缩放）：正数把背景向外撑大、离文字更远，负数向内收 */
+    /**
+     * 旧版"左右间距"（em）：间距已按四边拆分，本字段只为兼容老规则保留，
+     * 由 [HighlightRuleStore.sanitizeRule] 迁移到 [bgSpacingLeft]/[bgSpacingRight] 后清零。
+     */
     var bgSpacingH: Float = 0f,
-    /** 背景图上下间距（em）：正数向外撑大，负数向内收 */
+
+    /**
+     * 旧版"上下间距"（em）：同上，迁移到 [bgSpacingTop]/[bgSpacingBottom] 后清零。
+     */
     var bgSpacingV: Float = 0f,
+    /** 背景图左间距（em，随字号缩放）：正数把背景向外撑大、离文字更远，负数向内收 */
+    var bgSpacingLeft: Float = 0f,
+    /** 背景图右间距（em）：正数向外撑大，负数向内收 */
+    var bgSpacingRight: Float = 0f,
+    /** 背景图上间距（em）：正数向外撑大，负数向内收 */
+    var bgSpacingTop: Float = 0f,
+    /** 背景图下间距（em）：正数向外撑大，负数向内收 */
+    var bgSpacingBottom: Float = 0f,
     /** 作用范围，书名或书源URL，分号分隔，为空则对所有书籍生效 */
     var scope: String? = null,
     /** 排除范围，书名或书源URL，分号分隔，匹配的书籍不应用该规则 */

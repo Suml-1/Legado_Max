@@ -35,8 +35,10 @@ class BgImageSpan(
     private val npRight: Float = 0.1f,
     private val npBottom: Float = 0.1f,
     private val bgBleedMode: Int = HighlightRule.BLEED_SMART,
-    private val bgSpacingH: Float = 0f,
-    private val bgSpacingV: Float = 0f,
+    private val bgSpacingLeft: Float = 0f,
+    private val bgSpacingRight: Float = 0f,
+    private val bgSpacingTop: Float = 0f,
+    private val bgSpacingBottom: Float = 0f,
     private val underlineMode: Int = 0,
     private val underlineColor: Int = 0,
     private val underlineWidth: Float = 1f,
@@ -81,8 +83,6 @@ class BgImageSpan(
         val scale = bgImageScale.coerceIn(0.1f, 5f)
         val textSize = paint.textSize
         val fontMetrics = paint.fontMetrics
-        val spacingH = bgSpacingH * textSize
-        val spacingV = bgSpacingV * textSize
         // 与正文渲染保持同一规则：上下以文字上下界为基准，不能用行盒内缩
         val sliceTop = y + fontMetrics.ascent
         val sliceBottom = y + fontMetrics.descent
@@ -107,8 +107,10 @@ class BgImageSpan(
                     rightBlankWidth = if (end < text.length) measureBlankWidth(paint, text, end) else 0f,
                     verticalBlankSpace = verticalBlankSpace,
                     maxBleedX = textSize,
-                    spacingH = spacingH,
-                    spacingV = spacingV,
+                    spacingLeft = bgSpacingLeft * textSize,
+                    spacingRight = bgSpacingRight * textSize,
+                    spacingTop = bgSpacingTop * textSize,
+                    spacingBottom = bgSpacingBottom * textSize,
                 )
             } else when (bgImageFit) {
                 1 -> {

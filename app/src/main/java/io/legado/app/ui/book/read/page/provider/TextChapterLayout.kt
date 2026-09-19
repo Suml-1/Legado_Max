@@ -1055,8 +1055,10 @@ class TextChapterLayout(
                 val npRight = highlightStyle?.npRight ?: 0.1f
                 val npBottom = highlightStyle?.npBottom ?: 0.1f
                 val bgBleedMode = highlightStyle?.bgBleedMode ?: HighlightRule.BLEED_SMART
-                val bgSpacingH = highlightStyle?.bgSpacingH ?: 0f
-                val bgSpacingV = highlightStyle?.bgSpacingV ?: 0f
+                val bgSpacingLeft = highlightStyle?.bgSpacingLeft ?: 0f
+                val bgSpacingRight = highlightStyle?.bgSpacingRight ?: 0f
+                val bgSpacingTop = highlightStyle?.bgSpacingTop ?: 0f
+                val bgSpacingBottom = highlightStyle?.bgSpacingBottom ?: 0f
                 val highlightFontPath = extractFontPath(spanned, charIndex)
                 val charRight = if (charIndex + 1 < lineEnd) {
                     staticLayout.getPrimaryHorizontal(charIndex + 1)
@@ -1198,8 +1200,10 @@ class TextChapterLayout(
                                 npRight = npRight,
                                 npBottom = npBottom,
                                 bgBleedMode = bgBleedMode,
-                                bgSpacingH = bgSpacingH,
-                                bgSpacingV = bgSpacingV,
+                                bgSpacingLeft = bgSpacingLeft,
+                                bgSpacingRight = bgSpacingRight,
+                                bgSpacingTop = bgSpacingTop,
+                                bgSpacingBottom = bgSpacingBottom,
                                 fontPath = highlightFontPath,
                             ),
                         )
@@ -1227,8 +1231,10 @@ class TextChapterLayout(
                             npRight = npRight,
                             npBottom = npBottom,
                             bgBleedMode = bgBleedMode,
-                            bgSpacingH = bgSpacingH,
-                            bgSpacingV = bgSpacingV,
+                            bgSpacingLeft = bgSpacingLeft,
+                            bgSpacingRight = bgSpacingRight,
+                            bgSpacingTop = bgSpacingTop,
+                            bgSpacingBottom = bgSpacingBottom,
                             fontPath = highlightFontPath,
                         ),
                     )
@@ -1453,8 +1459,10 @@ class TextChapterLayout(
         var npRight = 0.1f
         var npBottom = 0.1f
         var bgBleedMode = HighlightRule.BLEED_SMART
-        var bgSpacingH = 0f
-        var bgSpacingV = 0f
+        var bgSpacingLeft = 0f
+        var bgSpacingRight = 0f
+        var bgSpacingTop = 0f
+        var bgSpacingBottom = 0f
         var hasUnderline = false
         var hasBgImage = false
         var hasBgColor = false
@@ -1476,8 +1484,10 @@ class TextChapterLayout(
                 npRight = span.npRight
                 npBottom = span.npBottom
                 bgBleedMode = span.bgBleedMode
-                bgSpacingH = span.bgSpacingH
-                bgSpacingV = span.bgSpacingV
+                bgSpacingLeft = span.bgSpacingLeft
+                bgSpacingRight = span.bgSpacingRight
+                bgSpacingTop = span.bgSpacingTop
+                bgSpacingBottom = span.bgSpacingBottom
                 hasBgImage = true
             }
             if (span.bgColor != null) {
@@ -1501,8 +1511,10 @@ class TextChapterLayout(
             npRight = if (hasBgImage) npRight else 0.1f,
             npBottom = if (hasBgImage) npBottom else 0.1f,
             bgBleedMode = bgBleedMode,
-            bgSpacingH = bgSpacingH,
-            bgSpacingV = bgSpacingV,
+            bgSpacingLeft = bgSpacingLeft,
+            bgSpacingRight = bgSpacingRight,
+            bgSpacingTop = bgSpacingTop,
+            bgSpacingBottom = bgSpacingBottom,
         )
     }
 
@@ -2042,8 +2054,10 @@ class TextChapterLayout(
         val npRight = style?.npRight ?: 0.1f
         val npBottom = style?.npBottom ?: 0.1f
         val bgBleedMode = style?.bgBleedMode ?: HighlightRule.BLEED_SMART
-        val bgSpacingH = style?.bgSpacingH ?: 0f
-        val bgSpacingV = style?.bgSpacingV ?: 0f
+        val bgSpacingLeft = style?.bgSpacingLeft ?: 0f
+        val bgSpacingRight = style?.bgSpacingRight ?: 0f
+        val bgSpacingTop = style?.bgSpacingTop ?: 0f
+        val bgSpacingBottom = style?.bgSpacingBottom ?: 0f
         val fontPath = style?.font.orEmpty()
         val column = when {
             !srcList.isNullOrEmpty() && (char == srcReplaceStr || char == reviewStr) -> {
@@ -2091,8 +2105,10 @@ class TextChapterLayout(
                     npRight = npRight,
                     npBottom = npBottom,
                     bgBleedMode = bgBleedMode,
-                    bgSpacingH = bgSpacingH,
-                    bgSpacingV = bgSpacingV,
+                    bgSpacingLeft = bgSpacingLeft,
+                    bgSpacingRight = bgSpacingRight,
+                    bgSpacingTop = bgSpacingTop,
+                    bgSpacingBottom = bgSpacingBottom,
                     fontPath = fontPath,
                 )
             }
@@ -2192,7 +2208,8 @@ class TextChapterLayout(
         val start: Int,
         val end: Int,
         val bgImage: String,
-        val spacingH: Float,
+        val spacingLeft: Float,
+        val spacingRight: Float,
         val npLeft: Float,
         val npRight: Float,
     )
@@ -2203,8 +2220,8 @@ class TextChapterLayout(
 
     private fun CharStyle?.sameBleedAs(other: CharStyle): Boolean =
         this != null && bgImage == other.bgImage && bgImageFit == other.bgImageFit &&
-            bgBleedMode == other.bgBleedMode && bgSpacingH == other.bgSpacingH &&
-            npLeft == other.npLeft && npRight == other.npRight
+            bgBleedMode == other.bgBleedMode && npLeft == other.npLeft && npRight == other.npRight &&
+            bgSpacingLeft == other.bgSpacingLeft && bgSpacingRight == other.bgSpacingRight
 
     private fun HighlightStyleSpan.isForcedBleed(): Boolean =
         bgImage.isNotEmpty() && bgImageFit == bgImageFitNine &&
@@ -2224,7 +2241,10 @@ class TextChapterLayout(
             var end = index + 1
             while (end < charStyles.size && charStyles[end].sameBleedAs(style)) end++
             segments.add(
-                BleedSegment(index, end, style.bgImage, style.bgSpacingH, style.npLeft, style.npRight),
+                BleedSegment(
+                    index, end, style.bgImage,
+                    style.bgSpacingLeft, style.bgSpacingRight, style.npLeft, style.npRight,
+                ),
             )
             index = end
         }
@@ -2240,7 +2260,10 @@ class TextChapterLayout(
             val end = spanned.getSpanEnd(span)
             if (start < end) {
                 segments.add(
-                    BleedSegment(start, end, span.bgImage, span.bgSpacingH, span.npLeft, span.npRight),
+                    BleedSegment(
+                        start, end, span.bgImage,
+                        span.bgSpacingLeft, span.bgSpacingRight, span.npLeft, span.npRight,
+                    ),
                 )
             }
         }
@@ -2311,14 +2334,15 @@ class TextChapterLayout(
             val sides = TextLine.nineSliceSideWidth(
                 bitmap, segment.npLeft, segment.npRight, textSize,
             )
-            val spacing = segment.spacingH * textSize
+            val spacingLeft = segment.spacingLeft * textSize
+            val spacingRight = segment.spacingRight * textSize
             // 左侧：把匹配区连同背景一起往右挪，邻字不动
             if (segment.start > 0) {
                 val index = segment.start - 1
                 if (indentLength > 0 && index < indentLength) {
                     // 段首缩进：外扩量加在最后一个缩进字上，缩进后的文字整体右移，背景的左侧边缘
                     // 就落在缩进后的文字起始位置（与匹配文字的距离 = 外扩量，保持不变）
-                    val extra = (sides[0] + spacing).coerceAtLeast(0f)
+                    val extra = (sides[0] + spacingLeft).coerceAtLeast(0f)
                     if (extra > 0f) {
                         val target = indentLength - 1
                         push.widthAdd[target] = maxOf(push.widthAdd[target], extra)
@@ -2326,7 +2350,7 @@ class TextChapterLayout(
                         applied = true
                     }
                 } else {
-                    val size = (sides[0] + spacing + bodySpacing - bearing(index, true))
+                    val size = (sides[0] + spacingLeft + bodySpacing - bearing(index, true))
                         .coerceAtLeast(0f)
                     if (size > 0f) {
                         push.widthAdd[index] = maxOf(push.widthAdd[index], size)
@@ -2336,7 +2360,7 @@ class TextChapterLayout(
             } else if (lineStartAligned) {
                 // 匹配从本行第一列开始（标题左对齐）：左侧没有列可以加宽，外扩量交给整行起始偏移，
                 // 背景的左侧边缘就落在文字起始位置（与匹配文字的距离 = 外扩量，保持不变）
-                val extra = (sides[0] + spacing).coerceAtLeast(0f)
+                val extra = (sides[0] + spacingLeft).coerceAtLeast(0f)
                 if (extra > 0f) {
                     push.lineStartAdd = maxOf(push.lineStartAdd, extra)
                     applied = true
@@ -2345,7 +2369,7 @@ class TextChapterLayout(
             // 右侧：加在匹配区最后一个字上（它后面的字才会被推开），因此记下要扣回背景的量
             if (segment.end < text.length) {
                 val index = segment.end - 1
-                val size = (sides[1] + spacing + bodySpacing - bearing(segment.end, false))
+                val size = (sides[1] + spacingRight + bodySpacing - bearing(segment.end, false))
                     .coerceAtLeast(0f)
                 if (size > 0f) {
                     push.widthAdd[index] = maxOf(push.widthAdd[index], size)
@@ -2412,8 +2436,10 @@ class TextChapterLayout(
                 npRight = style.npRight,
                 npBottom = style.npBottom,
                 bgBleedMode = style.bgBleedMode,
-                bgSpacingH = style.bgSpacingH,
-                bgSpacingV = style.bgSpacingV,
+                bgSpacingLeft = style.bgSpacingLeft,
+                bgSpacingRight = style.bgSpacingRight,
+                bgSpacingTop = style.bgSpacingTop,
+                bgSpacingBottom = style.bgSpacingBottom,
                 font = style.font,
             )
         }
