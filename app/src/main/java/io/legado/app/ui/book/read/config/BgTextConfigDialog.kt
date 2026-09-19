@@ -280,8 +280,12 @@ class BgTextConfigDialog : BaseDialogFragment(R.layout.dialog_read_bg_text) {
         }
         binding.tvBgColor.setOnClickListener {
             val bgColor =
-                if (curBgType() == 0) curBgStr().toColorInt()
-                else "#015A86".toColorInt()
+                if (curBgType() == 0) {
+                    // 背景色串可能来自导入/恢复的非法值，取色器初始色回退到默认蓝
+                    runCatching { curBgStr().toColorInt() }.getOrDefault("#015A86".toColorInt())
+                } else {
+                    "#015A86".toColorInt()
+                }
             ColorPickerDialog.newBuilder()
                 .setColor(bgColor)
                 .setShowAlphaSlider(false)

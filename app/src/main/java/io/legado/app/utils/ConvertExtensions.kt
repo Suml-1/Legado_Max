@@ -11,6 +11,7 @@ import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.text.DecimalFormat
+import java.util.Locale
 import kotlin.math.log10
 import kotlin.math.pow
 
@@ -117,6 +118,17 @@ object ConvertUtils {
 
 val Int.hexString: String
     get() = Integer.toHexString(this)
+
+/**
+ * 颜色 Int 转持久化用的 "#AARRGGBB" 字符串，固定补足 8 位十六进制。
+ *
+ * 不要用 `"#${color.hexString}"` 拼颜色：`Integer.toHexString` 会丢掉前导零，
+ * alpha ≤ 0x0F（含完全透明）时只能得到 5~7 位，例如 0x00000000 会写成 "#0"、
+ * 0x0A3E3D3B 会写成 "#a3e3d3b"；这类字符串长度既不是 7 也不是 9，
+ * 之后被 `Color.parseColor` 解析必然抛 IllegalArgumentException: Unknown color。
+ */
+val Int.argbHexString: String
+    get() = String.format(Locale.ROOT, "#%08x", this)
 
 fun Int.dpToPx(): Int = this.toFloat().dpToPx().toInt()
 

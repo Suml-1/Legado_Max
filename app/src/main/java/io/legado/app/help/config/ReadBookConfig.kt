@@ -14,6 +14,7 @@ import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.utils.BitmapUtils
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
+import io.legado.app.utils.argbHexString
 import io.legado.app.utils.compress.ZipUtils
 import io.legado.app.utils.createFolderReplace
 import io.legado.app.utils.externalCache
@@ -25,7 +26,6 @@ import io.legado.app.utils.getFile
 import io.legado.app.utils.getMeanColor
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefInt
-import io.legado.app.utils.hexString
 import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.putPrefInt
@@ -715,9 +715,9 @@ object ReadBookConfig {
         private var initColorInt = false
 
         private fun initColorInt() {
-            textColorIntEInk = textColorEInk.toColorInt()
-            textColorIntNight = textColorNight.toColorInt()
-            textColorInt = textColor.toColorInt()
+            textColorIntEInk = textColorEInk.toColorIntOrDefault(0xFF000000.toInt())
+            textColorIntNight = textColorNight.toColorIntOrDefault(0xFFADADAD.toInt())
+            textColorInt = textColor.toColorIntOrDefault(0xFF3E3D3B.toInt())
             initColorInt = true
         }
 
@@ -734,26 +734,35 @@ object ReadBookConfig {
         private var initAccentColorInt = false
 
         private fun initAccentColorInt() {
-            textAccentColorIntEInk = textAccentColorEInk.toColorInt()
-            textAccentColorIntNight = textAccentColorNight.toColorInt()
-            textAccentColorInt = textAccentColor.toColorInt()
+            textAccentColorIntEInk = textAccentColorEInk.toColorIntOrDefault(0xFF000000.toInt())
+            textAccentColorIntNight = textAccentColorNight.toColorIntOrDefault(0xFFFE4D55.toInt())
+            textAccentColorInt = textAccentColor.toColorIntOrDefault(0xFFE53935.toInt())
             initAccentColorInt = true
         }
 
+        /**
+         * 颜色字符串容错解析。
+         * 配置可能来自导入/恢复的其它分支数据（如把颜色"重置为完全透明"写出的 "#0"），
+         * 非法值只应回退到默认色，不能让 Color.parseColor 抛出的异常冒到界面。
+         */
+        private fun String.toColorIntOrDefault(default: Int): Int =
+            runCatching { toColorInt() }.getOrDefault(default)
+
         fun setCurTextColor(color: Int) {
+            val hex = color.argbHexString
             when {
                 AppConfig.isEInkMode -> {
-                    textColorEInk = "#${color.hexString}"
+                    textColorEInk = hex
                     textColorIntEInk = color
                 }
 
                 AppConfig.isNightTheme -> {
-                    textColorNight = "#${color.hexString}"
+                    textColorNight = hex
                     textColorIntNight = color
                 }
 
                 else -> {
-                    textColor = "#${color.hexString}"
+                    textColor = hex
                     textColorInt = color
                 }
             }
@@ -771,19 +780,20 @@ object ReadBookConfig {
         }
 
         fun setCurTextAccentColor(color: Int) {
+            val hex = color.argbHexString
             when {
                 AppConfig.isEInkMode -> {
-                    textAccentColorEInk = "#${color.hexString}"
+                    textAccentColorEInk = hex
                     textAccentColorIntEInk = color
                 }
 
                 AppConfig.isNightTheme -> {
-                    textAccentColorNight = "#${color.hexString}"
+                    textAccentColorNight = hex
                     textAccentColorIntNight = color
                 }
 
                 else -> {
-                    textAccentColor = "#${color.hexString}"
+                    textAccentColor = hex
                     textAccentColorInt = color
                 }
             }
@@ -801,7 +811,7 @@ object ReadBookConfig {
         }
 
         fun setCurUnderlineColor(color: Int) {
-            val hex = "#${color.hexString}"
+            val hex = color.argbHexString
             when {
                 AppConfig.isEInkMode -> underlineColor = hex
                 AppConfig.isNightTheme -> underlineColorNight = hex
@@ -810,7 +820,7 @@ object ReadBookConfig {
         }
 
         /**
-         * 返回当前模式下划线颜色；为空时回退到当前文字颜色。
+         * 返回当前模式下划线颜色；为空或非法时回退到当前文字颜色。
          */
         fun curUnderlineColor(): Int {
             val hex = when {
@@ -818,7 +828,7 @@ object ReadBookConfig {
                 AppConfig.isNightTheme -> underlineColorNight
                 else -> underlineColor
             }
-            return if (hex.isBlank()) curTextColor() else hex.toColorInt()
+            return if (hex.isBlank()) curTextColor() else hex.toColorIntOrDefault(curTextColor())
         }
 
         fun setCurStatusIconDark(isDark: Boolean) {

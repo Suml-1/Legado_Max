@@ -116,11 +116,11 @@ import io.legado.app.utils.LogUtils
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.applyOpenTint
+import io.legado.app.utils.argbHexString
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.dismissDialogFragment
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefString
-import io.legado.app.utils.hexString
 import io.legado.app.utils.iconItemOnLongClick
 import io.legado.app.utils.invisible
 import io.legado.app.utils.isAbsUrl
@@ -1907,7 +1907,7 @@ class ReadBookActivity : BaseReadBookActivity(),
             }
 
             BG_COLOR -> {
-                setCurBg(0, "#${color.hexString}")
+                setCurBg(0, color.argbHexString)
                 postEvent(EventBus.UP_CONFIG, arrayListOf(1))
                 if (AppConfig.readBarStyleFollowPage) {
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
