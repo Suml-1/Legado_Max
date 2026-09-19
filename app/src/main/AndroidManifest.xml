@@ -5,6 +5,9 @@
     <uses-sdk tools:overrideLibrary="com.qmdeve.liquidglass" />
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 17(API 37) 起局域网访问受「本地网络保护」限制：targetSdk 37 的应用默认被屏蔽，
+         必须声明并在运行时申请该权限，否则 Web 服务只能被本机（回环地址）访问 -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />

@@ -102,6 +102,8 @@
     <string name="web_service_auth_summary">要求API请求携带Token认证，在公共网络下建议开启</string>
     <string name="web_service_token_title">Web服务Token</string>
     <string name="web_service_token_summary">设置Web服务认证令牌</string>
+    <string name="local_network_permission_rationale">Android 17 起限制了局域网访问，授予「附近的设备」权限后其他设备才能连接 Web 服务</string>
+    <string name="local_network_permission_denied">未授予本地网络权限，Web 服务已停止</string>
     <string name="web_edit_source">Web 编辑书源</string>
     <string name="offline_cache">离线缓存</string>
     <string name="offline_cache_t">离线缓存</string>

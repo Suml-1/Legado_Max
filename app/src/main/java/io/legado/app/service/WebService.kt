@@ -3,13 +3,17 @@ package io.legado.app.service
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import io.legado.app.R
 import io.legado.app.base.BaseService
 import io.legado.app.help.config.AppConfig
+import io.legado.app.lib.permission.Permissions
+import io.legado.app.lib.permission.PermissionsCompat
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.IntentAction
@@ -152,6 +156,10 @@ class WebService : BaseService() {
         if (webSocketServer?.isAlive == true) {
             webSocketServer?.stop()
         }
+        // 没有本地网络权限时服务只能被本机访问，先申请权限，授权后再启动
+        if (!ensureLocalNetworkPermission()) {
+            return
+        }
         val addressList = NetworkUtils.getLocalIPAddress()
         if (addressList.any()) {
             val port = getPort()
@@ -190,6 +198,38 @@ class WebService : BaseService() {
             toastOnUi("web service cant start, no ip address")
             stopSelf()
         }
+    }
+
+    /**
+     * 确保持有本地网络访问权限。
+     *
+     * Android 17(API 37) 起本地网络受「本地网络保护」限制：以 SDK 37 为目标平台的应用默认被屏蔽，
+     * 表现为本机浏览器能打开 Web 服务、同网段的其他设备一律连不上。
+     * 低版本系统无此权限（由 INTERNET 隐式授予），直接放行。
+     *
+     * @return 是否已授权；false 表示已发起权限申请，需等回调后再启动服务器
+     */
+    private fun ensureLocalNetworkPermission(): Boolean {
+        if (Build.VERSION.SDK_INT < 37) {
+            return true
+        }
+        if (
+            ContextCompat.checkSelfPermission(this, Permissions.ACCESS_LOCAL_NETWORK)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            return true
+        }
+        PermissionsCompat.Builder()
+            .addPermissions(Permissions.ACCESS_LOCAL_NETWORK)
+            .rationale(R.string.local_network_permission_rationale)
+            .onGranted { upWebServer() }
+            .onDenied {
+                // 没有权限时其他设备无法访问，直接停掉服务，开关会同步回关闭状态
+                toastOnUi(R.string.local_network_permission_denied)
+                stopSelf()
+            }
+            .request()
+        return false
     }
 
     private fun getPort(): Int {
