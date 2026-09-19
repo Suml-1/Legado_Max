@@ -872,8 +872,11 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
      * （严格不外扩、智能只占用邻接空白、强制按四角厚度外扩并推开邻字），
      * 间距按四个方向独立可调，为正表示把背景向外撑大、为负向内收。
      *
-     * 取消按钮左侧另有一个左对齐的「重置」：把本弹窗内的全部取值回退到默认（分割比例 0.1、
-     * 智能外扩、四边间距 0），只改弹窗内的临时值，仍需「确定」才写入规则。
+     * 「重置」占框架按钮行的 neutral 位（在取消左边，与确定/取消同一行）：把本弹窗内的全部取值
+     * 回退到默认（分割比例 0.1、智能外扩、四边间距 0），只改弹窗内的临时值，仍需「确定」才写入规则。
+     *
+     * 注意**不要在按钮行里插带权重的占位视图**去把它顶到最左：ButtonBarLayout 在按钮放不下时会
+     * 自行改成竖排，会被这类子视图误导而把"取消/确定"挤成一上一下（2026-09-19 踩过）。
      */
     private fun showNineSliceAdjustDialog() {
         val bgImage = editingRule.bgImage?.takeIf { it.isNotBlank() } ?: return
@@ -1169,21 +1172,15 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
                 updatePreview()
             }
             .setNegativeButton(android.R.string.cancel, null)
-            // 重置留在弹窗内：用 neutral 占位，点击事件在 onShow 里手动接管（否则默认会关闭弹窗）
+            // 重置与确定/取消同一行、位于取消左边：占按钮行的 neutral 位。
+            // 不要在按钮行里插占位视图去"顶到最左"——ButtonBarLayout 放不下时会自行竖排，
+            // 会被带权重的子视图误导而把确定/取消挤成一上一下
             .setNeutralButton(R.string.reset, null)
             .create()
+        // neutral 的默认点击行为是关闭弹窗，这里手动接管成"只回退取值"
         dialog.setOnShowListener {
-            val resetButton = dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL)
-            resetButton?.setOnClickListener { applyDefaults() }
-            // 让重置靠左对齐：在它之后插入一个撑满剩余宽度的空白视图，取消/确定仍贴着右边
-            val buttonBar = resetButton?.parent as? LinearLayout
-            if (buttonBar != null) {
-                buttonBar.addView(
-                    View(requireContext()),
-                    buttonBar.indexOfChild(resetButton) + 1,
-                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f),
-                )
-            }
+            dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL)
+                ?.setOnClickListener { applyDefaults() }
         }
         dialog.show()
     }
