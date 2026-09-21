@@ -1687,10 +1687,11 @@ class TextChapterLayout(
         val titleEndAligned = isTitle && isRightTitle &&
             !emptyContent && !isVolumeTitle &&
             imageStyle?.uppercase() != Book.imgStyleSingle
-        // 正文段首无缩进时行首同样是正文列左边界，行首匹配也要整行右移让出背景；
+        // 正文段首无缩进时行首同样是正文列左边界，行首匹配也要整行右移让出背景（段首带缩进时走
+        // computeNeighborPush 的缩进右移路径；被图片分割出的续段首行没有缩进、同样适用）；
         // 正文段末匹配落在末行，末行是左对齐的、没有可整体左移的余量，改为按需压缩行宽
         val indentLength = paragraphIndentLength(text, isTitle)
-        val bodyStartAligned = !isTitle && isFirstLine && indentLength == 0
+        val bodyStartAligned = !isTitle && indentLength == 0
         val neighborPush = computeNeighborPush(
             text,
             collectForcedBleedSegments(charStyles),
@@ -1778,20 +1779,16 @@ class TextChapterLayout(
             } else {
                 0f
             }
-            // 正文段末匹配的外扩量：末行右侧空白不够时按两端对齐的方式压缩行宽让出（标题右对齐
+            // 正文段末匹配的外扩量：末行右端空白不够时按两端对齐的方式压缩行宽让出（标题右对齐
             // 用"整行左移"，正文末行左对齐、没有可左移的余量）；空白足够则无需处理
-            val endSqueeze = if (!isTitle && lineIndex == layout.lineCount - 1) {
-                val endBleed = neighborPush?.lineEndSub ?: 0f
-                if (endBleed > 0f) {
-                    val trailingBlank =
-                        (visibleWidth - lineStartExtra - desiredWidth).coerceAtLeast(0f)
-                    (endBleed - trailingBlank).coerceIn(0f, endBleed)
-                } else {
-                    0f
-                }
+            val endBleed = if (!isTitle && lineIndex == layout.lineCount - 1) {
+                neighborPush?.lineEndSub ?: 0f
             } else {
                 0f
             }
+            // 行尾要压回 visibleWidth - endBleed 才放得下背景右缘；末行右侧空白不足时才需要压缩
+            val endSqueezeNeeded = endBleed > 0f &&
+                (visibleWidth - lineStartExtra - desiredWidth) < endBleed
             when (lineIndex) {
                 0 if layout.lineCount > 1 && !isTitle && isFirstLine -> {
                     // 多行的第一行 非标题
@@ -1821,12 +1818,13 @@ class TextChapterLayout(
                         // 单行正文段落同样可能吃到行首匹配的整行右移
                         if (lineIndex == 0) lineStartExtra else 0f
                     }
-                    if (!isTitle && textFullJustify && endSqueeze > 0f) {
-                        // 末行右端放不下段末外扩：走两端对齐的压缩分布，desiredWidth 补上压缩量后
-                        // residual 相应变小，行尾正好落在让出外扩之后的位置
+                    if (!isTitle && textFullJustify && endSqueezeNeeded) {
+                        // 末行右端放不下段末外扩：走两端对齐的压缩分布。addCharsToLineMiddle 的
+                        // 行尾基准是 visibleWidth，desiredWidth 补上全部外扩量后 residual 恒为负、
+                        // 行尾正好落在 visibleWidth - endBleed，背景右缘贴住正文列右边界
                         addCharsToLineMiddle(
                             book, absStartX, textLine, words, textPaint,
-                            desiredWidth + startX + endSqueeze, startX,
+                            desiredWidth + startX + endBleed, startX,
                             widths, srcList, clickList, charStyles, lineStart,
                         )
                     } else {
@@ -1854,10 +1852,12 @@ class TextChapterLayout(
                             startX, false, widths, srcList, clickList, charStyles, lineStart,
                         )
                     } else {
-                        // 中间行
+                        // 中间行；续段（被图片分割出的残段）首行没有缩进、同样可能吃到行首匹配的
+                        // 整行右移，desiredWidth 同步补上右移量让行尾仍落在正文列右边界
                         addCharsToLineMiddle(
                             book, absStartX, textLine, words, textPaint,
-                            desiredWidth, 0f, widths, srcList, clickList, charStyles, lineStart,
+                            desiredWidth + lineStartExtra, lineStartExtra,
+                            widths, srcList, clickList, charStyles, lineStart,
                         )
                     }
                 }
