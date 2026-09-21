@@ -23,11 +23,16 @@ import kotlin.math.roundToInt
 /**
  * 把页眉/页脚模板渲染成可显示的富文本。
  *
- * 电量图标走 [ImageSpan] + [BatteryIconDrawable]：宽度直接取自 Drawable 尺寸，绘制走标准
- * Drawable 路径，不依赖自定义 ReplacementSpan 的测量结果——之前那种写法在"该位置只有图标"
- * 时会出现测量异常导致图标不可见。
+ * 电量图标走 [ImageSpan] + 自绘 Drawable：宽度直接取自 Drawable 尺寸，绘制走标准 Drawable
+ * 路径，不依赖自定义 ReplacementSpan 的测量结果——之前那种写法在"该位置只有图标"时会露出测量异常。
  */
 object ReaderInfoTemplateRenderer {
+
+    /** 图标的占位字符，ImageSpan 必须挂在对象替换字符上 */
+    private const val ICON_CHAR = '\uFFFC'
+
+    /** 零宽空格，宽度为 0，用来避免图标 Span 独占整段文本 */
+    private const val ZERO_WIDTH = "\u200B"
 
     /**
      * @param textSizeSp 该位置配置的字号（sp），电量图标按同比例缩放
@@ -45,7 +50,7 @@ object ReaderInfoTemplateRenderer {
                 is ReaderInfoPart.Text -> output.append(part.value)
                 is ReaderInfoPart.BatteryIcon -> {
                     val start = output.length
-                    output.append('\uFFFC')
+                    output.append(ICON_CHAR)
                     val iconDrawable =
                         BatteryIconDrawable(part.level, part.showLevel, textSizeSp, color)
                     output.setSpan(
@@ -55,6 +60,17 @@ object ReaderInfoTemplateRenderer {
                         Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
                     )
                 }
+            }
+        }
+        // 图标 Span 若覆盖整段文本（该位置只填了一个电量图标），部分系统版本不会绘制它——
+        // 表现就是"只放图标时什么都不显示，加了别的字符才出来"。两端补零宽空格，让图标永远
+        // 旁边有普通字符；零宽空格宽度为 0，排版与外观都不受影响。
+        if (output.isNotEmpty()) {
+            if (output[0] == ICON_CHAR) {
+                output.insert(0, ZERO_WIDTH)
+            }
+            if (output[output.length - 1] == ICON_CHAR) {
+                output.append(ZERO_WIDTH)
             }
         }
         return output
@@ -69,7 +85,7 @@ object ReaderInfoTemplateRenderer {
  * 图标还整体贴到行顶，与只有文字的页眉页脚位置高度对不上。
  *
  * 因此这里做两件事：
- * 1. `getSize` 传 `null` 跳过 fm 修改，行高完全由同行文字决定；
+ * 1. `getSize` 自己返回宽度、不写 `fm`，行高完全由同行文字决定；
  * 2. 自己接管绘制，用传入 paint 的真实字体度量把图标钉在文字行框内居中，
  *    避免 drawable 预估值与实际字体不一致造成的上下偏移。
  */
@@ -83,7 +99,12 @@ private class ReaderInfoIconSpan(
         start: Int,
         end: Int,
         fm: Paint.FontMetricsInt?,
-    ): Int = super.getSize(paint, text, start, end, null)
+    ): Int {
+        // 故意不走 ImageSpan 的实现：它按 drawable.bounds.right 取宽度，bounds 一旦被按 0 尺寸
+        // 改写就得到 0 宽、图标彻底看不见；这里直接给 Drawable 自身尺寸。也不写 fm，保持
+        // 行高由同行文字决定（ImageSpan 默认会把 fm 改成 drawable 高度，撑高整行）。
+        return iconDrawable.getIntrinsicWidth().coerceAtLeast(1)
+    }
 
     override fun draw(
         canvas: Canvas,
@@ -112,7 +133,7 @@ private class ReaderInfoIconSpan(
  * 外观沿用阅读界面原有的组合：`ic_battery` 轮廓图标 + 图标内填充条（按电量）或电量数字。
  * 尺寸按字号等比缩放，缩放系数与旧实现 `BatteryView.scaleFactor()` 一致。
  */
-class BatteryIconDrawable(
+private class BatteryIconDrawable(
     private val level: Int,
     private val showLevel: Boolean,
     textSizeSp: Float,

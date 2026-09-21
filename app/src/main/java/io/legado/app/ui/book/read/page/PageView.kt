@@ -225,23 +225,37 @@ class PageView(context: Context) : FrameLayout(context) {
                 view.isGone = template.isEmpty()
             }
             if (template.isNotEmpty()) {
-                view.setTextIfNotEqual(
-                    ReaderInfoTemplateRenderer.render(
-                        template,
-                        readerInfoValues,
-                        readerInfoView.textSize,
-                        readerInfoColor,
+                // 电量图标画在 Span 的 Drawable 里，纯文本比较看不出电量变化（占位字符始终不变），
+                // 所以指纹必须直接取自渲染输入（含电量），否则电量更新会被当成"内容没变"跳过、
+                // 一直显示首次渲染的旧值；模板本身也要进指纹，{电量图标} 与 {电量图标数字} 的
+                // 渲染文本是一样的。
+                val renderKey =
+                    "$template|$readerInfoValues|${readerInfoView.textSize}|$readerInfoColor"
+                if (readerInfoView.lastRenderKey != renderKey) {
+                    readerInfoView.lastRenderKey = renderKey
+                    // 指纹变了才重设，避免无变化的重复 setText 造成闪烁
+                    view.clearText()
+                    view.setTextIfNotEqual(
+                        ReaderInfoTemplateRenderer.render(
+                            template,
+                            readerInfoValues,
+                            readerInfoView.textSize,
+                            readerInfoColor,
+                        )
                     )
-                )
+                }
             }
         }
     }
 
-    private data class ReaderInfoView(
+    private class ReaderInfoView(
         val view: BatteryView,
         val template: String,
         val textSize: Float,
-    )
+    ) {
+        /** 上次渲染内容的指纹（含电量），用于判断是否需要重设文本 */
+        var lastRenderKey: String? = null
+    }
 
     /**
      * 更新背景
