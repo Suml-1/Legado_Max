@@ -1683,12 +1683,17 @@ class TextChapterLayout(
         val titleStartAligned = isTitle && !isMiddleTitle && !isRightTitle &&
             !emptyContent && !isVolumeTitle &&
             imageStyle?.uppercase() != Book.imgStyleSingle
+        // 标题右对齐时行末（最后一行/单行）就是正文列右边界，行末匹配要靠整行左移让出背景
+        val titleEndAligned = isTitle && isRightTitle &&
+            !emptyContent && !isVolumeTitle &&
+            imageStyle?.uppercase() != Book.imgStyleSingle
         val neighborPush = computeNeighborPush(
             text,
             collectForcedBleedSegments(charStyles),
             textPaint,
             paragraphIndentLength(text, isTitle),
             titleStartAligned,
+            titleEndAligned,
         ) { index -> widthsArray.getOrElse(index) { 0f } }
         columnTrimEnd = neighborPush?.trimEnd
         columnIndentExtra = neighborPush?.indentAdd ?: 0f
@@ -1762,6 +1767,12 @@ class TextChapterLayout(
             } else {
                 0f
             }
+            // 标题右对齐时段末匹配让出的外扩量从整行起始偏移里扣掉（只有最后一行/单行会被段末匹配影响）
+            val titleEndExtra = if (isTitle && lineIndex == layout.lineCount - 1) {
+                neighborPush?.lineEndSub ?: 0f
+            } else {
+                0f
+            }
             when (lineIndex) {
                 0 if layout.lineCount > 1 && !isTitle && isFirstLine -> {
                     // 多行的第一行 非标题
@@ -1781,7 +1792,9 @@ class TextChapterLayout(
                                 imageStyle?.uppercase() == Book.imgStyleSingle -> {
                                 (visibleWidth - desiredWidth) / 2
                             }
-                            isRightTitle -> visibleWidth - desiredWidth
+                            // 右对齐：扣掉段末匹配让出的外扩量，背景右侧边缘正好落在正文列右边界；
+                            // 行满时扣成负数会把左侧文字挤进页边距，改为保住文字、外扩量部分溢出
+                            isRightTitle -> (visibleWidth - desiredWidth - titleEndExtra).coerceAtLeast(0f)
                             else -> titleStartExtra
                         }
                     } else {
@@ -2201,6 +2214,12 @@ class TextChapterLayout(
          * 整行的起始偏移上，背景的左侧边缘就落在文字起始位置（见 [computeNeighborPush]）。
          */
         var lineStartAdd: Float = 0f
+
+        /**
+         * 行末额外左移量：匹配到**本行最后一列**（行末没有邻字可推）时，把外扩量从整行的
+         * 起始偏移里扣掉，背景的右侧边缘就落在文字结束位置（见 [computeNeighborPush]）。
+         */
+        var lineEndSub: Float = 0f
     }
 
     /** 参与"邻字外推"计算的一段九宫格强制高亮（只保留与背景图外扩相关的字段） */
@@ -2299,6 +2318,10 @@ class TextChapterLayout(
      * 左边界），左侧没有列可以加宽。此时若该行确实顶着正文列左边界（[lineStartAligned]），把外扩量
      * 记进 [NeighborPush.lineStartAdd]，由调用方加到整行的起始偏移上——背景左侧边缘落在文字起始位置，
      * 不会溢出到页边距里被裁掉。居中的行不需要（外扩量落在行首外的空白里，视觉上本来就是完整的）。
+     *
+     * 行末是镜像情况：匹配到本行最后一列（标题右对齐时最常见，行末左边就是正文列右边界），右侧没有
+     * 列可以加宽。此时若该行确实顶着正文列右边界（[lineEndAligned]），把外扩量记进
+     * [NeighborPush.lineEndSub]，由调用方从整行的起始偏移里扣掉——背景右侧边缘落在文字结束位置。
      */
     private fun computeNeighborPush(
         text: CharSequence,
@@ -2308,6 +2331,8 @@ class TextChapterLayout(
         indentLength: Int = 0,
         /** 该行文字是否紧贴正文列左边界（行首匹配时要把整行右移，见 [NeighborPush.lineStartAdd]） */
         lineStartAligned: Boolean = false,
+        /** 该行文字是否紧贴正文列右边界（行末匹配时要把整行左移，见 [NeighborPush.lineEndSub]） */
+        lineEndAligned: Boolean = false,
         advance: (Int) -> Float,
     ): NeighborPush? {
         if (segments.isEmpty()) return null
@@ -2374,6 +2399,14 @@ class TextChapterLayout(
                 if (size > 0f) {
                     push.widthAdd[index] = maxOf(push.widthAdd[index], size)
                     push.trimEnd[index] = maxOf(push.trimEnd[index], size)
+                    applied = true
+                }
+            } else if (lineEndAligned) {
+                // 匹配到本行最后一列（标题右对齐最常见）：右侧没有列可以加宽，外扩量从整行起始
+                // 偏移里扣掉，背景的右侧边缘就落在文字结束位置（与匹配文字的距离 = 外扩量，保持不变）
+                val extra = (sides[1] + spacingRight).coerceAtLeast(0f)
+                if (extra > 0f) {
+                    push.lineEndSub = maxOf(push.lineEndSub, extra)
                     applied = true
                 }
             }

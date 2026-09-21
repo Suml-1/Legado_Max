@@ -24,6 +24,10 @@
 - [Github分支GEd520](https://github.com/GEd520/legados)
 - [Github分支Suml-1](https://github.com/Suml-1/Legado_Max)
 
+**2026/9/21**
+
+- fix(阅读页): 修复标题右对齐时九宫格外扩"强制"策略不生效的问题(背景右侧边缘改为对齐正文列右边界,不再被页边距裁掉)
+
 **2026/9/19**
 
 - fix(web服务): 修复 Android 17 上其他设备无法访问 Web 服务的问题（新版系统限制了应用访问局域网，现在开启 Web 服务时会申请本地网络权限，未授权则提示并关闭服务）
