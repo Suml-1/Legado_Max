@@ -1687,13 +1687,17 @@ class TextChapterLayout(
         val titleEndAligned = isTitle && isRightTitle &&
             !emptyContent && !isVolumeTitle &&
             imageStyle?.uppercase() != Book.imgStyleSingle
+        // 正文段首无缩进时行首同样是正文列左边界，行首匹配也要整行右移让出背景；
+        // 正文段末匹配落在末行，末行是左对齐的、没有可整体左移的余量，改为按需压缩行宽
+        val indentLength = paragraphIndentLength(text, isTitle)
+        val bodyStartAligned = !isTitle && isFirstLine && indentLength == 0
         val neighborPush = computeNeighborPush(
             text,
             collectForcedBleedSegments(charStyles),
             textPaint,
-            paragraphIndentLength(text, isTitle),
-            titleStartAligned,
-            titleEndAligned,
+            indentLength,
+            titleStartAligned || bodyStartAligned,
+            titleEndAligned || !isTitle,
         ) { index -> widthsArray.getOrElse(index) { 0f } }
         columnTrimEnd = neighborPush?.trimEnd
         columnIndentExtra = neighborPush?.indentAdd ?: 0f
@@ -1761,8 +1765,9 @@ class TextChapterLayout(
             val (words, widths) = measureTextSplit(lineText, widthsArray, lineStart)
             val desiredWidth = widths.fastSum()
             textLine.text = lineText
-            // 标题左对齐时行首匹配让出的外扩量加在整行起始偏移上（只有首行会被行首匹配影响）
-            val titleStartExtra = if (isTitle && lineIndex == 0) {
+            // 行首匹配让出的外扩量加在整行起始偏移上（标题首行；正文无缩进的段首同理，
+            // 只有首行会被行首匹配影响）
+            val lineStartExtra = if (lineIndex == 0) {
                 neighborPush?.lineStartAdd ?: 0f
             } else {
                 0f
@@ -1773,12 +1778,27 @@ class TextChapterLayout(
             } else {
                 0f
             }
+            // 正文段末匹配的外扩量：末行右侧空白不够时按两端对齐的方式压缩行宽让出（标题右对齐
+            // 用"整行左移"，正文末行左对齐、没有可左移的余量）；空白足够则无需处理
+            val endSqueeze = if (!isTitle && lineIndex == layout.lineCount - 1) {
+                val endBleed = neighborPush?.lineEndSub ?: 0f
+                if (endBleed > 0f) {
+                    val trailingBlank =
+                        (visibleWidth - lineStartExtra - desiredWidth).coerceAtLeast(0f)
+                    (endBleed - trailingBlank).coerceIn(0f, endBleed)
+                } else {
+                    0f
+                }
+            } else {
+                0f
+            }
             when (lineIndex) {
                 0 if layout.lineCount > 1 && !isTitle && isFirstLine -> {
                     // 多行的第一行 非标题
                     addCharsToLineFirst(
                         book, absStartX, textLine, words, textPaint,
                         desiredWidth, widths, srcList, clickList, charStyles, lineStart,
+                        lineStartExtra,
                     )
                 }
                 layout.lineCount - 1 -> {
@@ -1795,15 +1815,26 @@ class TextChapterLayout(
                             // 右对齐：扣掉段末匹配让出的外扩量，背景右侧边缘正好落在正文列右边界；
                             // 行满时扣成负数会把左侧文字挤进页边距，改为保住文字、外扩量部分溢出
                             isRightTitle -> (visibleWidth - desiredWidth - titleEndExtra).coerceAtLeast(0f)
-                            else -> titleStartExtra
+                            else -> lineStartExtra
                         }
                     } else {
-                        0f
+                        // 单行正文段落同样可能吃到行首匹配的整行右移
+                        if (lineIndex == 0) lineStartExtra else 0f
                     }
-                    addCharsToLineNatural(
-                        book, absStartX, textLine, words,
-                        startX, !isTitle && lineIndex == 0, widths, srcList, clickList, charStyles, lineStart,
-                    )
+                    if (!isTitle && textFullJustify && endSqueeze > 0f) {
+                        // 末行右端放不下段末外扩：走两端对齐的压缩分布，desiredWidth 补上压缩量后
+                        // residual 相应变小，行尾正好落在让出外扩之后的位置
+                        addCharsToLineMiddle(
+                            book, absStartX, textLine, words, textPaint,
+                            desiredWidth + startX + endSqueeze, startX,
+                            widths, srcList, clickList, charStyles, lineStart,
+                        )
+                    } else {
+                        addCharsToLineNatural(
+                            book, absStartX, textLine, words,
+                            startX, !isTitle && lineIndex == 0, widths, srcList, clickList, charStyles, lineStart,
+                        )
+                    }
                 }
                 else -> {
                     if (isTitle) {
@@ -1816,7 +1847,7 @@ class TextChapterLayout(
                                 (visibleWidth - desiredWidth) / 2
                             }
                             isRightTitle -> visibleWidth - desiredWidth
-                            else -> titleStartExtra
+                            else -> lineStartExtra
                         }
                         addCharsToLineNatural(
                             book, absStartX, textLine, words,
@@ -1885,8 +1916,10 @@ class TextChapterLayout(
         clickList: LinkedList<String?>?,
         charStyles: Array<CharStyle?>?,
         lineStart: Int,
+        /** 行首匹配让出的外扩量：整行右移让出背景（与标题左对齐同理，正文仅无缩进的段首会出现） **/
+        startExtra: Float = 0f,
     ) {
-        var x = 0f
+        var x = startExtra
         if (!textFullJustify) {
             addCharsToLineNatural(
                 book, absStartX, textLine, words,
@@ -1916,7 +1949,9 @@ class TextChapterLayout(
             val textWidths1 = textWidths.subList(bodyIndent.length, textWidths.size)
             addCharsToLineMiddle(
                 book, absStartX, textLine, text1, textPaint,
-                desiredWidth, x, textWidths1, srcList, clickList, charStyles, lineStart + bodyIndent.length,
+                // 整行右移让出背景后，两端对齐的终点要扣回同样的量，行尾仍落在正文列右边界
+                //（有缩进时 startExtra 恒为 0，缩进路径不受影响）
+                desiredWidth + startExtra, x, textWidths1, srcList, clickList, charStyles, lineStart + bodyIndent.length,
             )
         }
     }
