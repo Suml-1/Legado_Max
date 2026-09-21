@@ -1090,6 +1090,10 @@ data class TextLine(
             paint.style = android.graphics.Paint.Style.FILL
             paint.isAntiAlias = true
             paint.isFilterBitmap = true
+            // 切片共享的边界若只是恰好贴合，两侧切片各自做抗锯齿会在拼接处留下半透明的
+            // "切线"，底下的页面背景（尤其背景图片）会从缝里透出来。内部边界各向外扩半个
+            // 像素让相邻切片互相叠压，拼缝处始终被完整覆盖；外框边缘保持原位不动。
+            val seamOverlap = 0.5f
             for (row in 0..2) {
                 for (col in 0..2) {
                     if (srcX[col] == srcX[col + 1] ||
@@ -1102,7 +1106,12 @@ data class TextLine(
                     canvas.drawBitmap(
                         bitmap,
                         android.graphics.Rect(srcX[col], srcY[row], srcX[col + 1], srcY[row + 1]),
-                        android.graphics.RectF(dstX[col], dstY[row], dstX[col + 1], dstY[row + 1]),
+                        android.graphics.RectF(
+                            if (col == 0) dstX[col] else dstX[col] - seamOverlap,
+                            if (row == 0) dstY[row] else dstY[row] - seamOverlap,
+                            if (col == 2) dstX[col + 1] else dstX[col + 1] + seamOverlap,
+                            if (row == 2) dstY[row + 1] else dstY[row + 1] + seamOverlap,
+                        ),
                         paint,
                     )
                 }
