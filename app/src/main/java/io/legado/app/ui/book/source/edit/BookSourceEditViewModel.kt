@@ -49,12 +49,23 @@ class BookSourceEditViewModel(application: Application) : BaseViewModel(applicat
         }
     }
 
+    /**
+     * 保存书源。
+     *
+     * 用 executeLazy（LAZY 启动）挂完回调再 start：链式协程的回调依赖"任务还没完成时已挂上回调"
+     * 这一时序，回调一旦漏掉，调用方（书源列表/详情页/换源/阅读页）就拿不到保存结果，
+     * 表现为"保存了但没生效、要再保存一次"。
+     *
+     * 书源 URL 变更时的书籍迁移也放在本协程内：原先在 Activity 的 lifecycleScope 里做，
+     * Activity 一旦销毁该协程被取消，迁移与结果回传会一起丢失。
+     */
     fun save(
         source: BookSource,
         finally: (() -> Unit)? = null,
         success: ((BookSource) -> Unit)? = null
     ) {
-        execute {
+        var migrated = false
+        executeLazy {
             if (source.bookSourceUrl.isBlank() || source.bookSourceName.isBlank()) {
                 throw NoStackTraceException(context.getString(R.string.non_null_name_url))
             }
@@ -79,15 +90,26 @@ class BookSourceEditViewModel(application: Application) : BaseViewModel(applicat
             appDb.bookSourceDao.insert(source)
             bookSource = source
             concurrentRecordMap.remove(source.bookSourceUrl) //删除并发限制缓存
+            // 源地址变了：书架里关联这本书源的书籍一起迁移，避免换地址后书籍丢源
+            val oldUrl = oldSource.bookSourceUrl
+            if (oldUrl.isNotBlank() && oldUrl != source.bookSourceUrl
+                && appDb.bookDao.hasBookByOrigin(oldUrl)
+            ) {
+                appDb.bookDao.updateOrigin(oldUrl, source.bookSourceUrl)
+                migrated = true
+            }
             source
         }.onSuccess {
+            if (migrated) {
+                context.toastOnUi(R.string.migrate_book_origin_done)
+            }
             success?.invoke(it)
         }.onError {
             context.toastOnUi(it.localizedMessage)
             it.printOnDebug()
         }.onFinally {
             finally?.invoke()
-        }
+        }.start()
     }
 
     fun pasteSource(onSuccess: (source: BookSource) -> Unit) {

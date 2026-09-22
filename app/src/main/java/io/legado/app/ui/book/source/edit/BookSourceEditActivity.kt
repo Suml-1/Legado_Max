@@ -758,16 +758,16 @@ class BookSourceEditActivity :
     }
 
     /**
-     * 保存书源。若书源 URL 发生变更且书架上有该书源的书，
-     * 自动将关联书籍迁移到新 URL，并 toast 提醒用户。
+     * 保存书源。URL 变更时的书籍迁移在 ViewModel 的保存协程内完成，
+     * 这里只负责 isSaving 状态与成功回调：
+     * 保存期间保持 isSaving=true（阻止退出导致协程被取消），
+     * 迁移完成、结果回传与 isSaving 复位在同一批执行，成功回调不会再丢。
      */
     private fun saveSource(
         source: BookSource,
         onSuccess: ((BookSource) -> Unit)? = null
     ) {
         isSaving = true
-        val oldUrl = viewModel.bookSource?.bookSourceUrl
-        val urlChanged = !oldUrl.isNullOrBlank() && oldUrl != source.bookSourceUrl
         viewModel.save(source, {
             isSaving = false
         }) { savedSource ->
@@ -775,20 +775,7 @@ class BookSourceEditActivity :
             // 若不在此先复位 isSaving，onSuccess 内触发的 finish() 会被
             // isSaving 保护拦截，导致保存成功后 Activity 不退出。
             isSaving = false
-            if (urlChanged && oldUrl != null) {
-                lifecycleScope.launch {
-                    val hasBooks = withContext(IO) { appDb.bookDao.hasBookByOrigin(oldUrl) }
-                    if (hasBooks) {
-                        withContext(IO) {
-                            appDb.bookDao.updateOrigin(oldUrl, savedSource.bookSourceUrl)
-                        }
-                        toastOnUi(R.string.migrate_book_origin_done)
-                    }
-                    onSuccess?.invoke(savedSource)
-                }
-            } else {
-                onSuccess?.invoke(savedSource)
-            }
+            onSuccess?.invoke(savedSource)
         }
     }
 
