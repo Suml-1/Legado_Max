@@ -482,6 +482,15 @@ class BookSourceEditActivity :
         binding.recyclerView.setHasFixedSize(true)
         binding.recyclerView.setItemViewCacheSize(15)
         binding.recyclerView.recycledViewPool.setMaxRecycledViews(0, 15)
+        // 关闭条目动画：列表内容按 Tab 整体替换，条目身份（字段）完全变掉，动画没有信息量。
+        // 保留默认 DefaultItemAnimator 会有两个代价：
+        // 1) notifyItemRangeChanged 触发 change 动画，RecyclerView 会为被更新的位置另建 ViewHolder
+        //    并把旧 ViewHolder 挂进动画队列；下一次 notify/scroll 与动画回调交错时，
+        //    DefaultItemAnimator 会对仍处于 attached 状态的 View 调 recycle，
+        //    抛 IllegalArgumentException: Scrapped or attached views may not be recycled（Tab 切换/保存后闪退）。
+        // 2) 另建 ViewHolder 会让 bind() 里的"key/value 未变则跳过 setText"优化失效（新 holder 无历史记录），
+        //    长文本又会全文重新排版，Tab 切换反而更慢。
+        binding.recyclerView.itemAnimator = null
         // 预览模式（超长文本截断显示）的字段被点击时打开全屏编辑
         adapter.onRequestFullEdit = { entity -> openFullEdit(entity) }
         if (AppConfig.sourceEditMaxLine < 999) {
