@@ -143,6 +143,7 @@ data class RssSource(
                 && enabledCookieJar == source.enabledCookieJar
                 && equal(sourceComment, source.sourceComment)
                 && equal(concurrentRate, source.concurrentRate)
+                && equal(jsLib, source.jsLib)
                 && equal(header, source.header)
                 && equal(loginUrl, source.loginUrl)
                 && equal(loginUi, source.loginUi)
@@ -156,8 +157,12 @@ data class RssSource(
                 && equal(ruleTitle, source.ruleTitle)
                 && equal(rulePubDate, source.rulePubDate)
                 && equal(ruleDescription, source.ruleDescription)
+                && equal(ruleImage, source.ruleImage)
                 && equal(ruleLink, source.ruleLink)
                 && equal(ruleContent, source.ruleContent)
+                && equal(contentWhitelist, source.contentWhitelist)
+                && equal(contentBlacklist, source.contentBlacklist)
+                && equal(shouldOverrideUrlLoading, source.shouldOverrideUrlLoading)
                 && enableJs == source.enableJs
                 && loadWithBaseUrl == source.loadWithBaseUrl
                 && equal(variableComment, source.variableComment)

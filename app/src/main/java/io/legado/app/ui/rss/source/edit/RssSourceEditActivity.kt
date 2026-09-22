@@ -395,7 +395,8 @@ class RssSourceEditActivity :
         binding.recyclerView.post {
             // P4: 用增量更新替代 notifyDataSetChanged
             adapter.notifyItemRangeChanged(0, adapter.editEntities.size)
-            scrollToFieldAndUpdate(entity, entity.value ?: "", -1)
+            // 只是定位，不把值回写控件（value 传 null）
+            scrollToFieldAndUpdate(entity, null, -1)
         }
     }
 
