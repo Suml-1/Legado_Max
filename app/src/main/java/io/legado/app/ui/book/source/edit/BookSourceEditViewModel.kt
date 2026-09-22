@@ -34,8 +34,14 @@ class BookSourceEditViewModel(application: Application) : BaseViewModel(applicat
     var autoComplete = false
     var bookSource: BookSource? = null
 
+    /**
+     * 加载待编辑的书源并回调界面。
+     *
+     * 同样用 executeLazy + start：onFinally 一旦漏执行，界面不会绑定数据（空白页），
+     * 且调用方用于区分"是否保存过"的引用会停留在 null，退出时会误报 RESULT_OK。
+     */
     fun initData(intent: Intent, onFinally: () -> Unit) {
-        execute {
+        executeLazy {
             val sourceUrl = intent.getStringExtra("sourceUrl")
             var source: BookSource? = null
             if (sourceUrl != null) {
@@ -46,7 +52,7 @@ class BookSourceEditViewModel(application: Application) : BaseViewModel(applicat
             }
         }.onFinally {
             onFinally()
-        }
+        }.start()
     }
 
     /**
@@ -89,14 +95,18 @@ class BookSourceEditViewModel(application: Application) : BaseViewModel(applicat
             }
             appDb.bookSourceDao.insert(source)
             bookSource = source
-            concurrentRecordMap.remove(source.bookSourceUrl) //删除并发限制缓存
-            // 源地址变了：书架里关联这本书源的书籍一起迁移，避免换地址后书籍丢源
+            concurrentRecordMap.remove(source.bookSourceUrl) // 删除并发限制缓存
+            // 源地址变了：书架里关联这本书源的书籍一起迁移，避免换地址后书籍丢源。
+            // 迁移是附带动作，单独兜底：它失败不能连累"书源已保存"这个结果，
+            // 否则书源已入库、调用方却收不到成功回调，又变成"保存了但没生效"
             val oldUrl = oldSource.bookSourceUrl
-            if (oldUrl.isNotBlank() && oldUrl != source.bookSourceUrl
-                && appDb.bookDao.hasBookByOrigin(oldUrl)
-            ) {
-                appDb.bookDao.updateOrigin(oldUrl, source.bookSourceUrl)
-                migrated = true
+            if (oldUrl.isNotBlank() && oldUrl != source.bookSourceUrl) {
+                runCatching {
+                    if (appDb.bookDao.hasBookByOrigin(oldUrl)) {
+                        appDb.bookDao.updateOrigin(oldUrl, source.bookSourceUrl)
+                        migrated = true
+                    }
+                }.onFailure { it.printOnDebug() }
             }
             source
         }.onSuccess {

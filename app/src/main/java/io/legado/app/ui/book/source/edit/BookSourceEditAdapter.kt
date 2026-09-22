@@ -206,11 +206,20 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                 editText.isEnabled = false
                 editText.isFocusable = false
                 editText.isFocusableInTouchMode = false
-                editText.setTextColor(editTextNormalColor)
+                // 禁用态并不等于不消费触摸：View.onTouchEvent 在 DISABLED 时直接 return clickable，
+                // 而 CodeView 继承自 AutoCompleteTextView（自身挂过 onClickListener，clickable 为 true），
+                // 不显式关掉这两个标志，触摸会被预览控件吃掉，点击永远落不到 itemView 上，
+                // 截断字段就没法再通过点击进入全屏编辑
+                editText.isClickable = false
+                editText.isLongClickable = false
+                if (editTextNormalColor != 0) {
+                    // 禁用态色板可能压暗文字，回填可编辑态颜色，只读预览与其余字段观感一致
+                    editText.setTextColor(editTextNormalColor)
+                }
                 textInputLayout.helperText = editText.context.getString(
                     R.string.source_edit_preview_truncated, fullValue!!.length
                 )
-                // 控件已禁用，不再接收触摸事件，点击由整条 itemView 承载
+                // 预览控件不消费触摸，整条 itemView 接管点击 → 全屏编辑
                 itemView.setOnClickListener { onRequestFullEdit?.invoke(editEntity) }
                 if (!unchanged) {
                     editText.skipNextHighlight = true
@@ -225,6 +234,9 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             editText.isEnabled = true
             editText.isFocusable = true
             editText.isFocusableInTouchMode = true
+            // 恢复成源编辑界面一直以来的状态：不响应 click，长按可选中文本
+            editText.isClickable = false
+            editText.isLongClickable = true
             editTextColors?.let { editText.setTextColor(it) }
             textInputLayout.helperText = null
             itemView.setOnClickListener(null)

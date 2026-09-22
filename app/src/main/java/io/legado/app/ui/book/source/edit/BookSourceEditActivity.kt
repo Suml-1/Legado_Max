@@ -101,9 +101,10 @@ class BookSourceEditActivity :
     private var lastFocusedFieldKey: String = ""
     private var lastFocusedTabKey: String = ""
 
-    // 标记保存是否正在进行，防止保存未完成时退出导致数据丢失
-    @Volatile
-    private var isSaving = false
+    // 进行中的保存数量。用计数而不是布尔量：保存入口有「保存/调试/源所用API/登录/搜索」多个，
+    // 并发发起时先完成的一次不能把守卫提前解除，否则另一次保存还在写库就允许退出，
+    // 协程随 Activity 销毁被取消 → 数据丢失。所有读写都在主线程。
+    private var pendingSaveCount = 0
 
     // 进入编辑页时加载的书源引用。
     // save() 成功后 viewModel.bookSource 会被替换为新对象（引用变化），
@@ -279,12 +280,34 @@ class BookSourceEditActivity :
             binding.tabLayout.selectTab(binding.tabLayout.getTabAt(tabPosition))
         }
         if (adapter.editEntities !== entities) {
-            adapter.editEntities = entities
+            swapEditEntities(entities)
         }
         binding.recyclerView.post {
             // P4: 用增量更新替代 notifyDataSetChanged
             adapter.notifyItemRangeChanged(0, adapter.editEntities.size)
             scrollToEntity(entity, cursorPosition, value)
+        }
+    }
+
+    /**
+     * 切换 Adapter 当前持有的编辑列表，并按新旧长度差异发出对应通知。
+     *
+     * 只发 notifyItemRangeChanged 而不处理长度增减，会让 RecyclerView 记录的条目数与 Adapter
+     * 不一致（换到更短的列表时尤其明显），触发 Inconsistency detected 一类崩溃，
+     * 因此列表替换必须走这里统一收口。
+     */
+    private fun swapEditEntities(entities: ArrayList<EditEntity>) {
+        val oldSize = adapter.editEntities.size
+        adapter.editEntities = entities
+        val newSize = entities.size
+        if (newSize > oldSize) {
+            adapter.notifyItemRangeChanged(0, oldSize)
+            adapter.notifyItemRangeInserted(oldSize, newSize - oldSize)
+        } else if (newSize < oldSize) {
+            adapter.notifyItemRangeChanged(0, newSize)
+            adapter.notifyItemRangeRemoved(newSize, oldSize - newSize)
+        } else {
+            adapter.notifyItemRangeChanged(0, newSize)
         }
     }
 
@@ -316,6 +339,9 @@ class BookSourceEditActivity :
         // 双层 post 确保布局完成后再获焦，避免 onBindViewHolder.clearFocus() 冲突
         binding.recyclerView.post {
             binding.recyclerView.post {
+                // position 是 post 之前算好的；期间若用户切了 Tab（列表已整体替换），
+                // 这个位置对应的已是别的字段，回写会污染别的字段，必须重新校验
+                if (adapter.editEntities.getOrNull(position) !== entity) return@post
                 val viewHolder = binding.recyclerView.findViewHolderForAdapterPosition(position)
                 if (viewHolder is BookSourceEditAdapter.MyViewHolder) {
                     val editText = viewHolder.binding.editText
@@ -548,7 +574,7 @@ class BookSourceEditActivity :
      * 如果有未保存的修改，弹出确认对话框
      */
     override fun finish() {
-        if (isSaving) {
+        if (pendingSaveCount > 0) {
             // 保存正在进行中，阻止退出，避免协程被取消导致数据丢失
             toastOnUi(R.string.save_ing)
             return
@@ -563,11 +589,11 @@ class BookSourceEditActivity :
                 }
             }
         } else {
-            // 数据与 viewModel.bookSource 一致，说明保存已成功（execute 块已执行 bookSource = source）。
-            // 但 Coroutine 的 onSuccess 回调可能因竞态未触发，导致 setResult(RESULT_OK) 未调用。
-            // 此处仅当本次会话确实保存过书源（bookSource 引用已更新）时补设 RESULT_OK，
-            // 确保调用方（如 ReadBookActivity）能刷新书源缓存。
-            // 若用户未修改直接返回（引用未变化），保持默认 RESULT_CANCELED，
+            // 数据与 viewModel.bookSource 一致，说明保存已落库（execute 块已执行 bookSource = source）。
+            // 正常路径由保存成功回调负责 setResult + finish；这里是兜底补设，
+            // 覆盖"已保存但结果没能送达调用方"的异常路径（如保存完成后界面被系统回收）。
+            // 仅当本次会话确实保存过书源（bookSource 引用已更新）才补设，
+            // 未修改直接返回时保持默认 RESULT_CANCELED，
             // 避免误触发详情页 refreshBook、换源对话框自动搜索等刷新逻辑。
             if (viewModel.bookSource !== initialSource) {
                 viewModel.bookSource?.let {
@@ -593,26 +619,17 @@ class BookSourceEditActivity :
     private fun setEditEntities(tabPosition: Int?) {
         adapter.cancelAllPendingHighlights()
         // P4: 用增量更新替代 notifyDataSetChanged
-        val oldSize = adapter.editEntities.size
-        adapter.editEntities = when (tabPosition) {
-            1 -> searchEntities
-            2 -> exploreEntities
-            3 -> infoEntities
-            4 -> tocEntities
-            5 -> contentEntities
+        swapEditEntities(
+            when (tabPosition) {
+                1 -> searchEntities
+                2 -> exploreEntities
+                3 -> infoEntities
+                4 -> tocEntities
+                5 -> contentEntities
 //            6 -> reviewEntities
-            else -> sourceEntities
-        }
-        val newSize = adapter.editEntities.size
-        if (newSize > oldSize) {
-            adapter.notifyItemRangeChanged(0, oldSize)
-            adapter.notifyItemRangeInserted(oldSize, newSize - oldSize)
-        } else if (newSize < oldSize) {
-            adapter.notifyItemRangeChanged(0, newSize)
-            adapter.notifyItemRangeRemoved(newSize, oldSize - newSize)
-        } else {
-            adapter.notifyItemRangeChanged(0, newSize)
-        }
+                else -> sourceEntities
+            }
+        )
         binding.recyclerView.scrollToPosition(0)
         binding.recyclerView.post {
             adapter.highlightVisibleItems()
@@ -767,15 +784,23 @@ class BookSourceEditActivity :
         source: BookSource,
         onSuccess: ((BookSource) -> Unit)? = null
     ) {
-        isSaving = true
-        viewModel.save(source, {
-            isSaving = false
-        }) { savedSource ->
+        pendingSaveCount++
+        // 每次保存只结算一次：成功回调与 finally 都会走 settle，
+        // 先到的一方扣减计数，避免计数被同一次保存重复扣减
+        var settled = false
+        fun settle(savedSource: BookSource?) {
+            if (settled) return
+            settled = true
+            pendingSaveCount--
+            if (savedSource != null) {
+                onSuccess?.invoke(savedSource)
+            }
+        }
+        viewModel.save(source, { settle(null) }) { savedSource ->
             // 修复竞态：Coroutine 的 onSuccess 先于 onFinally 执行，
-            // 若不在此先复位 isSaving，onSuccess 内触发的 finish() 会被
-            // isSaving 保护拦截，导致保存成功后 Activity 不退出。
-            isSaving = false
-            onSuccess?.invoke(savedSource)
+            // 若不在此先扣减计数，onSuccess 内触发的 finish() 会被守卫拦截，
+            // 导致保存成功后 Activity 不退出。
+            settle(savedSource)
         }
     }
 
