@@ -77,6 +77,15 @@ class RssSourceEditActivity :
     private val listEntities: ArrayList<EditEntity> = ArrayList()
     private val webViewEntities: ArrayList<EditEntity> = ArrayList()
     private val startEntities: ArrayList<EditEntity> = ArrayList()
+
+    // 进行中的保存数量。保存入口有「保存/调试/登录/源变量」多个，用计数而不是布尔量：
+    // 并发发起时先完成的一次不能把守卫提前解除，否则另一次保存还在写库就允许退出，
+    // 协程随 Activity 销毁被取消 → 数据丢失。所有读写都在主线程。
+    private var pendingSaveCount = 0
+
+    // 进入编辑页时加载的订阅源引用。save() 成功后 viewModel.rssSource 会被替换为新对象，
+    // 以此区分"本次会话确实保存过"与"未修改直接返回"，避免后者误触发调用方刷新。
+    private var initialSource: RssSource? = null
     private val selectDoc = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { uri ->
             if (uri.isContentScheme()) {
@@ -98,6 +107,7 @@ class RssSourceEditActivity :
         softKeyboardTool.attachToWindow(window)
         initView()
         viewModel.initData(intent) {
+            initialSource = viewModel.rssSource
             upSourceView(viewModel.rssSource)
             // 处理从源内容查询界面跳转来的定位请求
             val tabKey = intent.getStringExtra("tabKey")
@@ -116,6 +126,11 @@ class RssSourceEditActivity :
     }
 
     override fun finish() {
+        if (pendingSaveCount > 0) {
+            // 保存正在进行中，阻止退出，避免协程被取消导致数据丢失
+            toastOnUi(R.string.save_ing)
+            return
+        }
         val source = getRssSource()
         if (!source.equal(viewModel.rssSource ?: RssSource())) {
             alert(R.string.exit) {
@@ -126,7 +141,33 @@ class RssSourceEditActivity :
                 }
             }
         } else {
+            // 兜底：已保存过但结果没能送达调用方时补设 RESULT_OK（如保存完成后界面被系统回收），
+            // 未修改直接返回时保持默认 RESULT_CANCELED，避免误触发调用方刷新
+            if (viewModel.rssSource !== initialSource) {
+                setResult(RESULT_OK)
+            }
             super.finish()
+        }
+    }
+
+    /**
+     * 保存订阅源。所有保存入口统一走这里：
+     * 保存期间保持 pendingSaveCount > 0（阻止退出导致协程被取消），
+     * 成功回调与 finally 只结算一次，成功回调先扣减再触发，保证内部 finish() 不被守卫拦下。
+     */
+    private fun saveSource(source: RssSource, onSuccess: ((RssSource) -> Unit)? = null) {
+        pendingSaveCount++
+        var settled = false
+        fun settle(savedSource: RssSource?) {
+            if (settled) return
+            settled = true
+            pendingSaveCount--
+            if (savedSource != null) {
+                onSuccess?.invoke(savedSource)
+            }
+        }
+        viewModel.save(source, { settle(null) }) { savedSource ->
+            settle(savedSource)
         }
     }
 
@@ -151,12 +192,16 @@ class RssSourceEditActivity :
             val data = result.data
             val text = data?.getStringExtra("text")
             val fieldKey = data?.getStringExtra("fieldKey")
-            val tabKey = data?.getStringExtra("tabKey")
             val cursorPosition = data?.getIntExtra("cursorPosition", -1) ?: -1
-            
-            if (!text.isNullOrEmpty() && !fieldKey.isNullOrEmpty()) {
+
+            // text 为 null 表示"内容没改"（只回传定位参数）；空串是"用户把字段清空了"，
+            // 必须当一次修改回写，否则清空操作会被静默丢弃
+            if (text != null && !fieldKey.isNullOrEmpty()) {
                 updateEditEntityValue(fieldKey, text, cursorPosition)
-            } else if (!text.isNullOrEmpty()) {
+            } else if (!fieldKey.isNullOrEmpty()) {
+                // 内容未变，只定位到该字段
+                updateEditEntityValue(fieldKey, null, cursorPosition)
+            } else if (text != null) {
                 val view = window.decorView.findFocus()
                 if (view is EditText) {
                     view.setText(text)
@@ -222,14 +267,14 @@ class RssSourceEditActivity :
     }
 
     /**
-     * 更新指定字段的值
-     * 根据字段标识找到对应的实体并更新其值
-     * 
+     * 更新指定字段的值并定位到该字段。
+     * 按字段标识在所有板块里查找（全屏编辑内部可切换板块，不能只按当前 Tab 找）。
+     *
      * @param fieldKey 字段标识，如 "sourceName", "ruleContent"
-     * @param value 新的值
+     * @param value 新的值；为 null 表示内容未变，只定位不回写
      * @param cursorPosition 光标位置（可选）
      */
-    private fun updateEditEntityValue(fieldKey: String, value: String, cursorPosition: Int = -1) {
+    private fun updateEditEntityValue(fieldKey: String, value: String?, cursorPosition: Int = -1) {
         val allEntities = listOf(
             sourceEntities to 0,
             startEntities to 1,
@@ -238,55 +283,83 @@ class RssSourceEditActivity :
         )
 
         for ((entities, tabPosition) in allEntities) {
-            val entity = entities.find { it.key == fieldKey }
-            if (entity != null) {
-                entity.value = value
+            val entity = entities.find { it.key == fieldKey } ?: continue
+            value?.let { entity.value = it }
 
-                if (binding.tabLayout.selectedTabPosition != tabPosition) {
-                    binding.tabLayout.selectTab(binding.tabLayout.getTabAt(tabPosition))
+            if (binding.tabLayout.selectedTabPosition != tabPosition) {
+                binding.tabLayout.selectTab(binding.tabLayout.getTabAt(tabPosition))
+            }
+            if (adapter.editEntities !== entities) {
+                swapEditEntities(entities)
+            }
+            binding.recyclerView.post {
+                // P4: 用增量更新替代 notifyDataSetChanged
+                adapter.notifyItemRangeChanged(0, adapter.editEntities.size)
+                scrollToFieldAndUpdate(entity, value, cursorPosition)
+            }
+            return
+        }
+    }
+
+    private fun scrollToFieldAndUpdate(entity: EditEntity, value: String?, cursorPosition: Int) {
+        val position = adapter.editEntities.indexOf(entity)
+        if (position < 0) return
+        val layoutManager = binding.recyclerView.layoutManager
+        if (layoutManager is LinearLayoutManager) {
+            layoutManager.scrollToPositionWithOffset(position, 0)
+        } else {
+            binding.recyclerView.scrollToPosition(position)
+        }
+        // 超长字段处于截断预览（只读）态，只滚动定位：
+        // 不能把全文灌回预览控件，也不能获焦（预览控件已禁用）
+        if (RssSourceEditAdapter.isPreview(entity)) {
+            return
+        }
+        // 双层 post 确保布局完成后再获焦，避免 onBindViewHolder.clearFocus() 冲突
+        binding.recyclerView.post {
+            binding.recyclerView.post {
+                // position 是 post 之前算好的；期间若用户切了 Tab（列表已整体替换），
+                // 这个位置对应的已是别的字段，回写会污染别的字段，必须重新校验
+                if (adapter.editEntities.getOrNull(position) !== entity) return@post
+                val viewHolder = binding.recyclerView.findViewHolderForAdapterPosition(position)
+                if (viewHolder is RssSourceEditAdapter.EditTextViewHolder) {
+                    val editText = viewHolder.binding.editText
+                    value?.let {
+                        if (editText.text.toString() != it) {
+                            editText.setText(it)
+                        }
+                    }
+                    editText.requestFocus()
+                    val pos = if (cursorPosition >= 0) {
+                        cursorPosition.coerceAtMost(editText.text.length)
+                    } else 0
+                    if (editText.text.isNotEmpty()) {
+                        editText.setSelection(pos)
+                    }
                 }
-                if (adapter.editEntities !== entities) {
-                    adapter.editEntities = entities
-                }
-                binding.recyclerView.post {
-                    // P4: 用增量更新替代 notifyDataSetChanged
-                    adapter.notifyItemRangeChanged(0, adapter.editEntities.size)
-                    scrollToFieldAndUpdate(entity, value, cursorPosition)
-                }
-                return
             }
         }
     }
-    
-    private fun scrollToFieldAndUpdate(entity: EditEntity, value: String, cursorPosition: Int) {
-        val position = adapter.editEntities.indexOf(entity)
-        if (position >= 0) {
-            val layoutManager = binding.recyclerView.layoutManager
-            if (layoutManager is LinearLayoutManager) {
-                layoutManager.scrollToPositionWithOffset(position, 0)
-            } else {
-                binding.recyclerView.scrollToPosition(position)
-            }
-            // 双层 post 确保布局完成后再获焦，避免 onBindViewHolder.clearFocus() 冲突
-            binding.recyclerView.post {
-                binding.recyclerView.post {
-                    // 超长字段处于截断预览模式，只滚动定位，
-                    // 不能把全文灌回预览控件，也不能获焦（控件不可聚焦）
-                    if ((entity.value?.length ?: 0) > RssSourceEditAdapter.PREVIEW_MAX_CHARS) {
-                        return@post
-                    }
-                    val viewHolder = binding.recyclerView.findViewHolderForAdapterPosition(position)
-                    if (viewHolder is RssSourceEditAdapter.EditTextViewHolder) {
-                        val editText = viewHolder.binding.editText
-                        editText.setText(value)
-                        editText.requestFocus()
-                        val pos = if (cursorPosition in 0 ..< value.length) cursorPosition else 0
-                        if (value.isNotEmpty()) {
-                            editText.setSelection(pos)
-                        }
-                    }
-                }
-            }
+
+    /**
+     * 切换 Adapter 当前持有的编辑列表，并按新旧长度差异发出对应通知。
+     *
+     * 只发 notifyItemRangeChanged 而不处理长度增减，会让 RecyclerView 记录的条目数与 Adapter
+     * 不一致（换到更短的列表时尤其明显），触发 Inconsistency detected 一类崩溃，
+     * 因此列表替换必须走这里统一收口。
+     */
+    private fun swapEditEntities(entities: ArrayList<EditEntity>) {
+        val oldSize = adapter.editEntities.size
+        adapter.editEntities = entities
+        val newSize = entities.size
+        if (newSize > oldSize) {
+            adapter.notifyItemRangeChanged(0, oldSize)
+            adapter.notifyItemRangeInserted(oldSize, newSize - oldSize)
+        } else if (newSize < oldSize) {
+            adapter.notifyItemRangeChanged(0, newSize)
+            adapter.notifyItemRangeRemoved(newSize, oldSize - newSize)
+        } else {
+            adapter.notifyItemRangeChanged(0, newSize)
         }
     }
 
@@ -317,7 +390,7 @@ class RssSourceEditActivity :
             binding.tabLayout.selectTab(binding.tabLayout.getTabAt(tabPosition))
         }
         if (adapter.editEntities !== entities) {
-            adapter.editEntities = entities
+            swapEditEntities(entities)
         }
         binding.recyclerView.post {
             // P4: 用增量更新替代 notifyDataSetChanged
@@ -332,18 +405,18 @@ class RssSourceEditActivity :
 
             R.id.menu_edit_json -> showSourceJsonEdit()
 
-            R.id.menu_save -> viewModel.save(getRssSource()) {
+            R.id.menu_save -> saveSource(getRssSource()) {
                 setResult(RESULT_OK)
                 finish()
             }
 
-            R.id.menu_debug_source -> viewModel.save(getRssSource()) { source ->
+            R.id.menu_debug_source -> saveSource(getRssSource()) { source ->
                 startActivity<RssSourceDebugActivity> {
                     putExtra("key", source.sourceUrl)
                 }
             }
 
-            R.id.menu_login -> viewModel.save(getRssSource()) {
+            R.id.menu_login -> saveSource(getRssSource()) {
                 startActivity<SourceLoginActivity> {
                     putExtra("type", "rssSource")
                     putExtra("key", it.sourceUrl)
@@ -389,6 +462,15 @@ class RssSourceEditActivity :
         binding.recyclerView.setItemViewCacheSize(15)
         binding.recyclerView.recycledViewPool.setMaxRecycledViews(0, 15)
         binding.recyclerView.recycledViewPool.setMaxRecycledViews(1, 10)
+        // 关闭条目动画：列表内容按 Tab 整体替换，条目身份（字段）完全变掉，动画没有信息量。
+        // 保留默认 DefaultItemAnimator 会有两个代价：
+        // 1) notifyItemRangeChanged 触发 change 动画，RecyclerView 会为被更新的位置另建 ViewHolder
+        //    并把旧 ViewHolder 挂进动画队列；下一次 notify/scroll 与动画回调交错时，
+        //    DefaultItemAnimator 会对仍处于 attached 状态的 View 调 recycle，
+        //    抛 IllegalArgumentException: Scrapped or attached views may not be recycled（Tab 切换/保存后闪退）。
+        // 2) 另建 ViewHolder 会让 bind() 里的"key/value 未变则跳过 setText"优化失效（新 holder 无历史记录），
+        //    长文本又会全文重新排版，Tab 切换反而更慢。
+        binding.recyclerView.itemAnimator = null
         // 预览模式（超长文本截断显示）的字段被点击时打开全屏编辑
         adapter.onRequestFullEdit = { entity -> openFullEdit(entity) }
         val createSpanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
@@ -443,23 +525,14 @@ class RssSourceEditActivity :
 
     private fun setEditEntities(tabPosition: Int?) {
         // P4: 用增量更新替代 notifyDataSetChanged
-        val oldSize = adapter.editEntities.size
-        when (tabPosition) {
-            1 -> adapter.editEntities = startEntities
-            2 -> adapter.editEntities = listEntities
-            3 -> adapter.editEntities = webViewEntities
-            else -> adapter.editEntities = sourceEntities
-        }
-        val newSize = adapter.editEntities.size
-        if (newSize > oldSize) {
-            adapter.notifyItemRangeChanged(0, oldSize)
-            adapter.notifyItemRangeInserted(oldSize, newSize - oldSize)
-        } else if (newSize < oldSize) {
-            adapter.notifyItemRangeChanged(0, newSize)
-            adapter.notifyItemRangeRemoved(newSize, oldSize - newSize)
-        } else {
-            adapter.notifyItemRangeChanged(0, newSize)
-        }
+        swapEditEntities(
+            when (tabPosition) {
+                1 -> startEntities
+                2 -> listEntities
+                3 -> webViewEntities
+                else -> sourceEntities
+            }
+        )
         binding.recyclerView.scrollToPosition(0)
         window.decorView.rootView.clearFocus()
     }
@@ -647,7 +720,7 @@ class RssSourceEditActivity :
     }
 
     private fun setSourceVariable() {
-        viewModel.save(getRssSource()) { source ->
+        saveSource(getRssSource()) { source ->
             lifecycleScope.launch {
                 val comment =
                     source.getDisplayVariableComment("源变量可在js中通过source.getVariable()获取")
