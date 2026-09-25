@@ -36,7 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.service.DownloadStatus
 import io.legado.app.ui.download.components.DownloadTaskCard
-import io.legado.app.ui.theme.PageDimens
+import io.legado.app.ui.theme.AppDimens
 import io.legado.app.ui.theme.pageTopBarBackground
 import io.legado.app.ui.theme.pageTopBarColors
 import io.legado.app.ui.widget.components.AppPageTopBar
@@ -157,12 +157,12 @@ fun DownloadManageScreen(
             } else {
                 LazyColumn(
                     contentPadding = PaddingValues(
-                        top = PageDimens.screenPadding,
-                        bottom = PageDimens.screenPadding + navigationBarBottomInset,
-                        start = PageDimens.screenPadding,
-                        end = PageDimens.screenPadding
+                        top = AppDimens.screenPadding,
+                        bottom = AppDimens.screenPadding + navigationBarBottomInset,
+                        start = AppDimens.screenPadding,
+                        end = AppDimens.screenPadding
                     ),
-                    verticalArrangement = Arrangement.spacedBy(PageDimens.cardSpacing)
+                    verticalArrangement = Arrangement.spacedBy(AppDimens.cardSpacing)
                 ) {
                     items(filteredTasks, key = { it.id }) { task ->
                         DownloadTaskCard(

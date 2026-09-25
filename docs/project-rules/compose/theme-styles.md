@@ -15,8 +15,8 @@
 
 ### 7.2 魔法数字
 
-- 所有 dimens 必须集中定义在 `ui/theme/Dimensions.kt`（**目标态文件，当前尚未建立**，首次落地时创建并同步 `structure.md` §1 目录树；落地前新代码先把 dimens 就近定义在 `ui/theme/` 下，禁止散落各 Feature）。
-- 所有 shapes 必须集中定义在 `ui/theme/Shapes.kt`（同上）。
+- 所有 dimens 必须集中定义在 `ui/theme/Dimensions.kt` 的 `AppDimens`（**已建立**，目录树见 `structure.md` §1；原就地定义的 `PageDimens` 已并入并删除，禁止再另起平行对象）。
+- 所有 shapes 必须集中定义在 `ui/theme/ComposeShapes.kt`（**已建立**）。圆角值不得在 Compose 侧另设常量，一律经 `composePanelShape()` / `composeActionShape()` 从 `lib/theme/UiCorner` 取，与 XML 侧保持同源。
 - **禁止**在 Composable 体内裸写 `16.dp`、`12.dp`、`0.8f`。
 - 动画参数（时长档位、easing、spring、无限动画）**必须**遵循 §7.6，禁止调用点随手写 `tween(200, ...)`、`tween(600, ...)` 这类无档位时长。
 - **禁止**自定义 `CubicBezier` / `keyframes` 曲线散落多处，新增自定义曲线必须集中定义在 `ui/theme/AnimationSpecs.kt`（**目标态文件，首次落地时创建**）并注释用途。

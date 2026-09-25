@@ -36,7 +36,7 @@ import io.legado.app.ui.book.storage.components.CacheItemCard
 import io.legado.app.ui.book.storage.components.CacheSummaryCard
 import io.legado.app.ui.book.storage.components.ClearAllConfirmDialog
 import io.legado.app.ui.book.storage.components.ClearConfirmDialog
-import io.legado.app.ui.theme.PageDimens
+import io.legado.app.ui.theme.AppDimens
 import io.legado.app.ui.theme.pageCardContainerColor
 import io.legado.app.ui.widget.components.AppPageTopBar
 import io.legado.app.ui.widget.components.AppScaffold
@@ -176,12 +176,12 @@ fun StorageManageScreen(
                 LazyColumn(
                     modifier = Modifier.padding(paddingValues),
                     contentPadding = PaddingValues(
-                        top = PageDimens.screenPadding,
-                        bottom = PageDimens.screenPadding + navigationBarBottomInset,
-                        start = PageDimens.screenPadding,
-                        end = PageDimens.screenPadding
+                        top = AppDimens.screenPadding,
+                        bottom = AppDimens.screenPadding + navigationBarBottomInset,
+                        start = AppDimens.screenPadding,
+                        end = AppDimens.screenPadding
                     ),
-                    verticalArrangement = Arrangement.spacedBy(PageDimens.cardSpacing)
+                    verticalArrangement = Arrangement.spacedBy(AppDimens.cardSpacing)
                 ) {
                     item {
                         CacheSummaryCard(
