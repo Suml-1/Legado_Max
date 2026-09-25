@@ -246,7 +246,10 @@ data class HighlightRule(
     var bgSpacingTop: Float,         // 背景图上间距（em，范围 -0.5~1）
     var bgSpacingBottom: Float,      // 背景图下间距（em，范围 -0.5~1）
     var letterSpacingBefore: Float,  // 命中字距-命中前（px，0~120，默认 0：不留白）
-    var letterSpacingAfter: Float    // 命中字距-命中后（px，0~120，默认 0：不留白）
+    var letterSpacingAfter: Float,   // 命中字距-命中后（px，0~120，默认 0：不留白）
+    var lineSpacingEnabled: Boolean, // 是否只给包含命中的行加行距（默认 false）
+    var lineSpacingTop: Float,       // 命中行上方行距（px，0~120）
+    var lineSpacingBottom: Float     // 命中行下方行距（px，0~120）
 )
 ```
 
@@ -353,6 +356,21 @@ data class HighlightRule(
 - 留白**不撑大背景**：背景（背景图/背景色）仍然只覆盖命中的文字，留白区域保持干净。想让背景跟着外扩，用「背景图间距」（见上一节）。
 - 只设了命中字距、没有其他样式的规则同样生效。
 - 重叠规则在同一侧取较大值。
+
+#### 命中行上下行距（lineSpacingEnabled / lineSpacingTop / lineSpacingBottom）
+
+编辑页「命中行上下行距（px）」卡片，开关控制开关是否生效（`仅对包含命中的行生效`），`顶部` / `底部` 分别设置命中行上方与下方额外留出的空白，单位 px（范围 0~120）。默认关闭。
+
+| 参数 | 默认 | 含义 |
+|---|------|------|
+| `lineSpacingEnabled` | false | 是否给包含命中的行加行距 |
+| `lineSpacingTop` | 0 | 命中行上方行距（px） |
+| `lineSpacingBottom` | 0 | 命中行下方行距（px） |
+
+- **只影响命中行**：一张页面里只有包含命中文字的行的行高会变大，其余行仍按阅读设置的行距排版，所以不会把整段撑松。
+- 上留白把命中行整体下移、下留白加在该行之后，**行盒本身高度不变**——变的是命中行与上下行之间的空白（背景不会跟着变高，需要背景更饱满请调「背景图间距」）。
+- 同一行内叠加了多条规则时，上/下留白各取较大值。
+- 作用范围限正文（HTML 片段走系统排版，不参与该行距计算）。
 
 ### 2.4 执行机制
 

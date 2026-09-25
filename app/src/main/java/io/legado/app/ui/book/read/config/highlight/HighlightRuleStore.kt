@@ -37,9 +37,9 @@ object HighlightRuleStore {
     const val MIN_BG_SPACING_V = -0.5f
     const val MAX_BG_SPACING_V = 1f
 
-    /** 命中字距（px）的合法区间：只允许向外留白，上限与编辑页滑块一致 */
-    const val MIN_MATCH_LETTER_SPACING = 0f
-    const val MAX_MATCH_LETTER_SPACING = 120f
+    /** 命中排版留白（命中字距 px / 命中行行距 px）的合法区间：只允许向外留白，与编辑页滑块口径一致 */
+    const val MIN_MATCH_SPACING = 0f
+    const val MAX_MATCH_SPACING = 120f
 
     /**
      * 高亮规则备份文件的完整数据结构。
@@ -139,11 +139,15 @@ object HighlightRuleStore {
             bgSpacingRight = sanitized.bgSpacingRight.takeIf { it in MIN_BG_SPACING_H..MAX_BG_SPACING_H } ?: 0f,
             bgSpacingTop = sanitized.bgSpacingTop.takeIf { it in MIN_BG_SPACING_V..MAX_BG_SPACING_V } ?: 0f,
             bgSpacingBottom = sanitized.bgSpacingBottom.takeIf { it in MIN_BG_SPACING_V..MAX_BG_SPACING_V } ?: 0f,
-            // 命中字距越界（含 GSON 反序列化出的 NaN）视为未设置，回落到 0
+            // 命中字距/命中行行距越界（含 GSON 反序列化出的 NaN）视为未设置，回落到 0
             letterSpacingBefore = sanitized.letterSpacingBefore
-                .takeIf { it in MIN_MATCH_LETTER_SPACING..MAX_MATCH_LETTER_SPACING } ?: 0f,
+                .takeIf { it in MIN_MATCH_SPACING..MAX_MATCH_SPACING } ?: 0f,
             letterSpacingAfter = sanitized.letterSpacingAfter
-                .takeIf { it in MIN_MATCH_LETTER_SPACING..MAX_MATCH_LETTER_SPACING } ?: 0f,
+                .takeIf { it in MIN_MATCH_SPACING..MAX_MATCH_SPACING } ?: 0f,
+            lineSpacingTop = sanitized.lineSpacingTop
+                .takeIf { it in MIN_MATCH_SPACING..MAX_MATCH_SPACING } ?: 0f,
+            lineSpacingBottom = sanitized.lineSpacingBottom
+                .takeIf { it in MIN_MATCH_SPACING..MAX_MATCH_SPACING } ?: 0f,
             // 外扩策略只认三个枚举值，其余（含老规则缺字段得到的 0 以外的值）回落到 null 表示智能
             bgBleedMode = sanitized.bgBleedMode?.takeIf {
                 it == HighlightRule.BLEED_STRICT ||

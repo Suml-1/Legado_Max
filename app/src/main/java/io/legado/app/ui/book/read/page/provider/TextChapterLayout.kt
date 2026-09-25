@@ -1788,6 +1788,9 @@ class TextChapterLayout(
             val lineStart = layout.getLineStart(lineIndex)
             val lineEnd = layout.getLineEnd(lineIndex)
             val lineText = text.substring(lineStart, lineEnd)
+            // 命中行行距：包含命中的行才加，同一行内上/下留白各取较大值
+            val (highlightLineTop, highlightLineBottom) =
+                extractLineSpacing(charStyles, lineStart, lineEnd)
             val (words, widths) = measureTextSplit(lineText, widthsArray, lineStart)
             val desiredWidth = widths.fastSum()
             textLine.text = lineText
@@ -1892,15 +1895,36 @@ class TextChapterLayout(
             }
             calcTextLinePosition(textPages, textLine, stringBuilder.length)
             stringBuilder.append(lineText)
-            textLine.upTopBottom(durY, textHeight, fontMetrics)
+            // 上留白把整行下移，下留白加在行后：命中行与上下行之间留出空白，行盒本身高度不变
+            textLine.upTopBottom(durY + highlightLineTop, textHeight, fontMetrics)
             val textPage = pendingTextPage
             textPage.addLine(textLine)
-            durY += textHeight * lineSpacingExtra
+            durY += highlightLineTop + textHeight * lineSpacingExtra + highlightLineBottom
             if (textPage.height < durY) {
                 textPage.height = durY
             }
         }
         durY += textHeight * paragraphSpacing / 10f
+    }
+
+    /**
+     * 命中行上下行距：取 [start, end) 范围内命中字符给出的上/下留白（px），无命中行为 (0, 0)。
+     */
+    private fun extractLineSpacing(
+        charStyles: Array<CharStyle?>?,
+        start: Int,
+        end: Int,
+    ): Pair<Float, Float> {
+        if (charStyles == null || end <= start) return 0f to 0f
+        var top = 0f
+        var bottom = 0f
+        for (index in start.coerceAtLeast(0) until minOf(end, charStyles.size)) {
+            val style = charStyles[index] ?: continue
+            if (!style.lineSpacingEnabled) continue
+            if (style.lineSpacingTop > top) top = style.lineSpacingTop
+            if (style.lineSpacingBottom > bottom) bottom = style.lineSpacingBottom
+        }
+        return top to bottom
     }
 
     private fun calcTextLinePosition(
@@ -2581,6 +2605,9 @@ class TextChapterLayout(
                 bgSpacingBottom = style.bgSpacingBottom,
                 letterSpacingBefore = style.letterSpacingBefore,
                 letterSpacingAfter = style.letterSpacingAfter,
+                lineSpacingEnabled = style.lineSpacingEnabled,
+                lineSpacingTop = style.lineSpacingTop,
+                lineSpacingBottom = style.lineSpacingBottom,
                 font = style.font,
             )
         }

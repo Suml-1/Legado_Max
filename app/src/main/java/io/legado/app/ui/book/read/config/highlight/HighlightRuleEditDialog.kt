@@ -280,6 +280,8 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
             arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
             intArrayOf(accentColor, secondaryTextColor),
         )
+        binding.switchLineSpacing.trackTintList = binding.switchEnable.trackTintList
+        binding.switchLineSpacing.thumbTintList = binding.switchEnable.thumbTintList
 
         val cardDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
@@ -317,6 +319,10 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         binding.etLetterSpacingBefore.setHintTextColor(secondaryTextColor)
         binding.etLetterSpacingAfter.setTextColor(primaryTextColor)
         binding.etLetterSpacingAfter.setHintTextColor(secondaryTextColor)
+        binding.etLineSpacingTop.setTextColor(primaryTextColor)
+        binding.etLineSpacingTop.setHintTextColor(secondaryTextColor)
+        binding.etLineSpacingBottom.setTextColor(primaryTextColor)
+        binding.etLineSpacingBottom.setHintTextColor(secondaryTextColor)
         binding.etScope.setTextColor(primaryTextColor)
         binding.etScope.setHintTextColor(secondaryTextColor)
         binding.etExcludeScope.setTextColor(primaryTextColor)
@@ -358,6 +364,8 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         binding.etLayoutScope.background = makeInputDrawable(inputBgColor, inputStrokeColor, 14f, density)
         binding.etLetterSpacingBefore.background = makeInputDrawable(inputBgColor, inputStrokeColor, 12f, density)
         binding.etLetterSpacingAfter.background = makeInputDrawable(inputBgColor, inputStrokeColor, 12f, density)
+        binding.etLineSpacingTop.background = makeInputDrawable(inputBgColor, inputStrokeColor, 12f, density)
+        binding.etLineSpacingBottom.background = makeInputDrawable(inputBgColor, inputStrokeColor, 12f, density)
         binding.spBgImageFit.background = makeInputDrawable(inputBgColor, inputStrokeColor, 14f, density)
         binding.spThemeScope.background = makeInputDrawable(inputBgColor, inputStrokeColor, 14f, density)
         binding.tvWidthMinus.background = makeInputDrawable(inputBgColor, inputStrokeColor, 14f, density)
@@ -394,7 +402,13 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
     private fun applyThemeToStaticLabels() {
         val staticPrimary = requireContext().getColor(R.color.primaryText)
         val staticSecondary = requireContext().getColor(R.color.secondaryText)
-        listOf(binding.cardInfo, binding.cardStyle, binding.cardSpacing, binding.cardPreview).forEach { card ->
+        listOf(
+            binding.cardInfo,
+            binding.cardStyle,
+            binding.cardSpacing,
+            binding.cardLineSpacing,
+            binding.cardPreview,
+        ).forEach { card ->
             applyThemeColorRecursive(card, staticPrimary, staticSecondary)
         }
     }
@@ -470,6 +484,9 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         // 命中字距：滑块位置与输入框内容都由 bindSpacingControl 初始化，这里只填输入框
         binding.etLetterSpacingBefore.setText(editingRule.letterSpacingBefore.spacingInputText())
         binding.etLetterSpacingAfter.setText(editingRule.letterSpacingAfter.spacingInputText())
+        binding.switchLineSpacing.isChecked = editingRule.lineSpacingEnabled
+        binding.etLineSpacingTop.setText(editingRule.lineSpacingTop.spacingInputText())
+        binding.etLineSpacingBottom.setText(editingRule.lineSpacingBottom.spacingInputText())
         val groupIndex = groupItems.indexOf(editingRule.group).takeIf { it >= 0 } ?: 0
         binding.spGroup.setSelection(groupIndex)
         binding.spTarget.setSelection(editingRule.targetScope.coerceIn(0, 2))
@@ -635,6 +652,16 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         }
         bindSpacingControl(binding.sbLetterSpacingAfter, binding.etLetterSpacingAfter) {
             editingRule.letterSpacingAfter = it
+        }
+        binding.switchLineSpacing.setOnCheckedChangeListener { _, isChecked ->
+            editingRule.lineSpacingEnabled = isChecked
+            updatePreview()
+        }
+        bindSpacingControl(binding.sbLineSpacingTop, binding.etLineSpacingTop) {
+            editingRule.lineSpacingTop = it
+        }
+        bindSpacingControl(binding.sbLineSpacingBottom, binding.etLineSpacingBottom) {
+            editingRule.lineSpacingBottom = it
         }
         binding.spUnderlineMode.onItemSelectedListener =
             object : android.widget.AdapterView.OnItemSelectedListener {
@@ -818,12 +845,12 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
 
     private fun android.widget.EditText.spacingValue(): Float = text?.toString()?.toFloatOrNull()
         ?.takeIf { it.isFinite() }
-        ?.coerceIn(HighlightRuleStore.MIN_MATCH_LETTER_SPACING, HighlightRuleStore.MAX_MATCH_LETTER_SPACING)
+        ?.coerceIn(HighlightRuleStore.MIN_MATCH_SPACING, HighlightRuleStore.MAX_MATCH_SPACING)
         ?: 0f
 
     private fun Float.spacingInputText(): String {
         val value = takeIf { it.isFinite() }
-            ?.coerceIn(HighlightRuleStore.MIN_MATCH_LETTER_SPACING, HighlightRuleStore.MAX_MATCH_LETTER_SPACING)
+            ?.coerceIn(HighlightRuleStore.MIN_MATCH_SPACING, HighlightRuleStore.MAX_MATCH_SPACING)
             ?: 0f
         return if (value % 1f == 0f) value.toInt().toString() else value.toString()
     }

@@ -37,6 +37,12 @@ data class CharStyle(
     val letterSpacingBefore: Float = 0f,
     /** 命中字距（px）：仅命中段尾字符带右侧留白，其余字符为 0 */
     val letterSpacingAfter: Float = 0f,
+    /** 命中行上下行距：是否只给包含命中的行加行距 */
+    val lineSpacingEnabled: Boolean = false,
+    /** 命中行上方行距（px） */
+    val lineSpacingTop: Float = 0f,
+    /** 命中行下方行距（px） */
+    val lineSpacingBottom: Float = 0f,
     /** 高亮字体路径，空串表示跟随阅读字体 */
     val font: String = "",
 ) {
@@ -69,11 +75,18 @@ data class CharStyle(
             later.bgColor != null &&
             later.textColor != null
         ) {
-            // 整条覆盖时仅补上命中字距：重叠规则的留白取较大者，不能随覆盖丢失
-            if (!hasLetterSpacing) return later
+            // 整条覆盖时仅补上命中排版留白：重叠规则的留白取较大者，不能随覆盖丢失
+            if (!hasLetterSpacing && !later.hasLetterSpacing && lineSpacingTop <= 0f &&
+                lineSpacingBottom <= 0f
+            ) {
+                return later
+            }
             return later.copy(
                 letterSpacingBefore = maxOf(letterSpacingBefore, later.letterSpacingBefore),
                 letterSpacingAfter = maxOf(letterSpacingAfter, later.letterSpacingAfter),
+                lineSpacingEnabled = later.lineSpacingEnabled || lineSpacingEnabled,
+                lineSpacingTop = maxOf(lineSpacingTop, later.lineSpacingTop),
+                lineSpacingBottom = maxOf(lineSpacingBottom, later.lineSpacingBottom),
             )
         }
         return CharStyle(
@@ -98,6 +111,9 @@ data class CharStyle(
             bgSpacingBottom = if (later.bgImage.isNotEmpty()) later.bgSpacingBottom else bgSpacingBottom,
             letterSpacingBefore = maxOf(letterSpacingBefore, later.letterSpacingBefore),
             letterSpacingAfter = maxOf(letterSpacingAfter, later.letterSpacingAfter),
+            lineSpacingEnabled = later.lineSpacingEnabled || lineSpacingEnabled,
+            lineSpacingTop = maxOf(lineSpacingTop, later.lineSpacingTop),
+            lineSpacingBottom = maxOf(lineSpacingBottom, later.lineSpacingBottom),
             font = if (later.font.isNotEmpty()) later.font else font,
         )
     }

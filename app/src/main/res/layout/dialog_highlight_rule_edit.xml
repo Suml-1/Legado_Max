@@ -848,6 +848,121 @@
                 </LinearLayout>
 
                 <LinearLayout
+                    android:id="@+id/card_line_spacing"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/shape_highlight_rule_card"
+                    android:elevation="3dp"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="命中行上下行距（px）"
+                            android:textColor="@color/primaryText"
+                            android:textSize="13sp" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/switch_line_spacing"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:scaleX="0.8"
+                            android:scaleY="0.8" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="仅对包含命中的行生效"
+                        android:textColor="@color/secondaryText"
+                        android:textSize="11sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="52dp"
+                            android:layout_height="wrap_content"
+                            android:text="顶部"
+                            android:textColor="@color/primaryText"
+                            android:textSize="13sp" />
+
+                        <SeekBar
+                            android:id="@+id/sb_line_spacing_top"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:contentDescription="命中行顶部间距（px）"
+                            android:max="1200" />
+
+                        <EditText
+                            android:id="@+id/et_line_spacing_top"
+                            android:layout_width="64dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/shape_highlight_rule_input"
+                            android:gravity="center"
+                            android:hint="0"
+                            android:inputType="numberDecimal"
+                            android:paddingStart="6dp"
+                            android:paddingEnd="6dp"
+                            android:selectAllOnFocus="true"
+                            android:singleLine="true"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="52dp"
+                            android:layout_height="wrap_content"
+                            android:text="底部"
+                            android:textColor="@color/primaryText"
+                            android:textSize="13sp" />
+
+                        <SeekBar
+                            android:id="@+id/sb_line_spacing_bottom"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:contentDescription="命中行底部间距（px）"
+                            android:max="1200" />
+
+                        <EditText
+                            android:id="@+id/et_line_spacing_bottom"
+                            android:layout_width="64dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/shape_highlight_rule_input"
+                            android:gravity="center"
+                            android:hint="0"
+                            android:inputType="numberDecimal"
+                            android:paddingStart="6dp"
+                            android:paddingEnd="6dp"
+                            android:selectAllOnFocus="true"
+                            android:singleLine="true"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
                     android:id="@+id/card_preview"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

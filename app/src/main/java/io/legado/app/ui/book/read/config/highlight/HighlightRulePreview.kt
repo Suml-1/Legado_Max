@@ -20,9 +20,6 @@ import kotlin.math.ceil
  */
 object HighlightRulePreview {
 
-    /** 命中字距（px）等留白参数的预览上限，与编辑页输入框一致 */
-    private const val MAX_PREVIEW_SPACING = 120f
-
     /**
      * 构建预览内容。
      *
@@ -202,6 +199,15 @@ object HighlightRulePreview {
                 styled.getFontMetricsInt(fm)
                 // 装饰线（下划线远近等）会影响行高，交给装饰 Span 补足
                 decoration?.getSize(styled, text, start, end, fm)
+                if (ruleStyle.lineSpacingEnabled) {
+                    // 命中行行距：把上下留白并进字形盒，行高随之增加（与阅读页命中行口径一致）
+                    val top = ceil(ruleStyle.lineSpacingTop.previewSpacing()).toInt()
+                    val bottom = ceil(ruleStyle.lineSpacingBottom.previewSpacing()).toInt()
+                    fm.top -= top
+                    fm.ascent -= top
+                    fm.descent += bottom
+                    fm.bottom += bottom
+                }
             }
             return ceil(styled.measureText(text, start, end) + before + after).toInt()
         }
@@ -237,8 +243,11 @@ object HighlightRulePreview {
             }
         }
     }
-
-    /** 留白取值收敛：非有限值（NaN/Inf）与越界值一并回落到 0 */
-    private fun Float.previewSpacing(): Float =
-        takeIf { it.isFinite() }?.coerceIn(0f, MAX_PREVIEW_SPACING) ?: 0f
 }
+
+/** 命中字距/行距等留白参数的预览上限，与编辑页输入框一致 */
+private const val MAX_PREVIEW_SPACING = 120f
+
+/** 留白取值收敛：非有限值（NaN/Inf）与越界值一并回落到 0 */
+private fun Float.previewSpacing(): Float =
+    takeIf { it.isFinite() }?.coerceIn(0f, MAX_PREVIEW_SPACING) ?: 0f
