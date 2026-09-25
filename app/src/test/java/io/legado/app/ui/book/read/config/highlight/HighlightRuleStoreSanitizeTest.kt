@@ -94,4 +94,35 @@ class HighlightRuleStoreSanitizeTest {
         assertEquals(0f, outOfRange.bgSpacingTop)
         assertEquals(0f, outOfRange.bgSpacingBottom)
     }
+
+    @Test
+    fun `命中字距与命中行行距越界回落到 0`() {
+        val sanitized = HighlightRuleStore.sanitizeRule(
+            rule().copy(
+                letterSpacingBefore = 24f,
+                letterSpacingAfter = -4f,
+                lineSpacingEnabled = true,
+                lineSpacingTop = HighlightRuleStore.MAX_MATCH_SPACING + 1f,
+                lineSpacingBottom = Float.NaN,
+            ),
+        )
+        assertEquals(24f, sanitized.letterSpacingBefore)
+        assertEquals(0f, sanitized.letterSpacingAfter)
+        assertTrue(sanitized.lineSpacingEnabled)
+        assertEquals(0f, sanitized.lineSpacingTop)
+        assertEquals(0f, sanitized.lineSpacingBottom)
+    }
+
+    @Test
+    fun `styleSummary 标注命中字距与命中行行距`() {
+        val summary = rule().copy(
+            letterSpacingBefore = 8f,
+            letterSpacingAfter = 8f,
+            lineSpacingEnabled = true,
+            lineSpacingTop = 12f,
+            lineSpacingBottom = 12f,
+        ).styleSummary()
+        assertTrue(summary.contains("命中字距 8 / 8px"))
+        assertTrue(summary.contains("命中行行距 12 / 12px"))
+    }
 }
