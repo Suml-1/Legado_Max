@@ -20,6 +20,7 @@ import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.annotation.ColorInt
+import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.viewModels
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
@@ -1444,7 +1445,7 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         // 预览按控件实际宽度重新断行，命中字距/行距才能如实体现
         binding.tvPreview.setPreview(previewRule, primaryTextColor)
         lastPreviewRule = previewRule
-        if (binding.cardPreviewFloating.visibility == View.VISIBLE) {
+        if (binding.cardPreviewFloating.isVisible) {
             binding.tvPreviewFloating.setPreview(previewRule, primaryTextColor)
         }
     }
@@ -1465,8 +1466,8 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         // bounds 是滚动内容坐标，减去 scrollY 得到原卡片底边在可视区内的位置
         val cardBottom = bounds.bottom - scrollView.scrollY
         val shouldFloat = scrollView.canScrollVertically(1) && cardBottom > scrollView.height
-        if (shouldFloat == (floating.visibility == View.VISIBLE)) return
-        floating.visibility = if (shouldFloat) View.VISIBLE else View.GONE
+        if (shouldFloat == floating.isVisible) return
+        floating.isVisible = shouldFloat
         if (shouldFloat) {
             lastPreviewRule?.let { binding.tvPreviewFloating.setPreview(it, primaryTextColor) }
         }

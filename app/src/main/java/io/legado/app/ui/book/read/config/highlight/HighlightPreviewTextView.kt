@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.read.config.highlight
 
 import android.content.Context
+import android.graphics.text.LineBreaker
 import android.os.Build
 import android.text.Layout
 import android.util.AttributeSet
@@ -23,11 +24,13 @@ class HighlightPreviewTextView @JvmOverloads constructor(
     private var dirty = false
 
     init {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // 预览要能体现自定义留白，避免系统在字符间插入额外断行策略
-            breakStrategy = Layout.BREAK_STRATEGY_SIMPLE
-            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NONE
+        // 预览要能体现自定义留白：关掉系统的高质量断行与断词，否则字符间会被额外拉开。
+        // BREAK_STRATEGY_SIMPLE 的常量自 API 29 起改由 LineBreaker 提供，低版本（23~28）沿用系统
+        // 默认断行策略——预览已按可用宽度自行断行，这里只影响极窄宽度下的兜底表现
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            breakStrategy = LineBreaker.BREAK_STRATEGY_SIMPLE
         }
+        hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NONE
     }
 
     /** 设置预览规则；[textColor] 为规则未指定字色时的默认文字颜色 */
