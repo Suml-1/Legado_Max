@@ -42,7 +42,7 @@ val AppShapes = Shapes(
 
 > **技术选型：本项目图片框架统一为 Glide**（存量技术栈，全项目已依赖）。不引入 Coil / Fresco 等第二套框架；如未来要换，属于架构级决策，必须全局迁移，禁止单个 PR 局部混用。
 
-- **必须**走 `ui/widget/components/` 下的统一封装组件（暂名 `AppImage.kt`，**目标态文件，当前尚未建立**，落地时创建并同步 `structure.md` §1 目录树）加载图片，内部用 Glide 的 bitmap 链路。封装组件落地前，新 Compose 代码按下述链路模式实现，禁止用 View 版 API 过渡：
+- **必须**走 `ui/widget/components/` 下的统一封装组件加载图片，内部用 Glide 的 bitmap 链路。书籍/分组封面已落地为 `AppBookCover`（**已建立**，取图优先级与 View 版 `CoverImageView` 一致：封面图集 → 真实图片 → HTML 模板封面 → 默认封面，失败叠加书名作者）；其它图片场景的通用封装（暂名 `AppImage.kt`）仍是**目标态文件，当前尚未建立**，落地时创建并同步 `structure.md` §1 目录树。封装组件落地前，新 Compose 代码按下述链路模式实现，禁止用 View 版 API 过渡：
 
 ```kotlin
 Glide.with(context)

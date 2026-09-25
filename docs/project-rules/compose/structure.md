@@ -53,7 +53,7 @@ ui/
 └── README.md
 ```
 
-> **现状对照**：`Dimensions.kt`（`AppDimens`）与 `ComposeShapes.kt` 已建立，前者吸收了原 `PageDimens`（精准管理/下载管理就近定义的过渡对象已删除），后者从 `lib/theme/UiCorner` 取圆角值，与 XML 侧同源。仍标〔目标态〕未建立的组件是 `components/` 下的 `AppTopBar` / `AppListItem` 等与 `AppImage.kt`；`ui/widget/components/` 下实际已落地的是 `AppPageTopBar` / `AppSearchBar` / `AppScaffold` / `BookBottomSheet` / `VerticalScrollbar` / `settings/`（设置面板与行）等。目标态组件落地时如沿用与树不同的命名，请回改本树。
+> **现状对照**：`Dimensions.kt`（`AppDimens`）与 `ComposeShapes.kt` 已建立，前者吸收了原 `PageDimens`（精准管理/下载管理就近定义的过渡对象已删除），后者从 `lib/theme/UiCorner` 取圆角值，与 XML 侧同源。仍标〔目标态〕未建立的组件是 `components/` 下的 `AppTopBar` / `AppListItem` 等与 `AppImage.kt`；`ui/widget/components/` 下实际已落地的是 `AppPageTopBar` / `AppSearchBar` / `AppScaffold` / `AppBookCover`（书籍封面，Glide bitmap 链路）/ `BookBottomSheet` / `VerticalScrollbar` / `settings/`（设置面板与行）等。Feature 内部的 Compose 组件按需归入 `ui/[feature]/[子域]/compose/`（如 `ui/main/bookshelf/compose/`）。目标态组件落地时如沿用与树不同的命名，请回改本树。
 
 > 注：每个 Feature 内部还允许 `[Feature]/widget/`（模块级通用组件，如 `config/widget/`），以及更深层子域的 `components/`（Feature 私有），规则见下方硬规则。
 
