@@ -169,6 +169,15 @@ object AppDimens {
     /** 网格书名与封面之间的间距 */
     val shelfGridNameSpacing: Dp = 6.dp
 
+    /** 列表样式文件夹封面的起始外边距 */
+    val shelfFolderCoverStartMargin: Dp = 8.dp
+
+    /** 列表样式文件夹封面的上外边距 */
+    val shelfFolderCoverTopMargin: Dp = 8.dp
+
+    /** 列表样式文件夹封面的下外边距 */
+    val shelfFolderCoverBottomMargin: Dp = 12.dp
+
     /** 网格封面上的书名叠层内边距 */
     val shelfGridOverlayNamePadding: Dp = 4.dp
 
