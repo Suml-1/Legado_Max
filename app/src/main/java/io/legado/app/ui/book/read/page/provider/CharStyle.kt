@@ -76,9 +76,7 @@ data class CharStyle(
             later.textColor != null
         ) {
             // 整条覆盖时仅补上命中排版留白：重叠规则的留白取较大者，不能随覆盖丢失
-            if (!hasLetterSpacing && !later.hasLetterSpacing && lineSpacingTop <= 0f &&
-                lineSpacingBottom <= 0f
-            ) {
+            if (!hasLetterSpacing && lineSpacingTop <= 0f && lineSpacingBottom <= 0f) {
                 return later
             }
             return later.copy(

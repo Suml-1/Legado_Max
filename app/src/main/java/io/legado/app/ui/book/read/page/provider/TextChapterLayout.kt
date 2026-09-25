@@ -1732,13 +1732,26 @@ class TextChapterLayout(
                 if (push.widthAdd[i] != 0f) widthsArray[i] += push.widthAdd[i]
             }
         }
+        // 命中字距要计入断行，否则行尾命中时整行会被压窄、与预览的换行位置不一致；
+        // 但列位置在加字符时按留白让位（见 addCharsToLine*），所以留白只并进"断行用的副本"，
+        // 不污染 widthsArray，避免同一份留白被算两次
+        val matchSpacingWidths = collectMatchLetterSpacingWidths(charStyles, text.length)
+        val layoutWidthsArray = if (matchSpacingWidths == null) {
+            widthsArray
+        } else {
+            FloatArray(widthsArray.size) { widthsArray[it] + matchSpacingWidths[it] }
+        }
         val layout = if (useZhLayout) {
-            val (words, widths) = measureTextSplit(text, widthsArray)
+            val (words, widths) = measureTextSplit(text, layoutWidthsArray)
             val indentSize = if (isFirstLine) paragraphIndent.length else 0
             ZhLayout(text, textPaint, visibleWidth, words, widths, indentSize)
         } else {
             StaticLayout(
-                buildFontAwareLayoutText(text, charStyles, neighborPush?.widthAdd),
+                buildFontAwareLayoutText(
+                    text,
+                    charStyles,
+                    mergeWidthAdd(neighborPush?.widthAdd, matchSpacingWidths),
+                ),
                 textPaint,
                 visibleWidth,
                 Layout.Alignment.ALIGN_NORMAL,
@@ -1905,6 +1918,33 @@ class TextChapterLayout(
             }
         }
         durY += textHeight * paragraphSpacing / 10f
+    }
+
+    /**
+     * 命中字距在**断行测量**中要占的额外宽度：命中段首字符带上左侧留白、尾字符带上右侧留白
+     * （[CharStyle.withMatchBoundary] 已把段内字符的留白清零），无命中时返回 null。
+     */
+    private fun collectMatchLetterSpacingWidths(
+        charStyles: Array<CharStyle?>?,
+        size: Int,
+    ): FloatArray? {
+        if (charStyles == null) return null
+        var result: FloatArray? = null
+        for (index in 0 until minOf(size, charStyles.size)) {
+            val style = charStyles[index] ?: continue
+            val extra = style.letterSpacingBefore + style.letterSpacingAfter
+            if (extra <= 0f) continue
+            val array = result ?: FloatArray(size).also { result = it }
+            array[index] = extra
+        }
+        return result
+    }
+
+    /** 合并两份"额外宽度"数组（九宫格外推 + 命中字距），都为 null 时返回 null */
+    private fun mergeWidthAdd(a: FloatArray?, b: FloatArray?): FloatArray? = when {
+        a == null -> b
+        b == null -> a
+        else -> FloatArray(a.size) { a[it] + b.getOrElse(it) { 0f } }
     }
 
     /**

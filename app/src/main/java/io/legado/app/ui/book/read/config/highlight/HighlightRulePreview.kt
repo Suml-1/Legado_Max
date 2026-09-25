@@ -245,9 +245,8 @@ object HighlightRulePreview {
     }
 }
 
-/** 命中字距/行距等留白参数的预览上限，与编辑页输入框一致 */
-private const val MAX_PREVIEW_SPACING = 120f
-
-/** 留白取值收敛：非有限值（NaN/Inf）与越界值一并回落到 0 */
+/** 留白取值收敛：非有限值（NaN/Inf）与越界值一并回落到 0，上限沿用编辑页的输入范围 */
 private fun Float.previewSpacing(): Float =
-    takeIf { it.isFinite() }?.coerceIn(0f, MAX_PREVIEW_SPACING) ?: 0f
+    takeIf { it.isFinite() }
+        ?.coerceIn(HighlightRuleStore.MIN_MATCH_SPACING, HighlightRuleStore.MAX_MATCH_SPACING)
+        ?: 0f

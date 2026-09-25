@@ -57,6 +57,9 @@ class HighlightRuleConfigDialog : BaseDialogFragment(R.layout.dialog_highlight_r
     private val viewModel: HighlightRuleConfigViewModel by viewModels()
     private val adapter by lazy { HighlightRuleAdapter(requireContext()) }
     private var itemTouchHelper: ItemTouchHelper? = null
+
+    /** 当前展示的「更多」菜单。裸 Dialog 不随 Fragment 生命周期销毁，需在视图销毁时手动关闭 */
+    private var itemMenuDialog: android.app.Dialog? = null
     private var primaryTextColor = 0
     private var secondaryTextColor = 0
     private var accentColor = 0
@@ -158,6 +161,13 @@ class HighlightRuleConfigDialog : BaseDialogFragment(R.layout.dialog_highlight_r
         }
     }
 
+    override fun onDestroyView() {
+        // 「更多」菜单是裸 Dialog，不随 Fragment 销毁，宿主视图销毁时必须手动关闭
+        itemMenuDialog?.dismiss()
+        itemMenuDialog = null
+        super.onDestroyView()
+    }
+
     /** 根据当前主题计算各颜色值（主/次文字色、卡片背景、描边、预览区颜色）并应用到所有 UI 元素。 */
     private fun initTheme() {
         val bg = requireContext().bottomBackground
@@ -206,7 +216,8 @@ class HighlightRuleConfigDialog : BaseDialogFragment(R.layout.dialog_highlight_r
 
     /** 弹出单条规则的「更多」操作菜单（编辑、导出、分享、删除），屏幕居中显示。 */
     private fun showItemMenu(rule: HighlightRule) {
-        HighlightRuleItemMenuDialog(
+        itemMenuDialog?.dismiss()
+        itemMenuDialog = HighlightRuleItemMenuDialog(
             context = requireContext(),
             title = rule.name.ifBlank { getString(R.string.highlight_rule_unnamed) },
             onEdit = { editRule(rule) },

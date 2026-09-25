@@ -833,7 +833,7 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
     /**
      * 命中字距的滑块 + 数值框双向绑定。
      *
-     * 滑块一格 0.1px（[HighlightRuleStore.MAX_MATCH_LETTER_SPACING] 对应 max 1200）；
+     * 滑块一格 0.1px（[HighlightRuleStore.MAX_MATCH_SPACING] 对应 max 1200）；
      * 两个方向都只在用户操作时回写，避免初始化阶段互相触发。
      */
     private fun bindSpacingControl(seekBar: SeekBar, input: android.widget.EditText, apply: (Float) -> Unit) {

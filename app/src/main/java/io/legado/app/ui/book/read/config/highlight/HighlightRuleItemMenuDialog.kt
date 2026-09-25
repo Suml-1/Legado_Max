@@ -20,6 +20,9 @@ import io.legado.app.utils.dpToPx
  *
  * 列表项上的长按已改用于拖动排序，编辑/导出/分享/删除这些操作收到这里，
  * 保证每张卡片只有一个明确的"更多"入口。
+ *
+ * 这里用的是裸 [Dialog]（居中的自绘菜单，不做 Fragment 事务），所以调用方要持有
+ * [show] 返回的实例，在宿主视图销毁时主动 [Dialog.dismiss]，避免窗口泄漏。
  */
 class HighlightRuleItemMenuDialog(
     private val context: Context,
@@ -30,7 +33,8 @@ class HighlightRuleItemMenuDialog(
     private val onDelete: () -> Unit,
 ) {
 
-    fun show() {
+    /** @return 已展示的对话框，调用方负责在宿主销毁时关闭它 */
+    fun show(): Dialog {
         val binding = DialogHighlightRuleItemMenuBinding
             .inflate(LayoutInflater.from(context))
         val dialog = Dialog(context, R.style.dialog_style).apply {
@@ -57,6 +61,7 @@ class HighlightRuleItemMenuDialog(
             (screenWidth * 0.8f).toInt().coerceAtMost(360.dpToPx()),
             ViewGroup.LayoutParams.WRAP_CONTENT,
         )
+        return dialog
     }
 
     private fun applyTheme(binding: DialogHighlightRuleItemMenuBinding) {

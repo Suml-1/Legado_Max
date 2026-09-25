@@ -53,6 +53,10 @@
       "docs": ["coverConfigHelp.md", "bubbleHelp.md", "highlightRules.md", "replaceRuleHelp.md", "dictRuleHelp.md", "readMenuHelp.md"]
     },
     {
+      "source": "app/src/main/java/io/legado/app/ui/book/read/config/highlight/**",
+      "docs": ["highlightRules.md"]
+    },
+    {
       "source": "app/src/main/java/io/legado/app/help/book/**",
       "docs": ["readMenuHelp.md", "bookCacheHelp.md", "缓存与导出备份机制.md"]
     },

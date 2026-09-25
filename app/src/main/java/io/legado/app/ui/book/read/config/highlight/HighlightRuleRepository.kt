@@ -58,4 +58,27 @@ object HighlightRuleRepository {
     fun encodeRules(rules: List<HighlightRule>): String {
         return GSON.toJson(rules)
     }
+
+    /**
+     * 按拖动后的列表顺序重排完整规则表（纯函数，便于单测）。
+     *
+     * 分组筛选（[group] 非空）下列表只包含该分组的规则，此时只把这些规则回填到它们在原表中
+     * 占用的槽位，其他分组的规则位置保持不动；槽位数量与列表长度不一致说明两份数据不同步，
+     * 返回 null 表示放弃本次重排。
+     *
+     * @return 重排后的完整列表；[ordered] 为空或槽位不匹配时返回 null
+     */
+    fun reorderInGroup(
+        rules: List<HighlightRule>,
+        group: String?,
+        ordered: List<HighlightRule>,
+    ): List<HighlightRule>? {
+        if (ordered.isEmpty()) return null
+        if (group == null) return ordered.toList()
+        val slots = rules.withIndex().filter { it.value.group == group }.map { it.index }
+        if (slots.size != ordered.size) return null
+        return ArrayList(rules).also { result ->
+            slots.forEachIndexed { index, slot -> result[slot] = ordered[index] }
+        }
+    }
 }
