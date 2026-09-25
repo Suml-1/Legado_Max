@@ -258,10 +258,11 @@ private suspend fun loadCoverBitmap(
     if (sourceOrigin != null) {
         options = options.set(OkHttpModelLoader.sourceOriginOption, sourceOrigin)
     }
-    val builder = ImageLoader.loadBitmap(context, path).apply(options).centerCrop()
-    // 高清封面设置开启时不做降采样，与 View 版行为一致
+    var builder = ImageLoader.loadBitmap(context, path).apply(options).centerCrop()
+    // 高清封面设置开启时不做降采样，与 View 版行为一致；
+    // override 返回的是同一个 RequestBuilder（原地修改），这里回写只是让 CheckResult 告警消失
     if (!AppConfig.loadCoverHighQuality) {
-        builder.override(requestSize.width, requestSize.height)
+        builder = builder.override(requestSize.width, requestSize.height)
     }
     builder.into(target)
 }

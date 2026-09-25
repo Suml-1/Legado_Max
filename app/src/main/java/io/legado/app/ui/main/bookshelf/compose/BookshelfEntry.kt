@@ -105,7 +105,7 @@ fun BookshelfFolderItemView(
                 .padding(AppDimens.shelfGridItemPadding),
         ) {
             Box(modifier = Modifier.padding(AppDimens.shelfGridCoverMargin)) {
-                FolderCover(folder, Modifier.fillMaxWidth())
+                FolderCover(modifier = Modifier.fillMaxWidth(), folder = folder)
             }
             Text(
                 text = folder.name,
@@ -136,7 +136,7 @@ fun BookshelfFolderItemView(
                     bottom = AppDimens.shelfFolderCoverBottomMargin,
                 )
             ) {
-                FolderCover(folder, Modifier.width(AppDimens.shelfCoverWidth))
+                FolderCover(modifier = Modifier.width(AppDimens.shelfCoverWidth), folder = folder)
             }
             Spacer(modifier = Modifier.width(AppDimens.shelfCoverNameSpacing))
             Text(
@@ -158,13 +158,13 @@ fun BookshelfFolderItemView(
 }
 
 @Composable
-private fun FolderCover(folder: BookshelfFolderItem, widthModifier: Modifier) {
+private fun FolderCover(modifier: Modifier, folder: BookshelfFolderItem) {
     AppBookCover(
+        modifier = modifier.aspectRatio(1f / AppDimens.BOOK_COVER_ASPECT),
         name = folder.name,
         author = null,
         coverPath = folder.cover,
         galleryIdentity = BookshelfFolderItem.coverGalleryIdentity(folder.groupId),
         contentDescription = folder.name,
-        modifier = widthModifier.aspectRatio(1f / AppDimens.BOOK_COVER_ASPECT),
     )
 }
