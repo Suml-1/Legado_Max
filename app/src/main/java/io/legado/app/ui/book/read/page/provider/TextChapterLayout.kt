@@ -1735,11 +1735,15 @@ class TextChapterLayout(
         // 命中字距要计入断行，否则行尾命中时整行会被压窄、与预览的换行位置不一致；
         // 但列位置在加字符时按留白让位（见 addCharsToLine*），所以留白只并进"断行用的副本"，
         // 不污染 widthsArray，避免同一份留白被算两次
+        // 注意 widthsArray 是复用缓存，长度可能大于 text.length（见 allocateFloatArray，
+        // 上一段更长时尾部留下的还是脏数据），这里只能按文本长度取值
         val matchSpacingWidths = charStyles.matchSpacingWidths(text.length)
         val layoutWidthsArray = if (matchSpacingWidths == null) {
             widthsArray
         } else {
-            FloatArray(widthsArray.size) { widthsArray[it] + matchSpacingWidths[it] }
+            FloatArray(text.length) { index ->
+                widthsArray.getOrElse(index) { 0f } + matchSpacingWidths[index]
+            }
         }
         val layout = if (useZhLayout) {
             val (words, widths) = measureTextSplit(text, layoutWidthsArray)
