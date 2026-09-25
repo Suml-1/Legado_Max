@@ -112,11 +112,11 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/tv_delete"
+            android:id="@+id/tv_more"
             android:layout_width="wrap_content"
             android:layout_height="32dp"
             android:layout_marginStart="6dp"
-            android:background="@drawable/shape_highlight_rule_list_action_danger"
+            android:background="@drawable/shape_highlight_rule_action_outline"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:minWidth="58dp"
@@ -126,13 +126,14 @@
             <ImageView
                 android:layout_width="12dp"
                 android:layout_height="12dp"
-                android:src="@drawable/ic_outline_delete" />
+                android:contentDescription="@string/more"
+                android:src="@drawable/ic_more" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="@string/delete"
+                android:text="@string/more"
                 android:textSize="12sp" />
         </LinearLayout>
     </LinearLayout>

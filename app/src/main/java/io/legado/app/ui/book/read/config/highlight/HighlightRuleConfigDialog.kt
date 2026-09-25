@@ -6,12 +6,15 @@ import android.graphics.PorterDuff
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
 import io.legado.app.base.adapter.ItemViewHolder
@@ -39,6 +42,7 @@ import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setLayout
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import io.legado.app.ui.widget.recycler.ItemTouchCallback
 
 /**
  * 阅读高亮规则的配置弹窗。
@@ -52,6 +56,7 @@ class HighlightRuleConfigDialog : BaseDialogFragment(R.layout.dialog_highlight_r
     private val binding by viewBinding(DialogHighlightRuleConfigBinding::bind)
     private val viewModel: HighlightRuleConfigViewModel by viewModels()
     private val adapter by lazy { HighlightRuleAdapter(requireContext()) }
+    private var itemTouchHelper: ItemTouchHelper? = null
     private var primaryTextColor = 0
     private var secondaryTextColor = 0
     private var accentColor = 0
@@ -116,6 +121,23 @@ class HighlightRuleConfigDialog : BaseDialogFragment(R.layout.dialog_highlight_r
 
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerView.adapter = adapter
+        // 系统自带的长按判定容易被卡片里的按钮和滚动抢走，这里关掉，改成手动 startDrag
+        val touchCallback = ItemTouchCallback(object : ItemTouchCallback.Callback {
+            override fun swap(srcPosition: Int, targetPosition: Int): Boolean {
+                adapter.swapItem(srcPosition, targetPosition)
+                return true
+            }
+
+            override fun onClearView(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+            ) {
+                clearDragAppearance(viewHolder.itemView)
+                persistRuleOrder()
+            }
+        }).apply { isCanDrag = false }
+        itemTouchHelper = ItemTouchHelper(touchCallback)
+        itemTouchHelper?.attachToRecyclerView(binding.recyclerView)
         binding.recyclerView.clipToPadding = false
         binding.recyclerView.setPadding(16.dpToPx(), 8.dpToPx(), 16.dpToPx(), 28.dpToPx())
 
@@ -182,20 +204,47 @@ class HighlightRuleConfigDialog : BaseDialogFragment(R.layout.dialog_highlight_r
         }.show()
     }
 
-    /** 弹出单条规则的操作菜单（编辑、删除、导出、分享）。 */
-    private fun showItemMenu(rule: HighlightRule, anchor: View) {
-        PopupMenu(requireContext(), anchor).apply {
-            menuInflater.inflate(R.menu.highlight_rule_item, menu)
-            setOnMenuItemClickListener { item ->
-                when (item.itemId) {
-                    R.id.menu_edit -> editRule(rule)
-                    R.id.menu_delete -> deleteRule(rule)
-                    R.id.menu_export_single -> showExportChooser(listOf(rule))
-                    R.id.menu_share_single -> shareRules(listOf(rule))
-                }
-                true
-            }
-        }.show()
+    /** 弹出单条规则的「更多」操作菜单（编辑、导出、分享、删除），屏幕居中显示。 */
+    private fun showItemMenu(rule: HighlightRule) {
+        HighlightRuleItemMenuDialog(
+            context = requireContext(),
+            title = rule.name.ifBlank { getString(R.string.highlight_rule_unnamed) },
+            onEdit = { editRule(rule) },
+            onExport = { showExportChooser(listOf(rule)) },
+            onShare = { shareRules(listOf(rule)) },
+            onDelete = { deleteRule(rule) },
+        ).show()
+    }
+
+    /**
+     * 长按拾起：给个触感和浮起效果，明确告诉用户已经抓住卡片了。
+     */
+    private fun startDrag(holder: ItemViewHolder) {
+        val itemView = holder.itemView
+        itemView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        itemView.animate().cancel()
+        itemView.scaleX = DRAG_SCALE
+        itemView.scaleY = DRAG_SCALE
+        itemView.alpha = DRAG_ALPHA
+        itemView.elevation = DRAG_ELEVATION * itemView.resources.displayMetrics.density
+        itemTouchHelper?.startDrag(holder)
+    }
+
+    /** 拖动结束：恢复卡片常态（缩放、透明度、阴影） */
+    private fun clearDragAppearance(itemView: View) {
+        itemView.animate().cancel()
+        itemView.scaleX = 1f
+        itemView.scaleY = 1f
+        itemView.alpha = 1f
+        itemView.elevation = 2f * itemView.resources.displayMetrics.density
+    }
+
+    /** 拖动结束后把列表顺序写回规则表与存储，并刷新副标题。 */
+    private fun persistRuleOrder() {
+        val ordered = adapter.getItems()
+        if (ordered.isEmpty()) return
+        if (!viewModel.reorderRules(ordered)) return
+        updateSubtitle()
     }
 
     /** 溢出菜单项点击分发：将各菜单 ID 路由到对应操作方法。 */
@@ -460,23 +509,27 @@ class HighlightRuleConfigDialog : BaseDialogFragment(R.layout.dialog_highlight_r
             return ItemHighlightPresetRuleBinding.inflate(inflater, parent, false)
         }
 
-        /** 注册列表项的点击和长按事件：点击编辑、长按弹出操作菜单。 */
+        /** 注册列表项事件：点击编辑、长按拖动排序、「更多」弹出操作菜单。 */
         override fun registerListener(holder: ItemViewHolder, binding: ItemHighlightPresetRuleBinding) {
             binding.root.setOnClickListener {
                 getItem(holder.layoutPosition)?.let(::editRule)
             }
-            binding.root.setOnLongClickListener {
-                getItem(holder.layoutPosition)?.let { showItemMenu(it, binding.root) }
+            // 长按直接拾起卡片排序，编辑/导出/分享/删除全部收进「更多」
+            val longPress = View.OnLongClickListener {
+                if (getItem(holder.layoutPosition) == null) return@OnLongClickListener false
+                startDrag(holder)
                 true
             }
+            binding.root.setOnLongClickListener(longPress)
+            binding.tvPreview.setOnLongClickListener(longPress)
             binding.tvPreview.setOnClickListener {
                 getItem(holder.layoutPosition)?.let(::editRule)
             }
             binding.tvEdit.setOnClickListener {
                 getItem(holder.layoutPosition)?.let(::editRule)
             }
-            binding.tvDelete.setOnClickListener {
-                getItem(holder.layoutPosition)?.let(::deleteRule)
+            binding.tvMore.setOnClickListener {
+                getItem(holder.layoutPosition)?.let { showItemMenu(it) }
             }
         }
 
@@ -564,10 +617,23 @@ class HighlightRuleConfigDialog : BaseDialogFragment(R.layout.dialog_highlight_r
                     if (ColorUtils.isColorLight(accentColor)) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
                 )
 
-            (binding.tvDelete.getChildAt(0) as? android.widget.ImageView)
-                ?.setColorFilter(context.getColor(R.color.error), PorterDuff.Mode.SRC_IN)
-            (binding.tvDelete.getChildAt(1) as? android.widget.TextView)
-                ?.setTextColor(context.getColor(R.color.error))
+            (binding.tvMore.getChildAt(0) as? android.widget.ImageView)
+                ?.setColorFilter(primaryTextColor, PorterDuff.Mode.SRC_IN)
+            (binding.tvMore.getChildAt(1) as? android.widget.TextView)
+                ?.setTextColor(primaryTextColor)
+            binding.tvMore.background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 6f * density
+                setColor(cardBgColor)
+                setStroke((1f * density).toInt().coerceAtLeast(1), cardStrokeColor)
+            }
         }
+    }
+
+    private companion object {
+        /** 拖动中的卡片放大比例、透明度与阴影高度（dp） */
+        const val DRAG_SCALE = 1.03f
+        const val DRAG_ALPHA = 0.92f
+        const val DRAG_ELEVATION = 10f
     }
 }
