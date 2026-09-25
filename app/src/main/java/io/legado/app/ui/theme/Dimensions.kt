@@ -63,6 +63,11 @@ object AppDimens {
     /** 面板描边与行分隔线的粗细 */
     val dividerThickness: Dp = 1.dp
 
+    // ── 书籍封面（AppBookCover）──
+
+    /** 封面圆角，对齐 View 版 CoverImageView 的 12px 描边圆角 */
+    val bookCoverCornerRadius: Dp = 4.dp
+
     // ── 弹窗 ──
 
     /** 单选列表弹窗的选项区最大高度，超出后滚动，避免弹窗顶穿屏幕 */
