@@ -1,39 +1,18 @@
-package io.legado.app.ui.main.bookshelf.style2
+﻿package io.legado.app.ui.main.bookshelf.style2
 
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.widget.SearchView
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.unit.Dp
 import androidx.core.view.isGone
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.constant.AppLog
-import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.appDb
@@ -41,7 +20,6 @@ import io.legado.app.data.dao.BookShelfDisplay
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.databinding.FragmentBookshelf2Binding
-import io.legado.app.help.book.BookTagHelper
 import io.legado.app.help.book.BookTagManagement
 import io.legado.app.help.book.BookTagMatcher
 import io.legado.app.help.book.toSmartTagSnapshot
@@ -52,19 +30,15 @@ import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.main.bookshelf.BaseBookshelfFragment
+import io.legado.app.ui.main.bookshelf.loadBookshelfTagBarData
 import io.legado.app.ui.main.bookshelf.compose.BookshelfBookEntry
 import io.legado.app.ui.main.bookshelf.compose.BookshelfDisplayConfig
 import io.legado.app.ui.main.bookshelf.compose.BookshelfEntry
 import io.legado.app.ui.main.bookshelf.compose.BookshelfFolderEntry
 import io.legado.app.ui.main.bookshelf.compose.BookshelfFolderItem
-import io.legado.app.ui.main.bookshelf.compose.BookshelfFolderItemView
-import io.legado.app.ui.main.bookshelf.compose.BookshelfGridItem
-import io.legado.app.ui.main.bookshelf.compose.BookshelfListItem
 import io.legado.app.ui.main.bookshelf.compose.buildBookshelfBookItems
 import io.legado.app.ui.main.bookshelf.compose.updateBookshelfEntryUpdating
-import io.legado.app.ui.theme.AppDimens
 import io.legado.app.ui.widget.RoundedTagBarView
-import io.legado.app.ui.widget.components.VerticalScrollbar
 import io.legado.app.utils.cnCompare
 import io.legado.app.utils.flowWithLifecycleAndDatabaseChangeFirst
 import io.legado.app.utils.observeEvent
@@ -79,15 +53,14 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.math.max
 
 /**
  * 书架界面（style2：文件夹继承树）。
  *
- * 顶栏、二级标签栏仍是 View，列表内容改为 Compose：根分组显示「文件夹 + 全部书籍」，
- * 进入分组后只显示该分组的书籍。文件夹与书籍各自选择列表/网格列数，用最小公倍数换算
- * 网格总列数与每个条目占用的列数（与原 spanSizeLookup 口径一致）。
+ * 顶栏、二级标签栏仍是 View，列表内容改为 Compose（内容见 [BookshelfShelfTreeContent]）：
+ * 根分组显示「文件夹 + 全部书籍」，进入分组后只显示该分组的书籍。文件夹与书籍各自选择
+ * 列表/网格列数，用最小公倍数换算网格总列数与每个条目占用的列数（与原 spanSizeLookup 口径一致）。
  */
 class BookshelfFragment2() :
     BaseBookshelfFragment(R.layout.fragment_bookshelf2),
@@ -114,7 +87,7 @@ class BookshelfFragment2() :
     /** 二级标签栏数据是否已就绪；显隐变化统一推迟到列表提交同帧生效，消除转场残留帧 */
     private var tagBarLoaded = false
 
-    /** 适配器最近一次提交列表时所属的分组 */
+    /** 列表最近一次提交时所属的分组 */
     private var lastCommittedGroupId = BookGroup.IdRoot
 
     /** 当前展示的书籍（已按标签筛选），用于重建条目与目录更新 */
@@ -125,15 +98,6 @@ class BookshelfFragment2() :
     private var canScrollBackward by mutableStateOf(false)
     private var scrollToTopTick by mutableIntStateOf(0)
     private var immediateScrollToTopTick by mutableIntStateOf(0)
-
-    /**
-     * 每个分组各自的列表状态。
-     *
-     * 切换分组时复用上次的 [LazyListState] / [LazyGridState]，退出再进入分组能回到原来的
-     * 滚动位置（与原实现按分组保存/恢复 LayoutManager 状态一致）。
-     */
-    private val groupListStates = hashMapOf<Long, LazyListState>()
-    private val groupGridStates = hashMapOf<Long, LazyGridState>()
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         setSupportToolbar(binding.titleBar.toolbar)
@@ -161,7 +125,17 @@ class BookshelfFragment2() :
             ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
         )
         binding.composeBookshelf.setContent {
-            BookshelfContent()
+            BookshelfShelfTreeContent(
+                shelfEntries = shelfEntries,
+                displayConfig = displayConfig,
+                groupId = groupId,
+                bottomPaddingPx = bottomPaddingPx,
+                scrollToTopTick = scrollToTopTick,
+                immediateScrollToTopTick = immediateScrollToTopTick,
+                onScrollBackwardChange = { canScrollBackward = it },
+                onEntryClick = ::onEntryClick,
+                onEntryLongClick = ::onEntryLongClick,
+            )
         }
     }
 
@@ -246,7 +220,7 @@ class BookshelfFragment2() :
         val bookItems = buildBookshelfBookItems(
             context = requireContext(),
             displays = shelfDisplays,
-            config = displayConfig,
+            displayConfig = displayConfig,
             isUpdating = ::isUpdate,
         )
         val entries = ArrayList<BookshelfEntry>(bookItems.size + bookGroups.size)
@@ -265,197 +239,6 @@ class BookshelfFragment2() :
     private fun updateTagBarVisibility() {
         tagBar?.visibility =
             if (lastCommittedGroupId != BookGroup.IdRoot && tagBarLoaded) View.VISIBLE else View.GONE
-    }
-
-    @Composable
-    private fun BookshelfContent() {
-        if (displayConfig.useSpanGrid) {
-            BookshelfGridContent()
-        } else {
-            BookshelfListContent()
-        }
-    }
-
-    /**
-     * 列表 / 网格共用的间距：条目四周各留一个 margin（相邻条目之间即两个 margin），
-     * 首个条目额外留出顶部空间，底部再叠加主导航栏高度。
-     */
-    @Composable
-    private fun rememberShelfSpacing(): ShelfSpacing {
-        val density = LocalDensity.current
-        return remember(displayConfig.marginPx, bottomPaddingPx, density) {
-            val marginPx = displayConfig.marginPx
-            with(density) {
-                ShelfSpacing(
-                    itemMargin = marginPx.toDp(),
-                    itemSpacing = (marginPx * 2).toDp(),
-                    topPadding = (marginPx + AppDimens.shelfFirstItemExtraTop.toPx()).toDp(),
-                    bottomPadding = (marginPx + bottomPaddingPx).toDp(),
-                )
-            }
-        }
-    }
-
-    @Composable
-    private fun rememberGroupListState(): LazyListState {
-        val currentGroupId = groupId
-        return remember(currentGroupId) {
-            groupListStates.getOrPut(currentGroupId) { LazyListState() }
-        }
-    }
-
-    @Composable
-    private fun rememberGroupGridState(): LazyGridState {
-        val currentGroupId = groupId
-        return remember(currentGroupId) {
-            groupGridStates.getOrPut(currentGroupId) { LazyGridState() }
-        }
-    }
-
-    @Composable
-    private fun BookshelfListContent() {
-        val listState = rememberGroupListState()
-        val spacing = rememberShelfSpacing()
-        val canScrollBack by remember {
-            derivedStateOf {
-                listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
-            }
-        }
-        LaunchedEffect(canScrollBack) {
-            canScrollBackward = canScrollBack
-        }
-        LaunchedEffect(immediateScrollToTopTick) {
-            if (immediateScrollToTopTick > 0) listState.scrollToItem(0)
-        }
-        LaunchedEffect(scrollToTopTick) {
-            if (scrollToTopTick > 0) {
-                if (AppConfig.isEInkMode) listState.scrollToItem(0)
-                else listState.animateScrollToItem(0)
-            }
-        }
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = AppDimens.shelfContentHorizontalPadding,
-                    top = spacing.topPadding,
-                    end = AppDimens.shelfContentHorizontalPadding,
-                    bottom = spacing.bottomPadding,
-                ),
-                verticalArrangement = Arrangement.spacedBy(spacing.itemSpacing),
-            ) {
-                items(items = shelfEntries, key = { it.key }) { entry ->
-                    BookshelfEntryItem(
-                        entry = entry,
-                        displayConfig = displayConfig,
-                        onClick = ::onEntryClick,
-                        onLongClick = ::onEntryLongClick,
-                    )
-                }
-            }
-            if (displayConfig.fastScrollerEnabled) {
-                VerticalScrollbar(
-                    state = listState,
-                    modifier = Modifier.align(Alignment.CenterEnd)
-                )
-            }
-        }
-    }
-
-    @Composable
-    private fun BookshelfGridContent() {
-        val gridState = rememberGroupGridState()
-        val spacing = rememberShelfSpacing()
-        val canScrollBack by remember {
-            derivedStateOf {
-                gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0
-            }
-        }
-        LaunchedEffect(canScrollBack) {
-            canScrollBackward = canScrollBack
-        }
-        LaunchedEffect(immediateScrollToTopTick) {
-            if (immediateScrollToTopTick > 0) gridState.scrollToItem(0)
-        }
-        LaunchedEffect(scrollToTopTick) {
-            if (scrollToTopTick > 0) {
-                if (AppConfig.isEInkMode) gridState.scrollToItem(0)
-                else gridState.animateScrollToItem(0)
-            }
-        }
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(displayConfig.spanCount.coerceAtLeast(1)),
-                state = gridState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = AppDimens.shelfContentHorizontalPadding + spacing.itemMargin,
-                    top = spacing.topPadding,
-                    end = AppDimens.shelfContentHorizontalPadding + spacing.itemMargin,
-                    bottom = spacing.bottomPadding,
-                ),
-                horizontalArrangement = Arrangement.spacedBy(spacing.itemSpacing),
-                verticalArrangement = Arrangement.spacedBy(spacing.itemSpacing),
-            ) {
-                items(
-                    items = shelfEntries,
-                    key = { it.key },
-                    span = { entry ->
-                        GridItemSpan(
-                            if (entry is BookshelfFolderEntry) displayConfig.folderGridSpan()
-                            else displayConfig.bookGridSpan()
-                        )
-                    },
-                ) { entry ->
-                    BookshelfEntryItem(
-                        entry = entry,
-                        displayConfig = displayConfig,
-                        onClick = ::onEntryClick,
-                        onLongClick = ::onEntryLongClick,
-                    )
-                }
-            }
-            if (displayConfig.fastScrollerEnabled) {
-                VerticalScrollbar(
-                    state = gridState,
-                    modifier = Modifier.align(Alignment.CenterEnd)
-                )
-            }
-        }
-    }
-
-    @Composable
-    private fun BookshelfEntryItem(
-        entry: BookshelfEntry,
-        displayConfig: BookshelfDisplayConfig,
-        onClick: (BookshelfEntry) -> Unit,
-        onLongClick: (BookshelfEntry) -> Unit,
-    ) {
-        when (entry) {
-            is BookshelfBookEntry -> if (displayConfig.isGrid) {
-                BookshelfGridItem(
-                    bookItem = entry.book,
-                    displayConfig = displayConfig,
-                    onClick = { onClick(entry) },
-                    onLongClick = { onLongClick(entry) },
-                )
-            } else {
-                BookshelfListItem(
-                    bookItem = entry.book,
-                    displayConfig = displayConfig,
-                    onClick = { onClick(entry) },
-                    onLongClick = { onLongClick(entry) },
-                )
-            }
-
-            is BookshelfFolderEntry -> BookshelfFolderItemView(
-                folder = entry.folder,
-                folderLayout = displayConfig.folderLayout,
-                onClick = { onClick(entry) },
-                onLongClick = { onLongClick(entry) },
-            )
-        }
     }
 
     fun back(): Boolean {
@@ -536,33 +319,10 @@ class BookshelfFragment2() :
             return
         }
         val currentGroupId = groupId
+        val context = requireContext()
         viewLifecycleOwner.lifecycleScope.launch {
             val allText = getString(R.string.bookshelf_tag_all)
-            val (tags, tagCounts) = withContext(Dispatchers.IO) {
-                val configured = AppConfig.bookshelfGroupTags[currentGroupId].orEmpty()
-                val hidden = AppConfig.bookshelfHiddenTags[currentGroupId].orEmpty()
-                val allBooks = appDb.bookDao.allTagInfos
-                val groupBooks = filterBooksByGroup(allBooks, currentGroupId)
-                // 每本书的标签只解析一次，后续合并标签与统计数量复用
-                val parsedTags = groupBooks.map { BookTagHelper.parseSet(it.customTag) }
-                val existing = parsedTags.flatten()
-                val merged = BookTagManagement.mergeTags(configured, existing)
-                    .filter { tag -> hidden.none { it.equals(tag, ignoreCase = true) } }
-                val smartRules = BookTagMatcher.enabledRules(requireContext())
-                val snapshots = groupBooks.map { it.toSmartTagSnapshot() }
-                // 追加智能标签：仅保留本分组内有书籍命中的规则（总开关关闭时为空）
-                val smartNames = BookTagMatcher.matchingNames(snapshots, smartRules)
-                val mergedTags = BookTagManagement.mergeTags(merged, smartNames)
-                // 每个标签的命中数量，用于 "标签名·数量" 展示（自定义标签与智能标签同一口径）；
-                // 空 key 代表"全部"标签，数量即分组内书籍总数
-                val counts = BookTagMatcher.countMatches(
-                    mergedTags,
-                    parsedTags,
-                    snapshots,
-                    smartRules,
-                ) + ("" to groupBooks.size)
-                mergedTags to counts
-            }
+            val (tags, tagCounts) = loadBookshelfTagBarData(context, currentGroupId)
             // 查询期间已切换分组（如快速进出分组），丢弃过期结果
             if (currentGroupId != groupId) return@launch
             // 在标签列表前插入空字符串作为"全部"标签
@@ -591,46 +351,6 @@ class BookshelfFragment2() :
         }
     }
 
-    /**
-     * 根据 groupId 过滤书籍，逻辑与 [io.legado.app.ui.main.bookshelf.BookshelfTagManageViewModel.booksInGroup] 一致。
-     * 默认分组（负数 ID）基于 [BookType] 筛选，用户分组（正数 ID）基于 group 位掩码筛选。
-     */
-    private fun filterBooksByGroup(
-        books: List<io.legado.app.data.dao.BookTagInfo>,
-        currentGroupId: Long,
-    ): List<io.legado.app.data.dao.BookTagInfo> = when (currentGroupId) {
-        BookGroup.IdAll -> books
-        BookGroup.IdLocal -> books.filter { it.type and BookType.local > 0 }
-        BookGroup.IdAudio -> books.filter { it.type and BookType.audio > 0 }
-        BookGroup.IdVideo -> books.filter { it.type and BookType.video > 0 }
-        BookGroup.IdError -> books.filter { it.type and BookType.updateError > 0 }
-        else -> {
-            val userGroupMask = appDb.bookGroupDao.all
-                .filter { it.groupId > 0 }
-                .fold(0L) { acc, group -> acc or group.groupId }
-            when (currentGroupId) {
-                BookGroup.IdNetNone -> books.filter {
-                    it.type and BookType.audio == 0 &&
-                        it.type and BookType.video == 0 &&
-                        it.type and BookType.local == 0 &&
-                        (it.group and userGroupMask) == 0L
-                }
-
-                BookGroup.IdLocalNone -> books.filter {
-                    it.type and BookType.audio == 0 &&
-                        it.type and BookType.video == 0 &&
-                        it.type and BookType.local > 0 &&
-                        (it.group and userGroupMask) == 0L
-                }
-
-                else -> if (currentGroupId > 0) {
-                    books.filter { it.group and currentGroupId > 0 }
-                } else {
-                    emptyList()
-                }
-            }
-        }
-    }
 
     /**
      * 应用当前选中的标签筛选，重新加载数据流。
@@ -684,12 +404,4 @@ class BookshelfFragment2() :
             }
         }
     }
-
-    /** 由显示配置换算出的间距 */
-    private data class ShelfSpacing(
-        val itemMargin: Dp,
-        val itemSpacing: Dp,
-        val topPadding: Dp,
-        val bottomPadding: Dp,
-    )
 }

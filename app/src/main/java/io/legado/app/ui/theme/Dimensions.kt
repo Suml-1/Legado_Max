@@ -76,12 +76,6 @@ object AppDimens {
     /** 条目默认内边距 */
     val shelfItemPadding: Dp = 4.dp
 
-    /** 开启"显示外边框"时的条目外边距 */
-    val shelfItemBorderMargin: Dp = 4.dp
-
-    /** 条目外边框圆角 */
-    val shelfItemBorderCornerRadius: Dp = 12.dp
-
     /** 书架列表左右内边距（对齐原 RecyclerView 的 8dp padding） */
     val shelfContentHorizontalPadding: Dp = 8.dp
 
@@ -142,10 +136,7 @@ object AppDimens {
     /** 标签胶囊的垂直内边距 */
     val shelfTagChipPaddingVertical: Dp = 4.dp
 
-    /** 标签胶囊圆角 */
-    val shelfTagChipCornerRadius: Dp = 8.dp
-
-    /** 标签胶囊描边粗细（对齐 bg_tag 的 0.5dp） */
+    /** 标签胶囊描边粗细（对齐原 bg_tag 的 0.5dp） */
     val shelfTagChipBorderWidth: Dp = 0.5.dp
 
     /** 标签胶囊之间的水平间距 */
@@ -189,9 +180,6 @@ object AppDimens {
 
     /** 未读角标最小尺寸 */
     val shelfBadgeMinSize: Dp = 16.dp
-
-    /** 未读角标圆角 */
-    val shelfBadgeCornerRadius: Dp = 8.dp
 
     /** 状态下标（角标 / 加载指示器）距条目边缘的间距 */
     val shelfBadgeMargin: Dp = 5.dp

@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.help.book.BookTagMatcher
 import io.legado.app.ui.theme.AppDimens
+import io.legado.app.ui.theme.composeActionShape
 import io.legado.app.ui.theme.pageSecondaryTextColor
 
 /** 条目文字字号：对齐原 item_bookshelf_* 布局，避免换风格时观感漂移 */
@@ -71,13 +72,14 @@ internal fun BookshelfItemStatus(
         pageSecondaryTextColor()
     }
     val textColor = if (badgeColor.luminance() > 0.5f) Color.Black else Color.White
+    val shape = composeActionShape()
     Box(
         modifier = modifier
             .defaultMinSize(
                 minWidth = AppDimens.shelfBadgeMinSize,
                 minHeight = AppDimens.shelfBadgeMinSize,
             )
-            .clip(RoundedCornerShape(AppDimens.shelfBadgeCornerRadius))
+            .clip(shape)
             .background(badgeColor)
             .padding(
                 horizontal = AppDimens.shelfBadgePaddingHorizontal,
@@ -197,6 +199,7 @@ internal fun BookshelfChips(
     showBorder: Boolean,
 ) {
     if (chips.isEmpty()) return
+    val shape = composeActionShape()
     FlowRow(
         modifier = modifier
             .fillMaxWidth()
@@ -205,7 +208,6 @@ internal fun BookshelfChips(
         verticalArrangement = Arrangement.spacedBy(AppDimens.shelfTagChipVerticalSpacing),
     ) {
         chips.forEach { chip ->
-            val shape = RoundedCornerShape(AppDimens.shelfTagChipCornerRadius)
             Box(
                 modifier = Modifier
                     .then(

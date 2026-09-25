@@ -2,30 +2,11 @@ package io.legado.app.ui.main.bookshelf.style1.books
 
 import android.os.Bundle
 import android.view.View
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.unit.Dp
 import androidx.core.view.isGone
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -46,15 +27,12 @@ import io.legado.app.help.book.toSmartTagSnapshot
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.ui.book.info.BookInfoActivity
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.main.MainViewModel
 import io.legado.app.ui.main.bookshelf.compose.BookshelfBookItem
 import io.legado.app.ui.main.bookshelf.compose.BookshelfDisplayConfig
-import io.legado.app.ui.main.bookshelf.compose.BookshelfGridItem
-import io.legado.app.ui.main.bookshelf.compose.BookshelfListItem
 import io.legado.app.ui.main.bookshelf.compose.buildBookshelfBookItems
 import io.legado.app.ui.main.bookshelf.compose.updateBookshelfBookUpdating
-import io.legado.app.ui.theme.AppDimens
-import io.legado.app.ui.widget.components.VerticalScrollbar
 import io.legado.app.utils.cnCompare
 import io.legado.app.utils.flowWithLifecycleAndDatabaseChangeFirst
 import io.legado.app.utils.observeEvent
@@ -76,8 +54,8 @@ import kotlin.math.max
  * 书架界面（style1 内层分组页）。
  *
  * 分组骨架（TabLayout/下拉 + 内层 ViewPager + 二级标签栏）仍在 View 侧，这里只把每个
- * 分组的书籍列表换成 Compose 渲染；排序、标签筛选、下拉刷新、空态提示、底部内边距、
- * 快速滚动条与"回到顶部"等行为与原实现保持一致。
+ * 分组的书籍列表换成 Compose 渲染（内容见 [BookshelfShelfContent]）；排序、标签筛选、
+ * 下拉刷新、空态提示、底部内边距、快速滚动条与"回到顶部"等行为与原实现保持一致。
  */
 class BooksFragment() : BaseFragment(R.layout.fragment_books) {
 
@@ -123,6 +101,7 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books) {
             onlyUpdateRead = it.getBoolean("onlyUpdateRead", false)
             binding.refreshLayout.isEnabled = enableRefresh
         }
+        updateMainBottomPadding((activity as? MainActivity)?.mainContentBottomPadding() ?: 0)
         initSwipeRefresh()
         upRecyclerData()
     }
@@ -139,144 +118,18 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books) {
             ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
         )
         binding.composeBookshelf.setContent {
-            BookshelfContent()
+            BookshelfShelfContent(
+                shelfItems = shelfItems,
+                displayConfig = displayConfig,
+                bottomPaddingPx = bottomPaddingPx,
+                scrollToTopTick = scrollToTopTick,
+                immediateScrollToTopTick = immediateScrollToTopTick,
+                onScrollBackwardChange = { canScrollBackward = it },
+                onBookClick = ::onBookClick,
+                onBookLongClick = ::onBookLongClick,
+            )
         }
         startLastUpdateTimeJob()
-    }
-
-    @Composable
-    private fun BookshelfContent() {
-        if (displayConfig.isGrid) {
-            BookshelfGridContent()
-        } else {
-            BookshelfListContent()
-        }
-    }
-
-    /**
-     * 列表 / 网格共用的间距。
-     *
-     * 对齐原 ItemDecoration 的口径：条目四周各留一个 margin（相邻条目之间即两个 margin），
-     * 首个条目额外留出顶部空间，底部再叠加主导航栏高度以让内容能滚到底栏之上。
-     */
-    @Composable
-    private fun rememberShelfSpacing(): ShelfSpacing {
-        val density = LocalDensity.current
-        return remember(displayConfig.marginPx, bottomPaddingPx, density) {
-            val marginPx = displayConfig.marginPx
-            with(density) {
-                ShelfSpacing(
-                    itemMargin = marginPx.toDp(),
-                    itemSpacing = (marginPx * 2).toDp(),
-                    topPadding = (marginPx + AppDimens.shelfFirstItemExtraTop.toPx()).toDp(),
-                    bottomPadding = (marginPx + bottomPaddingPx).toDp(),
-                )
-            }
-        }
-    }
-
-    @Composable
-    private fun BookshelfListContent() {
-        val listState = rememberLazyListState()
-        val spacing = rememberShelfSpacing()
-        val canScrollBack by remember {
-            derivedStateOf {
-                listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
-            }
-        }
-        LaunchedEffect(canScrollBack) {
-            canScrollBackward = canScrollBack
-        }
-        LaunchedEffect(immediateScrollToTopTick) {
-            if (immediateScrollToTopTick > 0) listState.scrollToItem(0)
-        }
-        LaunchedEffect(scrollToTopTick) {
-            if (scrollToTopTick > 0) {
-                if (AppConfig.isEInkMode) listState.scrollToItem(0)
-                else listState.animateScrollToItem(0)
-            }
-        }
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = AppDimens.shelfContentHorizontalPadding,
-                    top = spacing.topPadding,
-                    end = AppDimens.shelfContentHorizontalPadding,
-                    bottom = spacing.bottomPadding,
-                ),
-                verticalArrangement = Arrangement.spacedBy(spacing.itemSpacing),
-            ) {
-                items(items = shelfItems, key = { it.key }) { item ->
-                    BookshelfListItem(
-                        bookItem = item,
-                        displayConfig = displayConfig,
-                        onClick = ::onBookClick,
-                        onLongClick = ::onBookLongClick,
-                    )
-                }
-            }
-            if (displayConfig.fastScrollerEnabled) {
-                VerticalScrollbar(
-                    state = listState,
-                    modifier = Modifier.align(Alignment.CenterEnd)
-                )
-            }
-        }
-    }
-
-    @Composable
-    private fun BookshelfGridContent() {
-        val gridState = rememberLazyGridState()
-        val spacing = rememberShelfSpacing()
-        val canScrollBack by remember {
-            derivedStateOf {
-                gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0
-            }
-        }
-        LaunchedEffect(canScrollBack) {
-            canScrollBackward = canScrollBack
-        }
-        LaunchedEffect(immediateScrollToTopTick) {
-            if (immediateScrollToTopTick > 0) gridState.scrollToItem(0)
-        }
-        LaunchedEffect(scrollToTopTick) {
-            if (scrollToTopTick > 0) {
-                if (AppConfig.isEInkMode) gridState.scrollToItem(0)
-                else gridState.animateScrollToItem(0)
-            }
-        }
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(displayConfig.bookLayout.coerceAtLeast(2)),
-                state = gridState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = AppDimens.shelfContentHorizontalPadding + spacing.itemMargin,
-                    top = spacing.topPadding,
-                    end = AppDimens.shelfContentHorizontalPadding + spacing.itemMargin,
-                    bottom = spacing.bottomPadding,
-                ),
-                horizontalArrangement = Arrangement.spacedBy(spacing.itemSpacing),
-                verticalArrangement = Arrangement.spacedBy(spacing.itemSpacing),
-            ) {
-                items(items = shelfItems, key = { it.key }) { item ->
-                    BookshelfGridItem(
-                        bookItem = item,
-                        displayConfig = displayConfig,
-                        onClick = ::onBookClick,
-                        onLongClick = ::onBookLongClick,
-                    )
-                }
-            }
-            if (displayConfig.fastScrollerEnabled) {
-                VerticalScrollbar(
-                    state = gridState,
-                    modifier = Modifier.align(Alignment.CenterEnd)
-                )
-            }
-        }
     }
 
     fun updateMainBottomPadding(bottomPadding: Int) {
@@ -337,7 +190,7 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books) {
         buildBookshelfBookItems(
             context = requireContext(),
             displays = displays,
-            config = displayConfig,
+            displayConfig = displayConfig,
             isUpdating = ::isUpdate,
         )
 
@@ -390,12 +243,12 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books) {
         upRecyclerData()
     }
 
-    private fun onBookClick(item: BookshelfBookItem) {
-        startActivityForBook(item.display.toMinimalBook())
+    private fun onBookClick(bookItem: BookshelfBookItem) {
+        startActivityForBook(bookItem.display.toMinimalBook())
     }
 
-    private fun onBookLongClick(item: BookshelfBookItem) {
-        val book = item.display.toMinimalBook()
+    private fun onBookLongClick(bookItem: BookshelfBookItem) {
+        val book = bookItem.display.toMinimalBook()
         startActivity<BookInfoActivity> {
             putExtra("name", book.name)
             putExtra("author", book.author)
@@ -421,12 +274,4 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books) {
             startLastUpdateTimeJob()
         }
     }
-
-    /** 由显示配置换算出的间距 */
-    private data class ShelfSpacing(
-        val itemMargin: Dp,
-        val itemSpacing: Dp,
-        val topPadding: Dp,
-        val bottomPadding: Dp,
-    )
 }

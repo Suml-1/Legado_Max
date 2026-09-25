@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +27,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.R
 import io.legado.app.ui.theme.AppDimens
+import io.legado.app.ui.theme.composePanelShape
 import io.legado.app.ui.theme.pageSecondaryTextColor
 import io.legado.app.ui.widget.components.AppBookCover
 
@@ -192,7 +192,7 @@ private fun BookshelfItemContainer(
     content: @Composable RowScope.() -> Unit,
 ) {
     val background = MaterialTheme.colorScheme.background
-    val shape = RoundedCornerShape(AppDimens.shelfItemBorderCornerRadius)
+    val shape = composePanelShape()
     val contrast = if (background.luminance() > 0.5f) Color.Black else Color.White
     Row(
         modifier = modifier

@@ -24,17 +24,14 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.databinding.FragmentBookshelf1Binding
-import io.legado.app.help.book.BookTagHelper
 import io.legado.app.help.book.BookTagManagement
-import io.legado.app.help.book.BookTagMatcher
-import io.legado.app.help.book.toSmartTagSnapshot
-import io.legado.app.constant.BookType
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.book.group.GroupEditDialog
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.main.bookshelf.BaseBookshelfFragment
+import io.legado.app.ui.main.bookshelf.loadBookshelfTagBarData
 import io.legado.app.ui.main.bookshelf.style1.books.BooksFragment
 import io.legado.app.ui.widget.RoundedTagBarView
 import io.legado.app.utils.isCreated
@@ -45,9 +42,7 @@ import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.collections.set
 
 /**
@@ -328,31 +323,7 @@ class BookshelfFragment1() :
         val context = requireContext()
         viewLifecycleOwner.lifecycleScope.launch {
             val allText = getString(R.string.bookshelf_tag_all)
-            val (tags, tagCounts) = withContext(Dispatchers.IO) {
-                val configured = AppConfig.bookshelfGroupTags[currentGroupId].orEmpty()
-                val hidden = AppConfig.bookshelfHiddenTags[currentGroupId].orEmpty()
-                val allBooks = appDb.bookDao.allTagInfos
-                val groupBooks = filterBooksByGroup(allBooks, currentGroupId)
-                // 每本书的标签只解析一次，后续合并标签与统计数量复用
-                val parsedTags = groupBooks.map { BookTagHelper.parseSet(it.customTag) }
-                val existing = parsedTags.flatten()
-                val merged = BookTagManagement.mergeTags(configured, existing)
-                    .filter { tag -> hidden.none { it.equals(tag, ignoreCase = true) } }
-                val smartRules = BookTagMatcher.enabledRules(context)
-                val snapshots = groupBooks.map { it.toSmartTagSnapshot() }
-                // 追加智能标签：仅保留本分组内有书籍命中的规则（总开关关闭时为空）
-                val smartNames = BookTagMatcher.matchingNames(snapshots, smartRules)
-                val mergedTags = BookTagManagement.mergeTags(merged, smartNames)
-                // 每个标签的命中数量，用于 "标签名·数量" 展示（自定义标签与智能标签同一口径）；
-                // 空 key 代表"全部"标签，数量即分组内书籍总数
-                val counts = BookTagMatcher.countMatches(
-                    mergedTags,
-                    parsedTags,
-                    snapshots,
-                    smartRules,
-                ) + ("" to groupBooks.size)
-                mergedTags to counts
-            }
+            val (tags, tagCounts) = loadBookshelfTagBarData(context, currentGroupId)
             // 在标签列表前插入空字符串作为“全部”标签，显示时转为 allText
             currentTagList = listOf("") + tags
             tagSelectedIndex = 0
@@ -368,45 +339,6 @@ class BookshelfFragment1() :
             )
             tagBar?.setSelectedIndex(0, false)
             refreshBooksByTag()
-        }
-    }
-
-    /**
-     * 根据 groupId 过滤书籍，逻辑与 [BookshelfTagManageViewModel.booksInGroup] 一致。
-     * 默认分组（负数 ID）基于 [BookType] 筛选，用户分组（正数 ID）基于 group 位掩码筛选。
-     */
-    private fun filterBooksByGroup(
-        books: List<io.legado.app.data.dao.BookTagInfo>,
-        currentGroupId: Long,
-    ): List<io.legado.app.data.dao.BookTagInfo> = when (currentGroupId) {
-        BookGroup.IdAll -> books
-        BookGroup.IdLocal -> books.filter { it.type and BookType.local > 0 }
-        BookGroup.IdAudio -> books.filter { it.type and BookType.audio > 0 }
-        BookGroup.IdVideo -> books.filter { it.type and BookType.video > 0 }
-        BookGroup.IdError -> books.filter { it.type and BookType.updateError > 0 }
-        else -> {
-            val userGroupMask = appDb.bookGroupDao.all
-                .filter { it.groupId > 0 }
-                .fold(0L) { acc, group -> acc or group.groupId }
-            when (currentGroupId) {
-                BookGroup.IdNetNone -> books.filter {
-                    it.type and BookType.audio == 0 &&
-                        it.type and BookType.video == 0 &&
-                        it.type and BookType.local == 0 &&
-                        (it.group and userGroupMask) == 0L
-                }
-                BookGroup.IdLocalNone -> books.filter {
-                    it.type and BookType.audio == 0 &&
-                        it.type and BookType.video == 0 &&
-                        it.type and BookType.local > 0 &&
-                        (it.group and userGroupMask) == 0L
-                }
-                else -> if (currentGroupId > 0) {
-                    books.filter { it.group and currentGroupId > 0 }
-                } else {
-                    emptyList()
-                }
-            }
         }
     }
 

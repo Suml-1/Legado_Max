@@ -49,11 +49,11 @@ data class BookshelfBookItem(
 fun buildBookshelfBookItems(
     context: Context,
     displays: List<BookShelfDisplay>,
-    config: BookshelfDisplayConfig,
+    displayConfig: BookshelfDisplayConfig,
     isUpdating: (String) -> Boolean,
 ): List<BookshelfBookItem> {
     // 智能标签规则在一次构建里只取一次（内部带缓存），所有条目复用
-    val smartRules = if (config.showTags) BookTagMatcher.enabledRules(context) else emptyList()
+    val smartRules = if (displayConfig.showTags) BookTagMatcher.enabledRules(context) else emptyList()
     return displays.map { display ->
         BookshelfBookItem(
             display = display,
@@ -61,14 +61,14 @@ fun buildBookshelfBookItems(
             isUpdating = !display.isLocal && isUpdating(display.bookUrl),
             unreadCount = display.getUnreadChapterNum(),
             hasNewChapter = display.lastCheckCount > 0,
-            lastUpdateText = if (config.showLastUpdateTime && !display.isLocal) {
+            lastUpdateText = if (displayConfig.showLastUpdateTime && !display.isLocal) {
                 display.latestChapterTime.toTimeAgo()
             } else {
                 null
             },
-            readProgress = if (config.showReadProgress) display.readProgress() else null,
-            chips = if (config.showTags) display.buildChips(smartRules) else emptyList(),
-            intro = if (config.showIntro) display.getDisplayIntroPlainText() else null,
+            readProgress = if (displayConfig.showReadProgress) display.readProgress() else null,
+            chips = if (displayConfig.showTags) display.buildChips(smartRules) else emptyList(),
+            intro = if (displayConfig.showIntro) display.getDisplayIntroPlainText() else null,
         )
     }
 }
@@ -79,19 +79,19 @@ fun buildBookshelfBookItems(
  * 只在状态真的变化时替换该条目，其余条目保持同一实例，让 Compose 跳过它们的重组。
  */
 fun updateBookshelfBookUpdating(
-    items: List<BookshelfBookItem>,
+    bookItems: List<BookshelfBookItem>,
     bookUrl: String,
     isUpdating: (String) -> Boolean,
 ): List<BookshelfBookItem> {
     var changed = false
-    val updated = items.map { item ->
+    val updated = bookItems.map { item ->
         if (item.key != bookUrl) return@map item
         val next = !item.display.isLocal && isUpdating(bookUrl)
         if (next == item.isUpdating) return@map item
         changed = true
         item.copy(isUpdating = next)
     }
-    return if (changed) updated else items
+    return if (changed) updated else bookItems
 }
 
 /**

@@ -12,6 +12,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -25,11 +26,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.CustomTarget
@@ -38,14 +42,12 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.glide.HtmlCoverRenderer
 import io.legado.app.help.glide.ImageLoader
 import io.legado.app.help.glide.OkHttpModelLoader
-import io.legado.app.lib.theme.ThemeStore
-import io.legado.app.lib.theme.accentColor
 import io.legado.app.model.BookCover
 import io.legado.app.ui.theme.AppDimens
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.utils.textHeight
 import io.legado.app.utils.toStringArray
 import kotlinx.coroutines.suspendCancellableCoroutine
-import splitties.init.appCtx
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlin.math.max
@@ -53,12 +55,21 @@ import kotlin.math.max
 /**
  * 书籍 / 分组封面的 Compose 实现。
  *
- * 与 View 版 [io.legado.app.ui.widget.image.CoverImageView] 保持同一套取图优先级：
- * 封面图集默认封面 → 真实封面图片 → HTML 模板封面 → 默认封面；图片缺失或加载失败时
- * 在封面上叠加竖排书名与作者（由封面设置控制）。
+ * 与 View 版 `CoverImageView` 保持同一套取图优先级，顺序不能调换：
+ * 封面图集默认封面 → HTML 模板封面 → "使用默认封面"开关 → 真实封面图片 → 默认封面；
+ * 图片缺失或加载失败时在封面上叠加竖排书名与作者（由封面设置控制）。
  *
  * 加载按主题样式规范 §7.3 的 Compose 图片链路实现：Glide bitmap 链路 + 显式 override 尺寸，
  * 组合离开时取消在途请求（`LaunchedEffect` 取消 → `clear` target），不借用 View 版 API。
+ *
+ * @param name 书名 / 分组名，用于默认封面的竖排书名与 HTML 模板变量
+ * @param author 作者，用于默认封面的竖排作者与 HTML 模板变量
+ * @param coverPath 已解析的展示封面路径（调用方传 `getDisplayCover()`），可为空
+ * @param galleryIdentity 封面图集取图身份：书籍传 bookUrl、分组传 `bookGroup:{分组id}`
+ * @param contentDescription 无障碍描述，一般传书名
+ * @param sourceOrigin 书源来源标识，影响网络请求头与图集身份回退
+ * @param cornerRadius 封面圆角
+ * @param loadOnlyWifi 是否只允许 WiFi 下加载网络封面
  */
 @Composable
 fun AppBookCover(
@@ -77,22 +88,26 @@ fun AppBookCover(
     val realPath = galleryCover ?: coverPath?.takeIf { it.isNotBlank() }
     // 图集默认封面优先于"强制默认封面"：命中图集时仍显示图集封面
     val useDefaultCover = AppConfig.useDefaultCover && galleryCover == null
-    val htmlCover = !useDefaultCover && realPath == null && HtmlCoverRenderer.isApplicable(name)
+    // HTML 模板封面在 View 版里优先于"使用默认封面"，两者顺序不能调换
+    val htmlCover = realPath == null && HtmlCoverRenderer.isApplicable(name)
     val drawName = BookCover.drawBookName && !name.isNullOrBlank()
-    // 既没有真实图片也没有 HTML 封面，最终落到默认封面：此时书名叠加是"封面本身"的一部分
-    val fallbackCover = !htmlCover && realPath == null
+    // 最终显示的是默认封面：既没有真实图片，或用户开启了"使用默认封面"。
+    // 此时书名叠加属于"封面本身"的一部分，而不是加载失败的兜底
+    val defaultCoverShown = !htmlCover && (realPath == null || useDefaultCover)
 
     var bounds by remember { mutableStateOf(IntSize.Zero) }
     val requestKey = listOf(realPath, sourceOrigin, htmlCover, useDefaultCover, name, author)
         .joinToString("|")
-    var bitmap by remember(requestKey) { mutableStateOf<Bitmap?>(null) }
+    // 初值就是默认封面：与 View 版 placeholder(defaultDrawable) 一致，避免加载期间露出壁纸
+    var bitmap by remember(requestKey) { mutableStateOf(defaultCoverBitmap()) }
     var loadFailed by remember(requestKey) { mutableStateOf(false) }
 
     LaunchedEffect(requestKey, bounds) {
         // 等控件测量出尺寸后再发请求，保证 override 的是真实显示尺寸
         if (bounds.width <= 0 || bounds.height <= 0) return@LaunchedEffect
         val loaded = when {
-            htmlCover -> HtmlCoverRenderer.load(name.orEmpty(), author) ?: defaultCoverBitmap()
+            htmlCover -> HtmlCoverRenderer.load(name.orEmpty(), author)
+            useDefaultCover -> defaultCoverBitmap()
             realPath != null -> loadCoverBitmap(
                 context = context,
                 path = realPath,
@@ -103,7 +118,8 @@ fun AppBookCover(
 
             else -> defaultCoverBitmap()
         }
-        bitmap = loaded
+        // 加载失败回退默认封面（同名叠层由 defaultCoverShown/loadFailed 决定）
+        bitmap = loaded ?: defaultCoverBitmap()
         loadFailed = loaded == null
     }
 
@@ -124,8 +140,8 @@ fun AppBookCover(
                 contentScale = ContentScale.Crop
             )
         }
-        // 有真实图片时只在加载失败后叠加书名；默认封面/无封面场景则始终叠加
-        if (drawName && !htmlCover && (fallbackCover || loadFailed)) {
+        // 有真实图片时只在加载失败后叠加书名；默认封面场景则始终叠加
+        if (drawName && !htmlCover && (defaultCoverShown || loadFailed)) {
             BookCoverTextOverlay(
                 name = name.orEmpty(),
                 author = author.orEmpty(),
@@ -149,8 +165,9 @@ internal fun BookCoverTextOverlay(
     drawAuthor: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val bgColor = remember { ThemeStore.backgroundColor(appCtx) }
-    val accentColor = remember { appCtx.accentColor }
+    // 描边取主题背景色、文字取强调色，与 View 版 generateCoverBitmap 的取色一致
+    val bgColor = MaterialTheme.colorScheme.background.toArgb()
+    val accentColor = MaterialTheme.colorScheme.primary.toArgb()
 
     Canvas(modifier = modifier) {
         val viewWidth = size.width
@@ -274,3 +291,35 @@ private suspend fun loadCoverBitmap(
  * 直接取底层位图引用即可，不做像素级处理。
  */
 private fun defaultCoverBitmap(): Bitmap? = (BookCover.defaultDrawable as? BitmapDrawable)?.bitmap
+
+// ── 预览（navigation-preview.md §10.1 强制）────────────────────────────────
+
+@Preview(name = "无封面（叠加书名）")
+@Composable
+private fun AppBookCoverPreview() {
+    LegadoTheme {
+        AppBookCover(
+            modifier = Modifier.size(width = 66.dp, height = 88.dp),
+            name = "剑来",
+            author = "烽火戏诸侯",
+            coverPath = null,
+            galleryIdentity = null,
+            contentDescription = null,
+        )
+    }
+}
+
+@Preview(name = "有封面", showBackground = true)
+@Composable
+private fun AppBookCoverWithPathPreview() {
+    LegadoTheme {
+        AppBookCover(
+            modifier = Modifier.size(width = 66.dp, height = 88.dp),
+            name = "剑来",
+            author = "烽火戏诸侯",
+            coverPath = "file:///android_asset/preview_cover.jpg",
+            galleryIdentity = "preview",
+            contentDescription = null,
+        )
+    }
+}
