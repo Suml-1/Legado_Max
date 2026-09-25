@@ -88,11 +88,11 @@ fun updateBookshelfEntryUpdating(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookshelfFolderItemView(
+    modifier: Modifier = Modifier,
     folder: BookshelfFolderItem,
     folderLayout: Int,
     onClick: (BookshelfFolderItem) -> Unit,
     onLongClick: (BookshelfFolderItem) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     if (folderLayout >= 2) {
         Column(

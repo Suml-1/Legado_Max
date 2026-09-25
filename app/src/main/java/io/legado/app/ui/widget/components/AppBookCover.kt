@@ -62,12 +62,12 @@ import kotlin.math.max
  */
 @Composable
 fun AppBookCover(
+    modifier: Modifier = Modifier,
     name: String?,
     author: String?,
     coverPath: String?,
     galleryIdentity: String?,
     contentDescription: String?,
-    modifier: Modifier = Modifier,
     sourceOrigin: String? = null,
     cornerRadius: Dp = AppDimens.bookCoverCornerRadius,
     loadOnlyWifi: Boolean = false,

@@ -348,7 +348,7 @@ class BookshelfFragment2() :
                 items(items = shelfEntries, key = { it.key }) { entry ->
                     BookshelfEntryItem(
                         entry = entry,
-                        config = displayConfig,
+                        displayConfig = displayConfig,
                         onClick = ::onEntryClick,
                         onLongClick = ::onEntryLongClick,
                     )
@@ -410,7 +410,7 @@ class BookshelfFragment2() :
                 ) { entry ->
                     BookshelfEntryItem(
                         entry = entry,
-                        config = displayConfig,
+                        displayConfig = displayConfig,
                         onClick = ::onEntryClick,
                         onLongClick = ::onEntryLongClick,
                     )
@@ -428,22 +428,22 @@ class BookshelfFragment2() :
     @Composable
     private fun BookshelfEntryItem(
         entry: BookshelfEntry,
-        config: BookshelfDisplayConfig,
+        displayConfig: BookshelfDisplayConfig,
         onClick: (BookshelfEntry) -> Unit,
         onLongClick: (BookshelfEntry) -> Unit,
     ) {
         when (entry) {
-            is BookshelfBookEntry -> if (config.isGrid) {
+            is BookshelfBookEntry -> if (displayConfig.isGrid) {
                 BookshelfGridItem(
-                    item = entry.book,
-                    config = config,
+                    bookItem = entry.book,
+                    displayConfig = displayConfig,
                     onClick = { onClick(entry) },
                     onLongClick = { onLongClick(entry) },
                 )
             } else {
                 BookshelfListItem(
-                    item = entry.book,
-                    config = config,
+                    bookItem = entry.book,
+                    displayConfig = displayConfig,
                     onClick = { onClick(entry) },
                     onLongClick = { onLongClick(entry) },
                 )
@@ -451,7 +451,7 @@ class BookshelfFragment2() :
 
             is BookshelfFolderEntry -> BookshelfFolderItemView(
                 folder = entry.folder,
-                folderLayout = config.folderLayout,
+                folderLayout = displayConfig.folderLayout,
                 onClick = { onClick(entry) },
                 onLongClick = { onLongClick(entry) },
             )

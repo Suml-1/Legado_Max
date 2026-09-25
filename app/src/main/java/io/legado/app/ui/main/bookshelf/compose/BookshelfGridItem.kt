@@ -30,7 +30,7 @@ private const val SHOW_BOOK_NAME_ON_COVER = 2
 private const val SHELF_GRID_NAME_TEXT_SIZE = 12
 private const val SHELF_GRID_OVERLAY_NAME_TEXT_SIZE = 11
 
-/** 封面底部渐变遮罩，对齐 bg_gradient_cover（底部黑 63% → 30% 处 38% → 顶部透明） */
+/** 封面底部渐变遮罩，对齐原 bg_gradient_cover（底部黑 63% → 30% 处 38% → 顶部透明） */
 private val gridNameOverlayBrush = Brush.verticalGradient(
     0.0f to Color.Transparent,
     0.3f to Color.Black.copy(alpha = 0.38f),
@@ -46,40 +46,43 @@ private val gridNameOverlayBrush = Brush.verticalGradient(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookshelfGridItem(
-    item: BookshelfBookItem,
-    config: BookshelfDisplayConfig,
+    modifier: Modifier = Modifier,
+    bookItem: BookshelfBookItem,
+    displayConfig: BookshelfDisplayConfig,
     onClick: (BookshelfBookItem) -> Unit,
     onLongClick: (BookshelfBookItem) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
-                onClick = { onClick(item) },
-                onLongClick = { onLongClick(item) },
+                onClick = { onClick(bookItem) },
+                onLongClick = { onLongClick(bookItem) },
             )
             .padding(AppDimens.shelfGridItemPadding),
     ) {
         Box(modifier = Modifier.padding(AppDimens.shelfGridCoverMargin)) {
             AppBookCover(
-                name = item.display.name,
-                author = item.display.author,
-                coverPath = item.display.getDisplayCover(),
-                galleryIdentity = item.display.bookUrl,
-                sourceOrigin = item.display.origin,
-                contentDescription = item.display.name,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f / AppDimens.BOOK_COVER_ASPECT),
+                name = bookItem.display.name,
+                author = bookItem.display.author,
+                coverPath = bookItem.display.getDisplayCover(),
+                galleryIdentity = bookItem.display.bookUrl,
+                sourceOrigin = bookItem.display.origin,
+                contentDescription = bookItem.display.name,
             )
-            item.readProgress?.let { progress ->
+            bookItem.readProgress?.let { progress ->
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .fillMaxWidth()
                         .height(AppDimens.shelfProgressThickness)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = AppDimens.SHELF_PROGRESS_TRACK_ALPHA))
+                        .background(
+                            MaterialTheme.colorScheme.primary
+                                .copy(alpha = AppDimens.SHELF_PROGRESS_TRACK_ALPHA)
+                        )
                 ) {
                     Box(
                         modifier = Modifier
@@ -90,16 +93,16 @@ fun BookshelfGridItem(
                 }
             }
             BookshelfItemStatus(
-                item = item,
-                showUnread = config.showUnread,
-                loadingSize = AppDimens.shelfGridLoadingSize,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(AppDimens.shelfBadgeMargin),
+                bookItem = bookItem,
+                showUnread = displayConfig.showUnread,
+                loadingSize = AppDimens.shelfGridLoadingSize,
             )
-            if (config.showBookName == SHOW_BOOK_NAME_ON_COVER) {
+            if (displayConfig.showBookName == SHOW_BOOK_NAME_ON_COVER) {
                 Text(
-                    text = item.display.name,
+                    text = bookItem.display.name,
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .fillMaxWidth()
@@ -118,9 +121,9 @@ fun BookshelfGridItem(
                 )
             }
         }
-        if (config.showBookName == SHOW_BOOK_NAME_BELOW) {
+        if (displayConfig.showBookName == SHOW_BOOK_NAME_BELOW) {
             Text(
-                text = item.display.name,
+                text = bookItem.display.name,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = AppDimens.shelfGridNameSpacing),

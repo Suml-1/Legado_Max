@@ -210,8 +210,8 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books) {
             ) {
                 items(items = shelfItems, key = { it.key }) { item ->
                     BookshelfListItem(
-                        item = item,
-                        config = displayConfig,
+                        bookItem = item,
+                        displayConfig = displayConfig,
                         onClick = ::onBookClick,
                         onLongClick = ::onBookLongClick,
                     )
@@ -263,8 +263,8 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books) {
             ) {
                 items(items = shelfItems, key = { it.key }) { item ->
                     BookshelfGridItem(
-                        item = item,
-                        config = displayConfig,
+                        bookItem = item,
+                        displayConfig = displayConfig,
                         onClick = ::onBookClick,
                         onLongClick = ::onBookLongClick,
                     )
