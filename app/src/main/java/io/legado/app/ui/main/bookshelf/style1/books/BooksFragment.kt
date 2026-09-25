@@ -1,41 +1,63 @@
 package io.legado.app.ui.main.bookshelf.style1.books
 
-import android.annotation.SuppressLint
-import android.graphics.Rect
 import android.os.Bundle
 import android.view.View
-import android.view.ViewConfiguration
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.unit.Dp
 import androidx.core.view.isGone
-import androidx.core.view.updatePadding
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.RecyclerView.Adapter.StateRestorationPolicy
 import io.legado.app.R
 import io.legado.app.base.BaseFragment
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.EventBus
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.appDb
+import io.legado.app.data.dao.BookShelfDisplay
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.databinding.FragmentBooksBinding
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.book.BookTagMatcher
 import io.legado.app.help.book.toSmartTagSnapshot
+import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.accentColor
-import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.book.info.BookInfoActivity
-import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.main.MainViewModel
+import io.legado.app.ui.main.bookshelf.compose.BookshelfBookItem
+import io.legado.app.ui.main.bookshelf.compose.BookshelfDisplayConfig
+import io.legado.app.ui.main.bookshelf.compose.BookshelfGridItem
+import io.legado.app.ui.main.bookshelf.compose.BookshelfListItem
+import io.legado.app.ui.main.bookshelf.compose.buildBookshelfBookItems
+import io.legado.app.ui.main.bookshelf.compose.updateBookshelfBookUpdating
+import io.legado.app.ui.theme.AppDimens
+import io.legado.app.ui.widget.components.VerticalScrollbar
 import io.legado.app.utils.cnCompare
 import io.legado.app.utils.flowWithLifecycleAndDatabaseChangeFirst
 import io.legado.app.utils.observeEvent
-import io.legado.app.utils.setEdgeEffectColor
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -51,11 +73,13 @@ import kotlinx.coroutines.launch
 import kotlin.math.max
 
 /**
- * 书架界面
+ * 书架界面（style1 内层分组页）。
+ *
+ * 分组骨架（TabLayout/下拉 + 内层 ViewPager + 二级标签栏）仍在 View 侧，这里只把每个
+ * 分组的书籍列表换成 Compose 渲染；排序、标签筛选、下拉刷新、空态提示、底部内边距、
+ * 快速滚动条与"回到顶部"等行为与原实现保持一致。
  */
-class BooksFragment() :
-    BaseFragment(R.layout.fragment_books),
-    BaseBooksAdapter.CallBack {
+class BooksFragment() : BaseFragment(R.layout.fragment_books) {
 
     constructor(position: Int, group: BookGroup) : this() {
         val bundle = Bundle()
@@ -69,8 +93,6 @@ class BooksFragment() :
 
     private val binding by viewBinding(FragmentBooksBinding::bind)
     private val activityViewModel by activityViewModels<MainViewModel>()
-    private var bookLayout = AppConfig.bookLayout
-    private lateinit var booksAdapter: BaseBooksAdapter<*>
     private var booksFlowJob: Job? = null
     var position = 0
         private set
@@ -81,31 +103,16 @@ class BooksFragment() :
     private var upLastUpdateTimeJob: Job? = null
     private var enableRefresh = true
     private var onlyUpdateRead = false
-    private val bookshelfMargin by lazy { AppConfig.bookshelfMargin }
-    private var itemCount = 0
     private var tagFilter: String? = null
 
-    private fun createBooksAdapter(): BaseBooksAdapter<*> = when (AppConfig.bookLayout) {
-        0 -> BooksAdapterList(requireContext(), this, this, viewLifecycleOwner.lifecycle)
-        1 -> BooksAdapterList2(requireContext(), this, this, viewLifecycleOwner.lifecycle)
-        else -> BooksAdapterGrid(requireContext(), this)
-    }
-
-    /**
-     * 判断当前 adapter 类型是否与 AppConfig.bookLayout 不匹配。
-     * 当 Fragment view 被销毁后重建（如 ViewPager 切换分组页面）时，
-     * Fragment 实例复用，booksAdapter 保留旧值。如果用户在 view 不可见期间
-     * 切换了布局（如从列表变为紧凑列表），重建时需要检测并重新创建 adapter。
-     */
-    private fun isAdapterLayoutStale(): Boolean {
-        val currentLayout = AppConfig.bookLayout
-        return when (booksAdapter) {
-            is BooksAdapterList -> currentLayout != 0
-            is BooksAdapterList2 -> currentLayout != 1
-            is BooksAdapterGrid -> currentLayout < 2
-            else -> true
-        }
-    }
+    /** 当前展示的书籍（已按标签筛选，供目录更新与重新构建条目复用） */
+    private var shelfDisplays: List<BookShelfDisplay> = emptyList()
+    private var displayConfig by mutableStateOf(BookshelfDisplayConfig.fromAppConfig())
+    private var shelfItems by mutableStateOf<List<BookshelfBookItem>>(emptyList())
+    private var bottomPaddingPx by mutableIntStateOf(0)
+    private var canScrollBackward by mutableStateOf(false)
+    private var scrollToTopTick by mutableIntStateOf(0)
+    private var immediateScrollToTopTick by mutableIntStateOf(0)
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         arguments?.let {
@@ -116,132 +123,164 @@ class BooksFragment() :
             onlyUpdateRead = it.getBoolean("onlyUpdateRead", false)
             binding.refreshLayout.isEnabled = enableRefresh
         }
-        // 同步最新的布局配置：Fragment view 被销毁后重建时，
-        // 构造时赋值的 bookLayout 已过期，需在此更新以确保
-        // initRecyclerView 使用最新的布局参数。
-        bookLayout = AppConfig.bookLayout
-        initRecyclerView()
+        initSwipeRefresh()
         upRecyclerData()
     }
 
-    private fun initRecyclerView() {
-        // 初始化适配器；若已初始化但布局类型已变更，则重新创建以匹配最新配置。
-        // 这是 view 被销毁后重建时仍复用旧 Fragment 实例的场景：
-        // booksAdapter 是 lateinit，Fragment 未销毁时其值保留，
-        // 如果用户在 view 不可见期间切换了 bookLayout，
-        // 重建 view 时必须用新 adapter，否则布局不会生效。
-        if (!this::booksAdapter.isInitialized || isAdapterLayoutStale()) {
-            booksAdapter = createBooksAdapter()
-        }
-        updateMainBottomPadding((activity as? MainActivity)?.mainContentBottomPadding() ?: 0)
-        binding.rvBookshelf.setHasFixedSize(true)
-        binding.rvBookshelf.setEdgeEffectColor(primaryColor)
-        upFastScrollerBar()
+    private fun initSwipeRefresh() {
         binding.refreshLayout.setColorSchemeColors(accentColor)
+        // ComposeView 不参与 View 体系的滚动测量，下拉刷新能否触发由列表状态反向同步
+        binding.refreshLayout.setOnChildScrollUpCallback { _, _ -> canScrollBackward }
         binding.refreshLayout.setOnRefreshListener {
             binding.refreshLayout.isRefreshing = false
-            activityViewModel.upToc(booksAdapter.getItems().map { it.toMinimalBook() }, onlyUpdateRead)
+            activityViewModel.upToc(getBooks(), onlyUpdateRead)
         }
-        if (bookLayout >= 2) {
-            binding.rvBookshelf.layoutManager = GridLayoutManager(context, bookLayout)
-            binding.rvBookshelf.setRecycledViewPool(activityViewModel.booksGridRecycledViewPool)
-        } else if (bookLayout == 1) {
-            // 紧凑列表使用独立的 RecycledViewPool，避免与标准列表布局混淆
-            binding.rvBookshelf.layoutManager = LinearLayoutManager(context)
-            binding.rvBookshelf.setRecycledViewPool(activityViewModel.booksList2RecycledViewPool)
-        } else {
-            binding.rvBookshelf.layoutManager = LinearLayoutManager(context)
-            binding.rvBookshelf.setRecycledViewPool(activityViewModel.booksListRecycledViewPool)
+        binding.composeBookshelf.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+        binding.composeBookshelf.setContent {
+            BookshelfContent()
         }
-        booksAdapter.stateRestorationPolicy = StateRestorationPolicy.PREVENT_WHEN_EMPTY
-        binding.rvBookshelf.adapter = booksAdapter
-        /**
-         * 应该是当初没有使用override val keepScrollPosition = true 加的代码
-         * 最近阅读插入顶部时会造成滚动
-         * 但是采用keepScrollPosition = true复原滚动后,代码就多余了
-         * 采用下面代码反而会向上多滚动一个行
-         * 再加上2025/12/19代码,因为下面的代码会出现很奇怪的自动滚动到顶部现象,没理出原因,注释掉下面代码
-         * **/
-//        booksAdapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-//            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-//                val layoutManager = binding.rvBookshelf.layoutManager
-//                if (positionStart == 0 && itemCount == 1 && layoutManager is LinearLayoutManager) {
-//                    val scrollTo = layoutManager.findFirstVisibleItemPosition() - itemCount
-//                    binding.rvBookshelf.scrollToPosition(max(0, scrollTo))
-//                }
-//            }
-//
-//            override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) {
-//                val layoutManager = binding.rvBookshelf.layoutManager
-//                if (toPosition == 0 && itemCount == 1 && layoutManager is LinearLayoutManager) {
-//                    val scrollTo = layoutManager.findFirstVisibleItemPosition() - itemCount
-//                    binding.rvBookshelf.scrollToPosition(max(0, scrollTo))
-//                }
-//            }
-//        })
-        // 清除旧的ItemDecoration，避免累积
-        while (binding.rvBookshelf.itemDecorationCount > 0) {
-            binding.rvBookshelf.removeItemDecorationAt(0)
-        }
-        binding.rvBookshelf.addItemDecoration(object : RecyclerView.ItemDecoration() {
-            private val marginFirst = bookshelfMargin + 24
-            private val marginNormal = bookshelfMargin
-
-            override fun getItemOffsets(
-                outRect: Rect,
-                view: View,
-                parent: RecyclerView,
-                state: RecyclerView.State,
-            ) {
-                val position = parent.getChildAdapterPosition(view)
-                if (position == RecyclerView.NO_POSITION) return
-
-                if (bookLayout >= 2) {
-                    val rowIndex = position / bookLayout
-                    val lastRowIndex = if (itemCount > 0) (itemCount - 1) / bookLayout else 0
-                    // 处理单行情况：既是第一行也是最后一行
-                    if (rowIndex == 0 && rowIndex == lastRowIndex) {
-                        outRect.set(bookshelfMargin, marginFirst, bookshelfMargin, marginFirst)
-                    } else {
-                        when (rowIndex) {
-                            0 -> outRect.set(bookshelfMargin, marginFirst, bookshelfMargin, bookshelfMargin)
-                            lastRowIndex -> outRect.set(bookshelfMargin, bookshelfMargin, bookshelfMargin, marginFirst)
-                            else -> outRect.set(bookshelfMargin, bookshelfMargin, bookshelfMargin, bookshelfMargin)
-                        }
-                    }
-                } else {
-                    // 处理单行情况：既是第一行也是最后一行
-                    if (position == 0 && position == itemCount - 1) {
-                        outRect.set(0, marginFirst, 0, marginFirst)
-                    } else {
-                        when (position) {
-                            0 -> outRect.set(0, marginFirst, 0, marginNormal)
-                            itemCount - 1 -> outRect.set(0, marginNormal, 0, marginFirst)
-                            else -> outRect.set(0, marginNormal, 0, marginNormal)
-                        }
-                    }
-                }
-            }
-        })
         startLastUpdateTimeJob()
     }
 
-    private fun upFastScrollerBar() {
-        val showFastScroller = AppConfig.showBookshelfFastScroller
-        binding.rvBookshelf.setFastScrollEnabled(showFastScroller)
-        binding.rvBookshelf.isVerticalScrollBarEnabled = !showFastScroller
-        if (!showFastScroller) {
-            binding.rvBookshelf.scrollBarSize =
-                ViewConfiguration.get(requireContext()).scaledScrollBarSize
+    @Composable
+    private fun BookshelfContent() {
+        if (displayConfig.isGrid) {
+            BookshelfGridContent()
+        } else {
+            BookshelfListContent()
+        }
+    }
+
+    /**
+     * 列表 / 网格共用的间距。
+     *
+     * 对齐原 ItemDecoration 的口径：条目四周各留一个 margin（相邻条目之间即两个 margin），
+     * 首个条目额外留出顶部空间，底部再叠加主导航栏高度以让内容能滚到底栏之上。
+     */
+    @Composable
+    private fun rememberShelfSpacing(): ShelfSpacing {
+        val density = LocalDensity.current
+        return remember(displayConfig.marginPx, bottomPaddingPx, density) {
+            val marginPx = displayConfig.marginPx
+            with(density) {
+                ShelfSpacing(
+                    itemMargin = marginPx.toDp(),
+                    itemSpacing = (marginPx * 2).toDp(),
+                    topPadding = (marginPx + AppDimens.shelfFirstItemExtraTop.toPx()).toDp(),
+                    bottomPadding = (marginPx + bottomPaddingPx).toDp(),
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun BookshelfListContent() {
+        val listState = rememberLazyListState()
+        val spacing = rememberShelfSpacing()
+        val canScrollBack by remember {
+            derivedStateOf {
+                listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
+            }
+        }
+        LaunchedEffect(canScrollBack) {
+            canScrollBackward = canScrollBack
+        }
+        LaunchedEffect(immediateScrollToTopTick) {
+            if (immediateScrollToTopTick > 0) listState.scrollToItem(0)
+        }
+        LaunchedEffect(scrollToTopTick) {
+            if (scrollToTopTick > 0) {
+                if (AppConfig.isEInkMode) listState.scrollToItem(0)
+                else listState.animateScrollToItem(0)
+            }
+        }
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = AppDimens.shelfContentHorizontalPadding,
+                    top = spacing.topPadding,
+                    end = AppDimens.shelfContentHorizontalPadding,
+                    bottom = spacing.bottomPadding,
+                ),
+                verticalArrangement = Arrangement.spacedBy(spacing.itemSpacing),
+            ) {
+                items(items = shelfItems, key = { it.key }) { item ->
+                    BookshelfListItem(
+                        item = item,
+                        config = displayConfig,
+                        onClick = ::onBookClick,
+                        onLongClick = ::onBookLongClick,
+                    )
+                }
+            }
+            if (displayConfig.fastScrollerEnabled) {
+                VerticalScrollbar(
+                    state = listState,
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun BookshelfGridContent() {
+        val gridState = rememberLazyGridState()
+        val spacing = rememberShelfSpacing()
+        val canScrollBack by remember {
+            derivedStateOf {
+                gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0
+            }
+        }
+        LaunchedEffect(canScrollBack) {
+            canScrollBackward = canScrollBack
+        }
+        LaunchedEffect(immediateScrollToTopTick) {
+            if (immediateScrollToTopTick > 0) gridState.scrollToItem(0)
+        }
+        LaunchedEffect(scrollToTopTick) {
+            if (scrollToTopTick > 0) {
+                if (AppConfig.isEInkMode) gridState.scrollToItem(0)
+                else gridState.animateScrollToItem(0)
+            }
+        }
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(displayConfig.bookLayout.coerceAtLeast(2)),
+                state = gridState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = AppDimens.shelfContentHorizontalPadding + spacing.itemMargin,
+                    top = spacing.topPadding,
+                    end = AppDimens.shelfContentHorizontalPadding + spacing.itemMargin,
+                    bottom = spacing.bottomPadding,
+                ),
+                horizontalArrangement = Arrangement.spacedBy(spacing.itemSpacing),
+                verticalArrangement = Arrangement.spacedBy(spacing.itemSpacing),
+            ) {
+                items(items = shelfItems, key = { it.key }) { item ->
+                    BookshelfGridItem(
+                        item = item,
+                        config = displayConfig,
+                        onClick = ::onBookClick,
+                        onLongClick = ::onBookLongClick,
+                    )
+                }
+            }
+            if (displayConfig.fastScrollerEnabled) {
+                VerticalScrollbar(
+                    state = gridState,
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                )
+            }
         }
     }
 
     fun updateMainBottomPadding(bottomPadding: Int) {
-        if (view == null) return
-        binding.rvBookshelf.clipToPadding = false
-        binding.rvBookshelf.scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY
-        binding.rvBookshelf.updatePadding(bottom = bottomPadding)
-        binding.rvBookshelf.refreshFastScrollerLayout()
+        bottomPaddingPx = bottomPadding
     }
 
     fun upBookSort(sort: Int) {
@@ -258,34 +297,24 @@ class BooksFragment() :
     }
 
     /**
-     * 更新书籍列表信息
-     * 方案A：使用 flowShelfByGroup 轻量查询替代 flowByGroup，
-     * SQL 层面已过滤 notShelf 并按 durChapterTime DESC 排序，
-     * 仅在内存中做用户选择的排序方式切换。
+     * 更新书籍列表数据。
+     *
+     * 数据源、排序口径与标签筛选逻辑与原实现一致，只是在收集时把 [BookShelfDisplay]
+     * 转成条目 UI 模型再交给 Compose 渲染。
      */
     private fun upRecyclerData() {
         booksFlowJob?.cancel()
         booksFlowJob = viewLifecycleOwner.lifecycleScope.launch {
             appDb.bookDao.flowShelfByGroup(groupId).map { list ->
-                // 排序
                 when (bookSort) {
                     1 -> list.sortedByDescending { it.latestChapterTime }
-                    2 -> list.sortedWith { o1, o2 ->
-                        o1.name.cnCompare(o2.name)
-                    }
-
+                    2 -> list.sortedWith { o1, o2 -> o1.name.cnCompare(o2.name) }
                     3 -> list.sortedBy { it.order }
-
                     // 综合排序 issue #3192
-                    4 -> list.sortedByDescending {
-                        max(it.latestChapterTime, it.durChapterTime)
-                    }
-                    // 按作者排序
-                    5 -> list.sortedWith { o1, o2 ->
-                        o1.author.cnCompare(o2.author)
-                    }
-
-                    else -> list // SQL 已按 durChapterTime DESC 排序，无需再排
+                    4 -> list.sortedByDescending { max(it.latestChapterTime, it.durChapterTime) }
+                    5 -> list.sortedWith { o1, o2 -> o1.author.cnCompare(o2.author) }
+                    // SQL 已按 durChapterTime DESC 排序，无需再排
+                    else -> list
                 }
             }.flowWithLifecycleAndDatabaseChangeFirst(
                 viewLifecycleOwner.lifecycle,
@@ -294,108 +323,110 @@ class BooksFragment() :
             ).catch {
                 AppLog.put("书架更新出错", it)
             }.conflate().flowOn(Dispatchers.Default).collect { list ->
-                // 注意 flowOn 只影响上游，collect 仍运行在主线程，可安全取 context
-                val filtered = if (tagFilter == null) {
-                    list
-                } else {
-                    val filterTag = tagFilter!!
-                    val smartRules = BookTagMatcher.enabledRules(requireContext())
-                    list.filter {
-                        BookTagMatcher.matches(
-                            filterTag,
-                            it.customTag,
-                            it.toSmartTagSnapshot(),
-                            smartRules,
-                        )
-                    }
-                }
-                itemCount = filtered.size
-                binding.tvEmptyMsg.isGone = itemCount > 0
-                binding.refreshLayout.isEnabled = enableRefresh && itemCount > 0
-                booksAdapter.setItems(filtered)
+                // 注意 flowOn 只影响上游，collect 仍运行在主线程
+                val filtered = applyTagFilter(list)
+                shelfDisplays = filtered
+                binding.tvEmptyMsg.isGone = filtered.isNotEmpty()
+                binding.refreshLayout.isEnabled = enableRefresh && filtered.isNotEmpty()
+                shelfItems = buildItems(filtered)
             }
         }
     }
 
+    private fun buildItems(displays: List<BookShelfDisplay>): List<BookshelfBookItem> =
+        buildBookshelfBookItems(
+            context = requireContext(),
+            displays = displays,
+            config = displayConfig,
+            isUpdating = ::isUpdate,
+        )
+
+    private fun applyTagFilter(list: List<BookShelfDisplay>): List<BookShelfDisplay> {
+        val filterTag = tagFilter ?: return list
+        val smartRules = BookTagMatcher.enabledRules(requireContext())
+        return list.filter {
+            BookTagMatcher.matches(
+                filterTag,
+                it.customTag,
+                it.toSmartTagSnapshot(),
+                smartRules,
+            )
+        }
+    }
+
+    /** 启动"最后更新时间"定时刷新：列表布局下每 30 秒重算一次相对时间 */
     private fun startLastUpdateTimeJob() {
         upLastUpdateTimeJob?.cancel()
-        if (!AppConfig.showLastUpdateTime || bookLayout >= 2) {
+        if (!displayConfig.showLastUpdateTime || displayConfig.isGrid) {
             return
         }
         upLastUpdateTimeJob = viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 while (isActive) {
-                    booksAdapter.upLastUpdateTime()
+                    if (shelfDisplays.isNotEmpty()) {
+                        shelfItems = buildItems(shelfDisplays)
+                    }
                     delay(30 * 1000)
                 }
             }
         }
     }
 
-    fun getBooks(): List<Book> = booksAdapter.getItems().map { it.toMinimalBook() }
+    fun getBooks(): List<Book> = shelfDisplays.map { it.toMinimalBook() }
 
     fun gotoTop() {
         if (AppConfig.isEInkMode) {
-            binding.rvBookshelf.scrollToPosition(0)
+            immediateScrollToTopTick++
         } else {
-            binding.rvBookshelf.smoothScrollToPosition(0)
+            scrollToTopTick++
         }
     }
 
-    fun getBooksCount(): Int = booksAdapter.itemCount
+    fun getBooksCount(): Int = shelfItems.size
 
-    /**
-     * 按标签筛选书籍。传 null 表示清除筛选。
-     */
+    /** 按标签筛选书籍。传 null 表示清除筛选。 */
     fun filterByTag(tag: String?) {
         tagFilter = tag
         upRecyclerData()
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        /**
-         * 将 RecyclerView 中的视图全部回收到 RecycledViewPool 中
-         */
-        binding.rvBookshelf.setItemViewCacheSize(0)
-        binding.rvBookshelf.adapter = null
+    private fun onBookClick(item: BookshelfBookItem) {
+        startActivityForBook(item.display.toMinimalBook())
     }
 
-    override fun open(book: Book) {
-        startActivityForBook(book)
-    }
-
-    override fun openBookInfo(book: Book) {
+    private fun onBookLongClick(item: BookshelfBookItem) {
+        val book = item.display.toMinimalBook()
         startActivity<BookInfoActivity> {
             putExtra("name", book.name)
             putExtra("author", book.author)
         }
     }
 
-    override fun isUpdate(bookUrl: String): Boolean = activityViewModel.isUpdate(bookUrl)
+    private fun isUpdate(bookUrl: String): Boolean = activityViewModel.isUpdate(bookUrl)
 
-    @SuppressLint("NotifyDataSetChanged")
+    override fun onDestroyView() {
+        super.onDestroyView()
+        shelfItems = emptyList()
+    }
+
     override fun observeLiveBus() {
         super.observeLiveBus()
         observeEvent<String>(EventBus.UP_BOOKSHELF) {
-            booksAdapter.notification(it)
+            shelfItems = updateBookshelfBookUpdating(shelfItems, it, ::isUpdate)
         }
         observeEvent<String>(EventBus.BOOKSHELF_REFRESH) {
-            // 更新布局配置
-            bookLayout = AppConfig.bookLayout
-            // 获取旧适配器的数据
-            val oldItems = booksAdapter.getItems()
-            // 如果布局类型改变，重新创建适配器并设置数据
-            val newAdapter = createBooksAdapter()
-            if (newAdapter::class != booksAdapter::class) {
-                booksAdapter = newAdapter
-                booksAdapter.setItems(oldItems)
-            }
-            // 重新初始化RecyclerView以应用新的布局
-            initRecyclerView()
-            booksAdapter.notifyDataSetChanged()
+            displayConfig = BookshelfDisplayConfig.fromAppConfig()
+            // 布局、边距、条目内容开关变化后需要重建条目，并重启相对时间刷新任务
+            shelfItems = buildItems(shelfDisplays)
             startLastUpdateTimeJob()
-            upFastScrollerBar()
         }
     }
+
+    /** 由显示配置换算出的间距 */
+    private data class ShelfSpacing(
+        val itemMargin: Dp,
+        val itemSpacing: Dp,
+        val topPadding: Dp,
+        val bottomPadding: Dp,
+    )
 }

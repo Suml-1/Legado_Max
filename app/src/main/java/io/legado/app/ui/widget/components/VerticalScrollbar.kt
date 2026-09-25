@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -62,6 +63,46 @@ fun VerticalScrollbar(
     if (viewportHeight <= 0f) return
 
     val avgItemHeight = visible.sumOf { it.size }.toFloat() / visible.size
+    val totalHeight = avgItemHeight * totalItems
+    val maxScroll = totalHeight - viewportHeight
+    if (maxScroll <= 0f) return
+
+    val scrollOffset = state.firstVisibleItemIndex * avgItemHeight + state.firstVisibleItemScrollOffset
+    val scrollFraction = (scrollOffset / maxScroll).coerceIn(0f, 1f)
+    val contentFraction = (viewportHeight / totalHeight).coerceIn(0.05f, 1f)
+
+    ScrollbarThumb(
+        contentFraction = contentFraction,
+        scrollFraction = scrollFraction,
+        onDragFraction = { fraction ->
+            val targetOffset = fraction * maxScroll
+            val targetIndex = (targetOffset / avgItemHeight).toInt().coerceIn(0, totalItems - 1)
+            val itemOffset = (targetOffset - targetIndex * avgItemHeight).toInt()
+            state.requestScrollToItem(targetIndex, itemOffset)
+        },
+        modifier = modifier
+    )
+}
+
+// ==================== LazyGridState ====================
+
+@Composable
+fun VerticalScrollbar(
+    state: LazyGridState,
+    modifier: Modifier = Modifier
+) {
+    val info = state.layoutInfo
+    val totalItems = info.totalItemsCount
+    if (totalItems == 0) return
+
+    val visible = info.visibleItemsInfo
+    if (visible.isEmpty() || visible.size >= totalItems) return
+
+    val viewportHeight = info.viewportSize.height.toFloat()
+    if (viewportHeight <= 0f) return
+
+    // 网格的行高用可见项平均高度近似：同一行内各项高度一致，误差只来自首末未对齐的滚动行
+    val avgItemHeight = visible.sumOf { it.size.height }.toFloat() / visible.size
     val totalHeight = avgItemHeight * totalItems
     val maxScroll = totalHeight - viewportHeight
     if (maxScroll <= 0f) return

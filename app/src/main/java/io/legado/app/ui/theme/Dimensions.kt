@@ -68,6 +68,140 @@ object AppDimens {
     /** 封面圆角，对齐 View 版 CoverImageView 的 12px 描边圆角 */
     val bookCoverCornerRadius: Dp = 4.dp
 
+    // ── 书架条目（列表 / 网格，尺寸对齐原 item_bookshelf_* 布局）──
+
+    /** 标准列表条目：开启"显示外边框"时的内边距 */
+    val shelfItemBorderPadding: Dp = 8.dp
+
+    /** 条目默认内边距 */
+    val shelfItemPadding: Dp = 4.dp
+
+    /** 开启"显示外边框"时的条目外边距 */
+    val shelfItemBorderMargin: Dp = 4.dp
+
+    /** 条目外边框圆角 */
+    val shelfItemBorderCornerRadius: Dp = 12.dp
+
+    /** 书架列表左右内边距（对齐原 RecyclerView 的 8dp padding） */
+    val shelfContentHorizontalPadding: Dp = 8.dp
+
+    /** 首个条目的额外上边距（对齐 View 侧 ItemDecoration 的首行补偿） */
+    val shelfFirstItemExtraTop: Dp = 8.dp
+
+    /** 条目外边框粗细 */
+    val shelfItemBorderWidth: Dp = 0.8.dp
+
+    /** 外边框填充透明度（对齐 View 侧 bookBorderBackground 的 0.41f） */
+    const val SHELF_ITEM_BORDER_FILL_ALPHA = 0.41f
+
+    /** 外边框描边与背景色的混合比例（对齐 View 侧 bookBorderBackground 的 0.22f） */
+    const val SHELF_ITEM_BORDER_BLEND = 0.22f
+
+    /** 标准列表封面宽度（高度按书本比例推导） */
+    val shelfCoverWidth: Dp = 66.dp
+
+    /** 紧凑列表封面宽度 */
+    val shelfCoverWidthCompact: Dp = 48.dp
+
+    /** 封面与文字列的间距 */
+    val shelfCoverNameSpacing: Dp = 10.dp
+
+    /** 书名相对文字列的起始内边距 */
+    val shelfTitleStartPadding: Dp = 2.dp
+
+    /** 书名与未读角标之间的间距 */
+    val shelfBadgeRowSpacing: Dp = 8.dp
+
+    /** 作者/阅读进度/最新章节行的图标尺寸 */
+    val shelfMetaIconSize: Dp = 18.dp
+
+    /** meta 行图标的内边距 */
+    val shelfMetaIconPadding: Dp = 2.dp
+
+    /** 书名行与首个 meta 行之间的间距 */
+    val shelfMetaFirstSpacing: Dp = 8.dp
+
+    /** meta 行之间的间距 */
+    val shelfMetaSpacing: Dp = 4.dp
+
+    /** 阅读进度条与上一行、百分比的间距 */
+    val shelfProgressSpacing: Dp = 2.dp
+
+    /** 阅读进度条高度 */
+    val shelfProgressThickness: Dp = 2.dp
+
+    /** 阅读进度条的下内边距 */
+    val shelfProgressVerticalPadding: Dp = 4.dp
+
+    /** 阅读进度百分比与进度条的间距 */
+    val shelfProgressPercentSpacing: Dp = 4.dp
+
+    /** 标签胶囊的水平内边距 */
+    val shelfTagChipPaddingHorizontal: Dp = 8.dp
+
+    /** 标签胶囊的垂直内边距 */
+    val shelfTagChipPaddingVertical: Dp = 4.dp
+
+    /** 标签胶囊圆角 */
+    val shelfTagChipCornerRadius: Dp = 8.dp
+
+    /** 标签胶囊描边粗细（对齐 bg_tag 的 0.5dp） */
+    val shelfTagChipBorderWidth: Dp = 0.5.dp
+
+    /** 标签胶囊之间的水平间距 */
+    val shelfTagChipSpacing: Dp = 4.dp
+
+    /** 标签胶囊之间的垂直间距 */
+    val shelfTagChipVerticalSpacing: Dp = 2.dp
+
+    /** 标签区与上一行的间距 */
+    val shelfTagRowsSpacing: Dp = 4.dp
+
+    /** 简介与上一行的间距 */
+    val shelfIntroSpacing: Dp = 4.dp
+
+    /** 网格条目外内边距 */
+    val shelfGridItemPadding: Dp = 4.dp
+
+    /** 网格封面与条目边缘的间距 */
+    val shelfGridCoverMargin: Dp = 4.dp
+
+    /** 网格书名与封面之间的间距 */
+    val shelfGridNameSpacing: Dp = 6.dp
+
+    /** 网格封面上的书名叠层内边距 */
+    val shelfGridOverlayNamePadding: Dp = 4.dp
+
+    /** 未读角标：字号以外的内边距 */
+    val shelfBadgePaddingHorizontal: Dp = 5.dp
+
+    /** 未读角标垂直内边距 */
+    val shelfBadgePaddingVertical: Dp = 1.dp
+
+    /** 未读角标最小尺寸 */
+    val shelfBadgeMinSize: Dp = 16.dp
+
+    /** 未读角标圆角 */
+    val shelfBadgeCornerRadius: Dp = 8.dp
+
+    /** 状态下标（角标 / 加载指示器）距条目边缘的间距 */
+    val shelfBadgeMargin: Dp = 5.dp
+
+    /** 列表条目加载指示器尺寸 */
+    val shelfListLoadingSize: Dp = 26.dp
+
+    /** 网格条目加载指示器尺寸 */
+    val shelfGridLoadingSize: Dp = 22.dp
+
+    /** 加载指示器线宽 */
+    val shelfLoadingStrokeWidth: Dp = 2.dp
+
+    /** 读取进度轨道的透明度（对齐 View 侧 25% 强调色轨道） */
+    const val SHELF_PROGRESS_TRACK_ALPHA = 0.25f
+
+    /** 封面宽高比：书本封面高度 = 宽度 × 该系数（对齐 CoverImageView 的 4/3） */
+    const val BOOK_COVER_ASPECT = 4f / 3f
+
     // ── 弹窗 ──
 
     /** 单选列表弹窗的选项区最大高度，超出后滚动，避免弹窗顶穿屏幕 */
