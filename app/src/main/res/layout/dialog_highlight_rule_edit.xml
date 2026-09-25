@@ -66,10 +66,15 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <androidx.core.widget.NestedScrollView
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_weight="1">
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/scroll_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:fillViewport="true"
             android:overScrollMode="ifContentScrolls">
 
@@ -1009,6 +1014,43 @@
                 </LinearLayout>
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
+
+            <LinearLayout
+                android:id="@+id/card_preview_floating"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="12dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/shape_highlight_rule_card"
+                android:clickable="true"
+                android:elevation="10dp"
+                android:focusable="true"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tv_preview_floating_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="预览效果（悬浮）"
+                    android:textColor="@color/primaryText"
+                    android:textSize="13sp" />
+
+                <io.legado.app.ui.book.read.config.highlight.HighlightPreviewTextView
+                    android:id="@+id/tv_preview_floating"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/shape_highlight_rule_preview"
+                    android:lineSpacingExtra="4dp"
+                    android:minHeight="56dp"
+                    android:padding="12dp"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </FrameLayout>
     </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

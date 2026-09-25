@@ -6,12 +6,14 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
@@ -81,6 +83,17 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
     private val spacingPreviewUpdate = Runnable {
         spacingPreviewPending = false
         if (isAdded && view != null) updatePreview()
+    }
+
+    /** 最近一次构建的预览规则，悬浮预览层出现时用它同步内容 */
+    private var lastPreviewRule: HighlightRule? = null
+
+    /** 滚动/布局变化时重算悬浮预览的显隐 */
+    private val floatingPreviewWatcher = object :
+        ViewTreeObserver.OnScrollChangedListener,
+        ViewTreeObserver.OnGlobalLayoutListener {
+        override fun onScrollChanged() = updateFloatingPreview()
+        override fun onGlobalLayout() = updateFloatingPreview()
     }
 
     private val selectImageResult = registerForActivityResult(HandleFileContract()) { result ->
@@ -209,12 +222,16 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         bindData()
         bindEvents()
         updatePreview()
+        binding.scrollView.viewTreeObserver.addOnScrollChangedListener(floatingPreviewWatcher)
+        binding.scrollView.viewTreeObserver.addOnGlobalLayoutListener(floatingPreviewWatcher)
     }
 
     override fun onDestroyView() {
         // 视图已销毁还挂着下一帧的预览刷新会拿到已失效的 binding
         binding.root.removeCallbacks(spacingPreviewUpdate)
         spacingPreviewPending = false
+        binding.scrollView.viewTreeObserver.removeOnScrollChangedListener(floatingPreviewWatcher)
+        binding.scrollView.viewTreeObserver.removeOnGlobalLayoutListener(floatingPreviewWatcher)
         super.onDestroyView()
     }
 
@@ -292,6 +309,7 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         binding.cardInfo.background = cardDrawable
         binding.cardStyle.background = makeCardDrawable(cardBg, cardStrokeColor, 24f, density)
         binding.cardPreview.background = makeCardDrawable(cardBg, cardStrokeColor, 24f, density)
+        binding.cardPreviewFloating.background = makeCardDrawable(cardBg, cardStrokeColor, 24f, density)
 
         binding.etPattern.setTextColor(primaryTextColor)
         binding.etPattern.setHintTextColor(secondaryTextColor)
@@ -352,6 +370,10 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         binding.etUnderlineColor.background = makeInputDrawable(inputBgColor, inputStrokeColor, 14f, density)
         binding.etSvgPath.background = makeInputDrawable(inputBgColor, inputStrokeColor, 14f, density)
         binding.tvPreview.background = previewBg
+        // 悬浮预览层只在滚动没到底时出现，颜色与卡片预览保持一致
+        binding.tvPreviewFloatingTitle.setTextColor(primaryTextColor)
+        binding.tvPreviewFloating.setTextColor(primaryTextColor)
+        binding.tvPreviewFloating.background = makeInputDrawable(inputBgColor, inputStrokeColor, 16f, density)
         binding.etBgImage.background = makeInputDrawable(inputBgColor, inputStrokeColor, 14f, density)
         binding.tvBgImagePick.background = makeInputDrawable(inputBgColor, inputStrokeColor, 14f, density)
         binding.etFont.background = makeInputDrawable(inputBgColor, inputStrokeColor, 14f, density)
@@ -1421,6 +1443,33 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
             )
         // 预览按控件实际宽度重新断行，命中字距/行距才能如实体现
         binding.tvPreview.setPreview(previewRule, primaryTextColor)
+        lastPreviewRule = previewRule
+        if (binding.cardPreviewFloating.visibility == View.VISIBLE) {
+            binding.tvPreviewFloating.setPreview(previewRule, primaryTextColor)
+        }
+    }
+
+    /**
+     * 预览卡片是滚动内容的最后一项，调参时常被输入区挡住看不到效果。
+     * 没滑到底时在底部悬浮一份同步预览，滑到底（原卡片已露出来）或原卡片底边已进入可视区就收起，
+     * 避免同一份内容出现两次。
+     */
+    private fun updateFloatingPreview() {
+        if (!isAdded || view == null) return
+        val scrollView = binding.scrollView
+        val card = binding.cardPreview
+        val floating = binding.cardPreviewFloating
+        if (card.height == 0 || scrollView.height == 0) return
+        val bounds = Rect(0, 0, card.width, card.height)
+        scrollView.offsetDescendantRectToMyCoords(card, bounds)
+        // bounds 是滚动内容坐标，减去 scrollY 得到原卡片底边在可视区内的位置
+        val cardBottom = bounds.bottom - scrollView.scrollY
+        val shouldFloat = scrollView.canScrollVertically(1) && cardBottom > scrollView.height
+        if (shouldFloat == (floating.visibility == View.VISIBLE)) return
+        floating.visibility = if (shouldFloat) View.VISIBLE else View.GONE
+        if (shouldFloat) {
+            lastPreviewRule?.let { binding.tvPreviewFloating.setPreview(it, primaryTextColor) }
+        }
     }
 
     private fun validatePattern(pattern: String): String? {
