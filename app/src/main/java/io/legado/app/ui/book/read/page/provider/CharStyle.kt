@@ -116,3 +116,42 @@ data class CharStyle(
         )
     }
 }
+
+/**
+ * 命中字距在**断行测量**中要占的额外宽度（逐字符）。
+ *
+ * 段内字符的留白已由 [CharStyle.withMatchBoundary] 清零，所以这里取到的就是命中段首字符
+ * 的左侧留白与尾字符的右侧留白；同一字符同时是段首与段尾（单字命中）时两值相加。
+ * 留白只并入「断行用的宽度副本」，列位置仍在逐字绘制时让位（见 TextChapterLayout）。
+ *
+ * @return 与 [size] 等长的每字符额外宽度；没有任何留白时返回 null，调用方可跳过整份拷贝
+ */
+internal fun Array<CharStyle?>?.matchSpacingWidths(size: Int): FloatArray? {
+    if (this == null) return null
+    var result: FloatArray? = null
+    for (index in 0 until minOf(size, this.size)) {
+        val style = this[index] ?: continue
+        val extra = style.letterSpacingBefore + style.letterSpacingAfter
+        if (extra <= 0f) continue
+        val array = result ?: FloatArray(size).also { result = it }
+        array[index] = extra
+    }
+    return result
+}
+
+/**
+ * 一条可视行里命中字距实际占掉的宽度（px）：[lineStart, lineEnd) 内所有生效留白之和。
+ *
+ * 两端对齐算剩余宽度时必须把它减掉：逐字绘制时留白由列位置追加，只按字形宽度算剩余空间
+ * 会让这一行整行多出留白那么宽，高亮文字从右侧溢出，再被 [TextChapterLayout] 的越界兜底
+ * 反向压缩回去，看起来就是字符挤在一起。
+ */
+internal fun Array<CharStyle?>?.measureLineMatchSpacing(lineStart: Int, lineEnd: Int): Float {
+    if (this == null || lineEnd <= lineStart) return 0f
+    var spacing = 0f
+    for (index in lineStart until minOf(lineEnd, this.size)) {
+        val style = this[index] ?: continue
+        spacing += style.letterSpacingBefore + style.letterSpacingAfter
+    }
+    return spacing
+}

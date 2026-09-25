@@ -1735,7 +1735,7 @@ class TextChapterLayout(
         // 命中字距要计入断行，否则行尾命中时整行会被压窄、与预览的换行位置不一致；
         // 但列位置在加字符时按留白让位（见 addCharsToLine*），所以留白只并进"断行用的副本"，
         // 不污染 widthsArray，避免同一份留白被算两次
-        val matchSpacingWidths = collectMatchLetterSpacingWidths(charStyles, text.length)
+        val matchSpacingWidths = charStyles.matchSpacingWidths(text.length)
         val layoutWidthsArray = if (matchSpacingWidths == null) {
             widthsArray
         } else {
@@ -1797,13 +1797,16 @@ class TextChapterLayout(
         }
         for (lineIndex in 0 until layout.lineCount) {
             val textLine = TextLine(isTitle = isTitle)
-            prepareNextPageIfNeed(durY + textHeight)
             val lineStart = layout.getLineStart(lineIndex)
             val lineEnd = layout.getLineEnd(lineIndex)
             val lineText = text.substring(lineStart, lineEnd)
             // 命中行行距：包含命中的行才加，同一行内上/下留白各取较大值
             val (highlightLineTop, highlightLineBottom) =
                 extractLineSpacing(charStyles, lineStart, lineEnd)
+            // 命中行行距也要算进翻页判断，否则命中行落在页底时会被推到版面外看不见
+            prepareNextPageIfNeed(durY + highlightLineTop + textHeight + highlightLineBottom)
+            // 本行命中字距实际占的宽度：两端对齐与标题对齐的基准都要含它，否则整行右侧溢出
+            val lineMatchSpacing = charStyles.measureLineMatchSpacing(lineStart, lineEnd)
             val (words, widths) = measureTextSplit(lineText, widthsArray, lineStart)
             val desiredWidth = widths.fastSum()
             textLine.text = lineText
@@ -1828,14 +1831,15 @@ class TextChapterLayout(
                 0f
             }
             // 行尾要压回 visibleWidth - endBleed 才放得下背景右缘；末行右侧空白不足时才需要压缩
+            // （行宽判断同样要含命中字距，留白是真实占位）
             val endSqueezeNeeded = endBleed > 0f &&
-                (visibleWidth - lineStartExtra - desiredWidth) < endBleed
+                (visibleWidth - lineStartExtra - desiredWidth - lineMatchSpacing) < endBleed
             when (lineIndex) {
                 0 if layout.lineCount > 1 && !isTitle && isFirstLine -> {
                     // 多行的第一行 非标题
                     addCharsToLineFirst(
                         book, absStartX, textLine, words, textPaint,
-                        desiredWidth, widths, srcList, clickList, charStyles, lineStart,
+                        desiredWidth, lineMatchSpacing, widths, srcList, clickList, charStyles, lineStart,
                         lineStartExtra,
                     )
                 }
@@ -1848,11 +1852,12 @@ class TextChapterLayout(
                                 emptyContent ||
                                 isVolumeTitle ||
                                 imageStyle?.uppercase() == Book.imgStyleSingle -> {
-                                (visibleWidth - desiredWidth) / 2
+                                (visibleWidth - desiredWidth - lineMatchSpacing) / 2
                             }
                             // 右对齐：扣掉段末匹配让出的外扩量，背景右侧边缘正好落在正文列右边界；
                             // 行满时扣成负数会把左侧文字挤进页边距，改为保住文字、外扩量部分溢出
-                            isRightTitle -> (visibleWidth - desiredWidth - titleEndExtra).coerceAtLeast(0f)
+                            isRightTitle -> (visibleWidth - desiredWidth - lineMatchSpacing - titleEndExtra)
+                                .coerceAtLeast(0f)
                             else -> lineStartExtra
                         }
                     } else {
@@ -1862,11 +1867,13 @@ class TextChapterLayout(
                     if (!isTitle && textFullJustify && endSqueezeNeeded) {
                         // 末行右端放不下段末外扩：走两端对齐的压缩分布。addCharsToLineMiddle 的
                         // 行尾基准是 visibleWidth，desiredWidth 补上全部外扩量后 residual 恒为负、
-                        // 行尾正好落在 visibleWidth - endBleed，背景右缘贴住正文列右边界
+                        // 行尾正好落在 visibleWidth - endBleed，背景右缘贴住正文列右边界。
+                        // 这里的负 residual 是刻意压缩，clampNegativeResidual 必须关掉
                         addCharsToLineMiddle(
                             book, absStartX, textLine, words, textPaint,
-                            desiredWidth + startX + endBleed, startX,
+                            desiredWidth + startX + endBleed + lineMatchSpacing, startX,
                             widths, srcList, clickList, charStyles, lineStart,
+                            clampNegativeResidual = false,
                         )
                     } else {
                         addCharsToLineNatural(
@@ -1883,9 +1890,9 @@ class TextChapterLayout(
                                 emptyContent ||
                                 isVolumeTitle ||
                                 imageStyle?.uppercase() == Book.imgStyleSingle -> {
-                                (visibleWidth - desiredWidth) / 2
+                                (visibleWidth - desiredWidth - lineMatchSpacing) / 2
                             }
-                            isRightTitle -> visibleWidth - desiredWidth
+                            isRightTitle -> visibleWidth - desiredWidth - lineMatchSpacing
                             else -> lineStartExtra
                         }
                         addCharsToLineNatural(
@@ -1894,11 +1901,13 @@ class TextChapterLayout(
                         )
                     } else {
                         // 中间行；续段（被图片分割出的残段）首行没有缩进、同样可能吃到行首匹配的
-                        // 整行右移，desiredWidth 同步补上右移量让行尾仍落在正文列右边界
+                        // 整行右移，desiredWidth 同步补上右移量、命中字距一并补上，
+                        // 让行尾仍落在正文列右边界（留白已参与自然换行，不允许再压负 residual）
                         addCharsToLineMiddle(
                             book, absStartX, textLine, words, textPaint,
-                            desiredWidth + lineStartExtra, lineStartExtra,
+                            desiredWidth + lineStartExtra + lineMatchSpacing, lineStartExtra,
                             widths, srcList, clickList, charStyles, lineStart,
+                            clampNegativeResidual = lineMatchSpacing > 0f,
                         )
                     }
                 }
@@ -1918,26 +1927,6 @@ class TextChapterLayout(
             }
         }
         durY += textHeight * paragraphSpacing / 10f
-    }
-
-    /**
-     * 命中字距在**断行测量**中要占的额外宽度：命中段首字符带上左侧留白、尾字符带上右侧留白
-     * （[CharStyle.withMatchBoundary] 已把段内字符的留白清零），无命中时返回 null。
-     */
-    private fun collectMatchLetterSpacingWidths(
-        charStyles: Array<CharStyle?>?,
-        size: Int,
-    ): FloatArray? {
-        if (charStyles == null) return null
-        var result: FloatArray? = null
-        for (index in 0 until minOf(size, charStyles.size)) {
-            val style = charStyles[index] ?: continue
-            val extra = style.letterSpacingBefore + style.letterSpacingAfter
-            if (extra <= 0f) continue
-            val array = result ?: FloatArray(size).also { result = it }
-            array[index] = extra
-        }
-        return result
     }
 
     /** 合并两份"额外宽度"数组（九宫格外推 + 命中字距），都为 null 时返回 null */
@@ -2000,6 +1989,8 @@ class TextChapterLayout(
         textPaint: TextPaint,
         /**自然排版长度**/
         desiredWidth: Float,
+        /** 本行命中字距占的宽度：两端对齐的剩余宽度要扣掉它 **/
+        lineMatchSpacing: Float,
         textWidths: List<Float>,
         srcList: LinkedList<String>?,
         clickList: LinkedList<String?>?,
@@ -2040,7 +2031,9 @@ class TextChapterLayout(
                 book, absStartX, textLine, text1, textPaint,
                 // 整行右移让出背景后，两端对齐的终点要扣回同样的量，行尾仍落在正文列右边界
                 //（有缩进时 startExtra 恒为 0，缩进路径不受影响）
-                desiredWidth + startExtra, x, textWidths1, srcList, clickList, charStyles, lineStart + bodyIndent.length,
+                desiredWidth + startExtra + lineMatchSpacing, x, textWidths1, srcList, clickList,
+                charStyles, lineStart + bodyIndent.length,
+                clampNegativeResidual = lineMatchSpacing > 0f,
             )
         }
     }
@@ -2054,7 +2047,10 @@ class TextChapterLayout(
         textLine: TextLine,
         words: List<String>,
         textPaint: TextPaint,
-        /**自然排版长度**/
+        /**
+         * 自然排版长度：字形宽度之和，再加上行首让位量与本行命中字距（调用方已补）。
+         * 命中字距必须算进来，否则两端对齐后整行会多出留白那么宽，高亮文字从右侧溢出
+         */
         desiredWidth: Float,
         /**起始x坐标**/
         startX: Float,
@@ -2063,6 +2059,14 @@ class TextChapterLayout(
         clickList: LinkedList<String?>?,
         charStyles: Array<CharStyle?>?,
         lineStart: Int,
+        /**
+         * 是否禁止 residual 为负（只有带命中字距的行才传 true）。
+         *
+         * 命中字距已经参与自然换行，再按负 residual 分配等于把正文字符压到一起（字挤在一起）；
+         * 而**刻意压缩整行**给段末外扩让位的分支仍然是负 residual（见 setTypeText 的
+         * endSqueezeNeeded 分支），所以默认保持旧行为、由调用方决定。
+         */
+        clampNegativeResidual: Boolean = false,
     ) {
         if (!textFullJustify) {
             addCharsToLineNatural(
@@ -2072,7 +2076,9 @@ class TextChapterLayout(
             )
             return
         }
-        val residualWidth = visibleWidth - desiredWidth
+        val residualWidth = (visibleWidth - desiredWidth).let {
+            if (clampNegativeResidual) it.coerceAtLeast(0f) else it
+        }
         val spaceSize = words.count { it == " " }
         textLine.startX = absStartX + startX
         if (spaceSize > 1) {
