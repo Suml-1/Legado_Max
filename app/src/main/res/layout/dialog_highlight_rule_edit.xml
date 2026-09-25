@@ -748,6 +748,106 @@
                 </LinearLayout>
 
                 <LinearLayout
+                    android:id="@+id/card_spacing"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/shape_highlight_rule_card"
+                    android:elevation="3dp"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="命中字距（px）"
+                        android:textColor="@color/primaryText"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="在命中文字与相邻文字之间留出空白，0 表示不留白"
+                        android:textColor="@color/secondaryText"
+                        android:textSize="11sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="52dp"
+                            android:layout_height="wrap_content"
+                            android:text="命中前"
+                            android:textColor="@color/primaryText"
+                            android:textSize="13sp" />
+
+                        <SeekBar
+                            android:id="@+id/sb_letter_spacing_before"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:contentDescription="命中前间距（px）"
+                            android:max="1200" />
+
+                        <EditText
+                            android:id="@+id/et_letter_spacing_before"
+                            android:layout_width="64dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/shape_highlight_rule_input"
+                            android:gravity="center"
+                            android:hint="0"
+                            android:inputType="numberDecimal"
+                            android:paddingStart="6dp"
+                            android:paddingEnd="6dp"
+                            android:selectAllOnFocus="true"
+                            android:singleLine="true"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="52dp"
+                            android:layout_height="wrap_content"
+                            android:text="命中后"
+                            android:textColor="@color/primaryText"
+                            android:textSize="13sp" />
+
+                        <SeekBar
+                            android:id="@+id/sb_letter_spacing_after"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:contentDescription="命中后间距（px）"
+                            android:max="1200" />
+
+                        <EditText
+                            android:id="@+id/et_letter_spacing_after"
+                            android:layout_width="64dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/shape_highlight_rule_input"
+                            android:gravity="center"
+                            android:hint="0"
+                            android:inputType="numberDecimal"
+                            android:paddingStart="6dp"
+                            android:paddingEnd="6dp"
+                            android:selectAllOnFocus="true"
+                            android:singleLine="true"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
                     android:id="@+id/card_preview"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -781,7 +881,7 @@
                         android:paddingBottom="8dp"
                         android:textSize="13sp" />
 
-                    <TextView
+                    <io.legado.app.ui.book.read.config.highlight.HighlightPreviewTextView
                         android:id="@+id/tv_preview"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

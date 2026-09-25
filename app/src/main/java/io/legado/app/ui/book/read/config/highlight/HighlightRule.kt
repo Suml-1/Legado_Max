@@ -52,6 +52,10 @@ data class HighlightRule(
     var bgSpacingTop: Float = 0f,
     /** 背景图下间距（em）：正数向外撑大，负数向内收 */
     var bgSpacingBottom: Float = 0f,
+    /** 命中字距（px）：命中段左侧邻字之间额外留出的空白，0 表示不留白 */
+    var letterSpacingBefore: Float = 0f,
+    /** 命中字距（px）：命中段右侧邻字之间额外留出的空白，0 表示不留白 */
+    var letterSpacingAfter: Float = 0f,
     /** 作用范围，书名或书源URL，分号分隔，为空则对所有书籍生效 */
     var scope: String? = null,
     /** 排除范围，书名或书源URL，分号分隔，匹配的书籍不应用该规则 */
@@ -109,6 +113,9 @@ data class HighlightRule(
             )
         } else if (bgColor != null) {
             parts.add("背景色 ${bgColor!!.toHexColor()}")
+        }
+        if (letterSpacingBefore > 0f || letterSpacingAfter > 0f) {
+            parts.add("命中字距 ${letterSpacingBefore.formatDistance()} / ${letterSpacingAfter.formatDistance()}px")
         }
         if (parts.isEmpty()) {
             parts.add("无样式")
@@ -232,4 +239,9 @@ data class HighlightRule(
 
         fun Int.toHexColor(): String = String.format("#%08X", this)
     }
+}
+
+/** 规则摘要里的 px 数值展示：整数不带小数，其余保留两位 */
+private fun Float.formatDistance(): String {
+    return if (this % 1f == 0f) toInt().toString() else String.format(java.util.Locale.US, "%.2f", this)
 }

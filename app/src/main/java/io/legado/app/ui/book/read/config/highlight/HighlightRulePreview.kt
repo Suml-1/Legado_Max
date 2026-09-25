@@ -1,169 +1,244 @@
 package io.legado.app.ui.book.read.config.highlight
 
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Typeface
 import android.text.SpannableStringBuilder
 import android.text.Spanned
-import android.text.style.ForegroundColorSpan
-import io.legado.app.ui.book.read.page.provider.HighlightTypefaceSpan
+import android.text.TextPaint
+import android.text.style.ReplacementSpan
+import io.legado.app.ui.book.read.page.provider.HighlightFontCache
+import java.text.BreakIterator
+import kotlin.math.ceil
 
 /**
  * 高亮规则配置页的预览文本构建器。
  *
- * 根据规则正则和统一样式模型生成可直接显示在 TextView 中的预览内容，
- * 用于编辑页和规则列表卡片，不参与阅读页最终绘制。
+ * 按规则正则与统一样式模型生成可显示的预览内容，用于编辑页和规则列表卡片；
+ * 不参与阅读页最终绘制。留白、行距这类会影响排版结果的样式必须按可用宽度重新断行，
+ * 所以构建时要传入画笔与绘制宽度（见 [HighlightPreviewTextView]）。
  */
 object HighlightRulePreview {
 
-    fun build(rule: HighlightRule): CharSequence {
+    /** 命中字距（px）等留白参数的预览上限，与编辑页输入框一致 */
+    private const val MAX_PREVIEW_SPACING = 120f
+
+    /**
+     * 构建预览内容。
+     *
+     * @param defaultTextColor 规则未指定字色时的文字颜色（跟随主题）
+     * @param paint 目标控件的画笔，用于量宽与断行
+     * @param width 目标控件的可用宽度（px），留白会从这段宽度里扣除
+     */
+    fun build(
+        rule: HighlightRule,
+        defaultTextColor: Int,
+        paint: TextPaint,
+        width: Int,
+    ): CharSequence {
         val text = rule.normalizedSampleText()
-        val spannable = SpannableStringBuilder(text)
-        val regex = kotlin.runCatching { rule.toRegex() }.getOrNull() ?: return spannable
+        val regex = runCatching { rule.toRegex() }.getOrNull() ?: return text
         val style = HighlightRuleStyle.from(rule)
+        val styledPaint = TextPaint(paint).apply {
+            if (style.font.isNotBlank()) {
+                HighlightFontCache.getTypefaceFor(style.font, paint.typeface)?.let { typeface = it }
+            }
+        }
+        val decoration = decoration(style, defaultTextColor)
+        val characters = BreakIterator.getCharacterInstance().apply { setText(text) }
+        val words = BreakIterator.getLineInstance().apply { setText(text) }
+        val result = SpannableStringBuilder()
+        var usedWidth = 0f
+
+        fun newLine() {
+            result.append('\n')
+            usedWidth = 0f
+        }
+
+        fun appendRun(start: Int, end: Int, matched: Boolean) {
+            var cursor = start
+            val runPaint = if (matched) styledPaint else paint
+            while (cursor < end) {
+                if (text[cursor] == '\n') {
+                    newLine()
+                    cursor++
+                    continue
+                }
+                val paragraphEnd = text.indexOf('\n', cursor).let { if (it < 0) end else minOf(it, end) }
+                // 命中字距在预览里同样占位：断行按"字符宽 + 留白"算，命中段外侧才有留白
+                var before = if (matched) style.letterSpacingBefore.previewSpacing() else 0f
+                var after = if (matched) style.letterSpacingAfter.previewSpacing() else 0f
+                val available = (width - usedWidth - before - after).coerceAtLeast(0f)
+                val count = runPaint.breakText(text, cursor, paragraphEnd, true, available, null)
+                var limit = cursor + count
+                if (limit < paragraphEnd && !characters.isBoundary(limit)) {
+                    limit = characters.preceding(limit).coerceAtLeast(cursor)
+                }
+                if (limit == cursor) {
+                    if (usedWidth > 0f) {
+                        newLine()
+                        continue
+                    }
+                    limit = characters.following(cursor).coerceAtMost(paragraphEnd)
+                    // 极窄预览下也要保证至少一个完整字形可见：先把留白按剩余空间等比压缩
+                    val room = (width - ceil(runPaint.measureText(text, cursor, limit))).coerceAtLeast(0f)
+                    if (before + after > room) {
+                        val scale = if (before + after > 0f) room / (before + after) else 0f
+                        before *= scale
+                        after *= scale
+                    }
+                } else if (limit < paragraphEnd) {
+                    val wordEnd = if (words.isBoundary(limit)) limit else words.preceding(limit)
+                    if (wordEnd > cursor) limit = wordEnd
+                }
+                val offset = result.length
+                result.append(text, cursor, limit)
+                if (matched) {
+                    val span = PreviewSpan(style, defaultTextColor, before, after, decoration, styledPaint.typeface)
+                    result.setSpan(span, offset, result.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    usedWidth += span.getSize(runPaint, text, cursor, limit, null)
+                } else {
+                    usedWidth += ceil(runPaint.measureText(text, cursor, limit))
+                }
+                cursor = limit
+                if (cursor < paragraphEnd) newLine()
+            }
+        }
+
+        var cursor = 0
         regex.findAll(text).forEach { match ->
             val start = match.range.first
             val end = match.range.last + 1
-            if (style.font.isNotBlank()) {
-                spannable.setSpan(
-                    HighlightTypefaceSpan(style.font),
-                    start,
-                    end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                )
-            }
-            val textColor = style.resolvedTextColor
-            val accentColor = style.resolvedAccentColor
-            val underlineWidth = style.underlineWidth
-            val underlineOffset = style.underlineOffset
-            val hasBgImage = style.bgImage.isNotBlank()
-            val bgColor = style.bgColor
+            if (start >= end) return@forEach
+            appendRun(cursor, start, false)
+            appendRun(start, end, true)
+            cursor = end
+        }
+        appendRun(cursor, text.length, false)
+        return result
+    }
 
-            if (hasBgImage) {
-                spannable.setSpan(
-                BgImageSpan(
-                    textColor,
-                    style.bgImage,
-                    style.bgImageFit,
-                    style.bgImageScale,
-                    style.npLeft,
-                    style.npTop,
-                    style.npRight,
-                    style.npBottom,
-                    style.bgBleedMode,
-                    style.bgSpacingLeft,
-                    style.bgSpacingRight,
-                    style.bgSpacingTop,
-                    style.bgSpacingBottom,
-                    style.underlineMode,
-                    accentColor,
-                    underlineWidth,
-                    style.underlineSvgPath,
-                    underlineOffset,
-                ),
-                    start,
-                    end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                )
-            } else if (bgColor != null) {
-                spannable.setSpan(
-                    BgColorSpan(
-                        textColor,
-                        bgColor,
-                        style.underlineMode,
-                        accentColor,
-                        underlineWidth,
-                        style.underlineSvgPath,
-                        underlineOffset,
-                    ),
-                    start,
-                    end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                )
-            } else {
-                when (style.underlineMode) {
-                    1 -> {
-                        spannable.setSpan(
-                            SolidUnderlineSpan(textColor, accentColor, underlineWidth, underlineOffset),
-                            start,
-                            end,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                        )
-                    }
-                    2 -> {
-                        spannable.setSpan(
-                            DashUnderlineSpan(textColor, accentColor, underlineWidth, underlineOffset),
-                            start,
-                            end,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                        )
-                    }
-                    3 -> {
-                        spannable.setSpan(
-                            WaveUnderlineSpan(textColor, accentColor, underlineWidth, underlineOffset),
-                            start,
-                            end,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                        )
-                    }
-                    4 -> {
-                        spannable.setSpan(
-                            DoubleUnderlineSpan(textColor, accentColor, underlineWidth, underlineOffset),
-                            start,
-                            end,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                        )
-                    }
-                    5 -> {
-                        val svgPath = style.underlineSvgPath
-                        if (!svgPath.isNullOrBlank()) {
-                            spannable.setSpan(
-                                SvgUnderlineSpan(textColor, accentColor, underlineWidth, svgPath),
-                                start,
-                                end,
-                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                            )
-                        } else {
-                            spannable.setSpan(
-                                ForegroundColorSpan(textColor),
-                                start,
-                                end,
-                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                            )
-                        }
-                    }
-                    6 -> {
-                        spannable.setSpan(
-                            StrikeThroughSpan(textColor, accentColor, underlineWidth),
-                            start,
-                            end,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                        )
-                    }
-                    7 -> {
-                        spannable.setSpan(
-                            ItalicTextSpan(textColor),
-                            start,
-                            end,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                        )
-                    }
-                    8 -> {
-                        spannable.setSpan(
-                            BoxTextSpan(textColor, accentColor, underlineWidth),
-                            start,
-                            end,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                        )
-                    }
-                    else -> {
-                        spannable.setSpan(
-                            ForegroundColorSpan(textColor),
-                            start,
-                            end,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                        )
-                    }
-                }
+    /** 命中区间的装饰 Span：背景图/背景色优先，其次下划线类样式，都没有时返回 null 表示只改字色 */
+    private fun decoration(style: HighlightRuleStyle, defaultTextColor: Int): ReplacementSpan? {
+        val textColor = style.textColor ?: defaultTextColor
+        val accentColor = style.resolvedAccentColor
+        return when {
+            style.bgImage.isNotBlank() -> BgImageSpan(
+                textColor,
+                style.bgImage,
+                style.bgImageFit,
+                style.bgImageScale,
+                style.npLeft,
+                style.npTop,
+                style.npRight,
+                style.npBottom,
+                style.bgBleedMode,
+                style.bgSpacingLeft,
+                style.bgSpacingRight,
+                style.bgSpacingTop,
+                style.bgSpacingBottom,
+                style.underlineMode,
+                accentColor,
+                style.underlineWidth,
+                style.underlineSvgPath,
+                style.underlineOffset,
+            )
+
+            style.bgColor != null -> BgColorSpan(
+                textColor,
+                style.bgColor,
+                style.underlineMode,
+                accentColor,
+                style.underlineWidth,
+                style.underlineSvgPath,
+                style.underlineOffset,
+            )
+
+            else -> when (style.underlineMode) {
+                1 -> SolidUnderlineSpan(textColor, accentColor, style.underlineWidth, style.underlineOffset)
+                2 -> DashUnderlineSpan(textColor, accentColor, style.underlineWidth, style.underlineOffset)
+                3 -> WaveUnderlineSpan(textColor, accentColor, style.underlineWidth, style.underlineOffset)
+                4 -> DoubleUnderlineSpan(textColor, accentColor, style.underlineWidth, style.underlineOffset)
+                5 -> style.underlineSvgPath.takeIf { it.isNotBlank() }
+                    ?.let { SvgUnderlineSpan(textColor, accentColor, style.underlineWidth, it) }
+                6 -> StrikeThroughSpan(textColor, accentColor, style.underlineWidth)
+                7 -> ItalicTextSpan(textColor)
+                8 -> BoxTextSpan(textColor, accentColor, style.underlineWidth)
+                else -> null
             }
         }
-        return spannable
     }
+
+    /**
+     * 命中区间的占位 Span：负责留白与字色/字体的实际表现。
+     *
+     * 留白加在推进宽度上（[getSize]），绘制时按留白右移（[draw]），
+     * 这样留白落在命中段外侧，命中段内部不会被撑开。
+     */
+    private class PreviewSpan(
+        private val ruleStyle: HighlightRuleStyle,
+        private val defaultTextColor: Int,
+        private val before: Float,
+        private val after: Float,
+        private val decoration: ReplacementSpan?,
+        private val typeface: Typeface?,
+    ) : ReplacementSpan() {
+
+        private fun styledPaint(paint: Paint): TextPaint = TextPaint(paint).apply {
+            // 注意：apply 内层接收者是 Paint，style 会被解析成 Paint.style，所以这里用具名字段
+            color = ruleStyle.textColor ?: defaultTextColor
+            typeface = this@PreviewSpan.typeface
+        }
+
+        override fun getSize(
+            paint: Paint,
+            text: CharSequence,
+            start: Int,
+            end: Int,
+            fm: Paint.FontMetricsInt?,
+        ): Int {
+            val styled = styledPaint(paint)
+            if (fm != null) {
+                styled.getFontMetricsInt(fm)
+                // 装饰线（下划线远近等）会影响行高，交给装饰 Span 补足
+                decoration?.getSize(styled, text, start, end, fm)
+            }
+            return ceil(styled.measureText(text, start, end) + before + after).toInt()
+        }
+
+        override fun draw(
+            canvas: Canvas,
+            text: CharSequence,
+            start: Int,
+            end: Int,
+            x: Float,
+            top: Int,
+            y: Int,
+            bottom: Int,
+            paint: Paint,
+        ) {
+            val styled = styledPaint(paint)
+            if (decoration == null) {
+                canvas.drawText(text, start, end, x + before, y.toFloat(), styled)
+            } else {
+                // 装饰线的上下界对齐字形上下界，与阅读页按字形绘制口径一致
+                val metrics = styled.fontMetricsInt
+                decoration.draw(
+                    canvas,
+                    text,
+                    start,
+                    end,
+                    x + before,
+                    y + metrics.ascent,
+                    y,
+                    y + metrics.descent,
+                    styled,
+                )
+            }
+        }
+    }
+
+    /** 留白取值收敛：非有限值（NaN/Inf）与越界值一并回落到 0 */
+    private fun Float.previewSpacing(): Float =
+        takeIf { it.isFinite() }?.coerceIn(0f, MAX_PREVIEW_SPACING) ?: 0f
 }

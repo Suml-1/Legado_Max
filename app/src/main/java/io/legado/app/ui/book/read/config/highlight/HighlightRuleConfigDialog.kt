@@ -513,7 +513,7 @@ class HighlightRuleConfigDialog : BaseDialogFragment(R.layout.dialog_highlight_r
                     append(item.themeScopeLabel())
                 }
             }
-            binding.tvPreview.text = HighlightRulePreview.build(item)
+            binding.tvPreview.setPreview(item, primaryTextColor)
 
             val density = binding.root.context.resources.displayMetrics.density
             binding.root.background = GradientDrawable().apply {

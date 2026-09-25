@@ -2,6 +2,7 @@ package io.legado.app.ui.book.read.page.provider
 
 import android.graphics.Paint
 import android.text.Layout
+import android.text.Spannable
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -128,6 +129,15 @@ class TextChapterLayout(
 
     /** 九宫格"强制"策略需要从列末尾扣掉的宽度（见 [computeNeighborPush]），按段落排版时写入 */
     private var columnTrimEnd: FloatArray? = null
+
+    /**
+     * HTML 段落的命中字距（px）：命中段首字符的左侧留白与尾字符的右侧留白。
+     *
+     * StaticLayout 已把留白算进推进宽度，列坐标取的是布局坐标，所以要把它从列范围里剥掉：
+     * 首字符列右移留白量、尾字符列左收留白量，背景才不会被留白撑宽（见 [setTypeHtml]）。
+     */
+    private var matchSpacingBefore: FloatArray? = null
+    private var matchSpacingAfter: FloatArray? = null
 
     /**
      * 九宫格"强制"策略在**段首带缩进**时给缩进额外让出的宽度（见 [computeNeighborPush]）。
@@ -990,6 +1000,9 @@ class TextChapterLayout(
                 }
             }
         }
+        // 命中字距：同样挂到字符自身的推进宽度上，StaticLayout 断行与两端对齐才按真实宽度算；
+        // 留白量另存一份，建列时从列范围里剥掉（背景不跟着变宽）
+        applyMatchLetterSpacing(spanned)
         val textColor = ReadBookConfig.textColor
         if (textPaint.color != textColor) {
             textPaint.color = textColor
@@ -1040,6 +1053,9 @@ class TextChapterLayout(
                     continue
                 }
                 val charX = staticLayout.getPrimaryHorizontal(charIndex)
+                // 命中字距已算进布局推进宽度，列范围要把它剥掉，背景才不会被留白撑宽
+                val spacingBeforeChar = matchSpacingBefore?.getOrNull(charIndex) ?: 0f
+                val spacingAfterChar = matchSpacingAfter?.getOrNull(charIndex) ?: 0f
                 val textSize = extractTextSize(spanned, charIndex, textPaint.textSize)
                 val textColor = extractTextColor(spanned, charIndex)
                 val linkUrl = extractLinkUrl(spanned, charIndex)
@@ -1064,13 +1080,14 @@ class TextChapterLayout(
                     staticLayout.getPrimaryHorizontal(charIndex + 1)
                 } else {
                     tempPaint.textSize = textSize
-                    // 行尾字符无下一列可取坐标，需按该字符实际字体测宽，保持与绘制一致
+                    // 行尾字符无下一列可取坐标，需按该字符实际字体测宽，保持与绘制一致；
+                    // 该字符自带命中字距时，布局推进宽度里已含留白，量宽时一并补上口径才一致
                     tempPaint.typeface = HighlightFontCache.getTypefaceFor(
                         highlightFontPath,
                         textPaint.typeface,
                     ) ?: textPaint.typeface
                     val charWidth = tempPaint.measureText(char)
-                    charX + charWidth
+                    charX + charWidth + spacingBeforeChar + spacingAfterChar
                 }
                 var needAddText = true
                 spanned.getSpans(charIndex, charIndex + 1, ImageSpan::class.java).firstOrNull()?.let { span ->
@@ -1176,9 +1193,10 @@ class TextChapterLayout(
                     }
                     needAddText = false
                 }
-                // 只认自定义标签用的 ReplacementSpan：邻字外推挂的 HighlightSpacingSpan 不算
+                // 只认自定义标签用的 ReplacementSpan：邻字外推挂的 HighlightSpacingSpan
+                // 与命中字距挂的 BoundarySpacingSpan 都不算
                 spanned.getSpans(charIndex, charIndex + 1, ReplacementSpan::class.java)
-                    .firstOrNull { it !is HighlightSpacingSpan }?.let { _ ->
+                    .firstOrNull { it !is HighlightSpacingSpan && it !is BoundarySpacingSpan }?.let { _ ->
                     // 自定义标签
                     if (char == HR_PLACE_CHAR) {
                         columns.add(
@@ -1213,9 +1231,10 @@ class TextChapterLayout(
                 if (needAddText) {
                     columns.add(
                         TextHtmlColumn(
-                            absStartX + charX,
-                            // 九宫格"强制"策略给最后一个字加的宽度要扣掉，否则背景会跟着一起变宽
-                            absStartX + charRight - (columnTrimEnd?.getOrNull(charIndex) ?: 0f),
+                            absStartX + charX + spacingBeforeChar,
+                            // 九宫格"强制"外推与命中字距给字符多加的宽度都要扣掉，否则背景会跟着一起变宽
+                            absStartX + charRight -
+                                (columnTrimEnd?.getOrNull(charIndex) ?: 0f) - spacingAfterChar,
                             char,
                             textSize,
                             textColor,
@@ -1569,9 +1588,11 @@ class TextChapterLayout(
                 val style = compiled.charStyle
                 val active = styles ?: arrayOfNulls<CharStyle>(text.length).also { styles = it }
                 for (i in start until end) {
+                    // 命中字距只落在命中段首尾字符上：留白属于命中段与邻字之间，段内不加
+                    val charStyle = style.withMatchBoundary(i == start, i == end - 1)
                     active[i] = when (val existing = active[i]) {
-                        null -> style
-                        else -> existing.mergedWith(style)
+                        null -> charStyle
+                        else -> existing.mergedWith(charStyle)
                     }
                 }
             }
@@ -1628,7 +1649,8 @@ class TextChapterLayout(
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
             )
         }
-        if (style.hasDecoration) {
+        // 只设了命中字距的规则同样要带样式 Span：留白靠它传给排版测量
+        if (style.hasDecoration || style.hasLetterSpacing) {
             spannable.setSpan(
                 HighlightStyleSpan(style),
                 start,
@@ -1702,6 +1724,9 @@ class TextChapterLayout(
         ) { index -> widthsArray.getOrElse(index) { 0f } }
         columnTrimEnd = neighborPush?.trimEnd
         columnIndentExtra = neighborPush?.indentAdd ?: 0f
+        // 逐列排版在加字符时直接按字符样式让出命中字距，不需要 HTML 路径那份坐标修正
+        matchSpacingBefore = null
+        matchSpacingAfter = null
         neighborPush?.let { push ->
             for (i in push.widthAdd.indices) {
                 if (push.widthAdd[i] != 0f) widthsArray[i] += push.widthAdd[i]
@@ -1993,6 +2018,9 @@ class TextChapterLayout(
             for (index in words.indices) {
                 val char = words[index]
                 val cw = textWidths[index]
+                // 命中字距：留白加在命中段与邻字之间，不计入字符列本身，背景也就不会跟着变宽
+                val matchStyle = charStyles?.getOrNull(lineStart + index)
+                x += matchStyle?.letterSpacingBefore ?: 0f
                 val x1 = if (char == " ") {
                     if (index != words.lastIndex) (x + cw + d) else (x + cw)
                 } else {
@@ -2003,7 +2031,7 @@ class TextChapterLayout(
                     x, x1, index + 1 == words.size, srcList,
                     clickList, charStyles, lineStart + index,
                 )
-                x = x1
+                x = x1 + (matchStyle?.letterSpacingAfter ?: 0f)
             }
         } else {
             val gapCount: Int = words.lastIndex
@@ -2014,13 +2042,16 @@ class TextChapterLayout(
             for (index in words.indices) {
                 val char = words[index]
                 val cw = textWidths[index]
+                // 命中字距：留白加在命中段与邻字之间，不计入字符列本身，背景也就不会跟着变宽
+                val matchStyle = charStyles?.getOrNull(lineStart + index)
+                x += matchStyle?.letterSpacingBefore ?: 0f
                 val x1 = if (index != words.lastIndex) (x + cw + d) else (x + cw)
                 addCharToLine(
                     book, absStartX, textLine, char,
                     x, x1, index + 1 == words.size, srcList,
                     clickList, charStyles, lineStart + index,
                 )
-                x = x1
+                x = x1 + (matchStyle?.letterSpacingAfter ?: 0f)
             }
         }
         exceed(absStartX, textLine, words)
@@ -2048,6 +2079,9 @@ class TextChapterLayout(
         for (index in words.indices) {
             val char = words[index]
             val cw = textWidths[index]
+            // 命中字距：留白加在命中段与邻字之间，不计入字符列本身，背景也就不会跟着变宽
+            val matchStyle = charStyles?.getOrNull(lineStart + index)
+            x += matchStyle?.letterSpacingBefore ?: 0f
             val x1 = x + cw
             addCharToLine(
                 book,
@@ -2062,7 +2096,7 @@ class TextChapterLayout(
                 charStyles,
                 lineStart + index,
             )
-            x = x1
+            x = x1 + (matchStyle?.letterSpacingAfter ?: 0f)
             if (hasIndent && index == indentLength - 1) {
                 textLine.indentWidth = x
             }
@@ -2325,6 +2359,43 @@ class TextChapterLayout(
     }
 
     /**
+     * 把命中字距挂到 HTML 段落的字符上，并记下每字符的留白量。
+     *
+     * 命中段首字符带左侧留白、尾字符带右侧留白（描边拆开是为了让留白落在命中段外侧，
+     * 而不是挤进命中段内部）；重叠规则同一侧取较大值。
+     */
+    private fun applyMatchLetterSpacing(spanned: Spannable) {
+        matchSpacingBefore = null
+        matchSpacingAfter = null
+        val spans = spanned.getSpans(0, spanned.length, HighlightStyleSpan::class.java)
+            .filter { it.letterSpacingBefore > 0f || it.letterSpacingAfter > 0f }
+        if (spans.isEmpty()) return
+        val before = FloatArray(spanned.length)
+        val after = FloatArray(spanned.length)
+        spans.forEach { span ->
+            val start = spanned.getSpanStart(span)
+            val end = spanned.getSpanEnd(span)
+            if (start < 0 || end <= start || start >= spanned.length) return@forEach
+            if (span.letterSpacingBefore > before[start]) before[start] = span.letterSpacingBefore
+            val lastIndex = end - 1
+            if (lastIndex in after.indices && span.letterSpacingAfter > after[lastIndex]) {
+                after[lastIndex] = span.letterSpacingAfter
+            }
+        }
+        for (index in before.indices) {
+            if (before[index] <= 0f && after[index] <= 0f) continue
+            spanned.setSpan(
+                BoundarySpacingSpan(before[index], after[index]),
+                index,
+                index + 1,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+            )
+        }
+        matchSpacingBefore = before
+        matchSpacingAfter = after
+    }
+
+    /**
      * 段落首行的缩进长度；没有缩进（标题、用户把缩进设为 0、非段落开头）时返回 0。
      */
     private fun paragraphIndentLength(text: CharSequence, isTitle: Boolean): Int {
@@ -2508,6 +2579,8 @@ class TextChapterLayout(
                 bgSpacingRight = style.bgSpacingRight,
                 bgSpacingTop = style.bgSpacingTop,
                 bgSpacingBottom = style.bgSpacingBottom,
+                letterSpacingBefore = style.letterSpacingBefore,
+                letterSpacingAfter = style.letterSpacingAfter,
                 font = style.font,
             )
         }

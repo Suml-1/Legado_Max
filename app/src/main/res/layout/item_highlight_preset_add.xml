@@ -57,7 +57,7 @@
         android:text="@string/preview"
         android:textSize="11sp" />
 
-    <TextView
+    <io.legado.app.ui.book.read.config.highlight.HighlightPreviewTextView
         android:id="@+id/tv_preview"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

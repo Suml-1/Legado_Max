@@ -75,6 +75,14 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
             viewModel.isRegexMode = value
         }
 
+    /** 命中字距是否已排入下一帧的预览刷新：拖动滑块时按帧合并，避免每格都重建预览 */
+    private var spacingPreviewPending = false
+
+    private val spacingPreviewUpdate = Runnable {
+        spacingPreviewPending = false
+        if (isAdded && view != null) updatePreview()
+    }
+
     private val selectImageResult = registerForActivityResult(HandleFileContract()) { result ->
         result.uri?.let { uri ->
             // 选择图片时，清除背景颜色
@@ -203,6 +211,13 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         updatePreview()
     }
 
+    override fun onDestroyView() {
+        // 视图已销毁还挂着下一帧的预览刷新会拿到已失效的 binding
+        binding.root.removeCallbacks(spacingPreviewUpdate)
+        spacingPreviewPending = false
+        super.onDestroyView()
+    }
+
     override fun observeLiveBus() {
         observeEvent<ArrayList<Int>>(EventBus.UP_CONFIG) {
             if (it.contains(1) || it.contains(2)) {
@@ -298,6 +313,10 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         binding.tvFontPick.setTextColor(primaryTextColor)
         binding.etSampleText.setTextColor(primaryTextColor)
         binding.etSampleText.setHintTextColor(secondaryTextColor)
+        binding.etLetterSpacingBefore.setTextColor(primaryTextColor)
+        binding.etLetterSpacingBefore.setHintTextColor(secondaryTextColor)
+        binding.etLetterSpacingAfter.setTextColor(primaryTextColor)
+        binding.etLetterSpacingAfter.setHintTextColor(secondaryTextColor)
         binding.etScope.setTextColor(primaryTextColor)
         binding.etScope.setHintTextColor(secondaryTextColor)
         binding.etExcludeScope.setTextColor(primaryTextColor)
@@ -337,6 +356,8 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         binding.etLayoutScope.setTextColor(primaryTextColor)
         binding.etLayoutScope.setHintTextColor(secondaryTextColor)
         binding.etLayoutScope.background = makeInputDrawable(inputBgColor, inputStrokeColor, 14f, density)
+        binding.etLetterSpacingBefore.background = makeInputDrawable(inputBgColor, inputStrokeColor, 12f, density)
+        binding.etLetterSpacingAfter.background = makeInputDrawable(inputBgColor, inputStrokeColor, 12f, density)
         binding.spBgImageFit.background = makeInputDrawable(inputBgColor, inputStrokeColor, 14f, density)
         binding.spThemeScope.background = makeInputDrawable(inputBgColor, inputStrokeColor, 14f, density)
         binding.tvWidthMinus.background = makeInputDrawable(inputBgColor, inputStrokeColor, 14f, density)
@@ -373,7 +394,7 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
     private fun applyThemeToStaticLabels() {
         val staticPrimary = requireContext().getColor(R.color.primaryText)
         val staticSecondary = requireContext().getColor(R.color.secondaryText)
-        listOf(binding.cardInfo, binding.cardStyle, binding.cardPreview).forEach { card ->
+        listOf(binding.cardInfo, binding.cardStyle, binding.cardSpacing, binding.cardPreview).forEach { card ->
             applyThemeColorRecursive(card, staticPrimary, staticSecondary)
         }
     }
@@ -446,6 +467,9 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         binding.sbBgImageScale.progress = (editingRule.bgImageScale.coerceIn(0.1f, 5f) * 10).toInt()
         binding.tvBgImageScale.text = "${editingRule.bgImageScale.coerceIn(0.1f, 5f).formatScale()}x"
         binding.spUnderlineMode.setSelection(editingRule.underlineMode.coerceIn(0, 8))
+        // 命中字距：滑块位置与输入框内容都由 bindSpacingControl 初始化，这里只填输入框
+        binding.etLetterSpacingBefore.setText(editingRule.letterSpacingBefore.spacingInputText())
+        binding.etLetterSpacingAfter.setText(editingRule.letterSpacingAfter.spacingInputText())
         val groupIndex = groupItems.indexOf(editingRule.group).takeIf { it >= 0 } ?: 0
         binding.spGroup.setSelection(groupIndex)
         binding.spTarget.setSelection(editingRule.targetScope.coerceIn(0, 2))
@@ -606,6 +630,12 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             },
         )
+        bindSpacingControl(binding.sbLetterSpacingBefore, binding.etLetterSpacingBefore) {
+            editingRule.letterSpacingBefore = it
+        }
+        bindSpacingControl(binding.sbLetterSpacingAfter, binding.etLetterSpacingAfter) {
+            editingRule.letterSpacingAfter = it
+        }
         binding.spUnderlineMode.onItemSelectedListener =
             object : android.widget.AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(
@@ -749,6 +779,53 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
         } else {
             binding.tvRegexToggle.setTextColor(primaryTextColor)
         }
+    }
+
+    /**
+     * 命中字距的滑块 + 数值框双向绑定。
+     *
+     * 滑块一格 0.1px（[HighlightRuleStore.MAX_MATCH_LETTER_SPACING] 对应 max 1200）；
+     * 两个方向都只在用户操作时回写，避免初始化阶段互相触发。
+     */
+    private fun bindSpacingControl(seekBar: SeekBar, input: android.widget.EditText, apply: (Float) -> Unit) {
+        seekBar.progress = (input.spacingValue() * 10).roundToInt()
+        input.doAfterTextChanged {
+            val value = input.spacingValue()
+            seekBar.progress = (value * 10).roundToInt()
+            apply(value)
+            scheduleSpacingPreview()
+        }
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                // 程序化更新滑块不能反过来把输入框里更精确的值抹平
+                if (fromUser) input.setText((progress / 10f).spacingInputText())
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                if (spacingPreviewPending) updatePreview()
+            }
+        })
+    }
+
+    /** 拖动/输入过程中按帧合并预览刷新，松手或停下后由 [spacingPreviewUpdate] 补一次 */
+    private fun scheduleSpacingPreview() {
+        if (spacingPreviewPending) return
+        spacingPreviewPending = true
+        binding.root.postOnAnimation(spacingPreviewUpdate)
+    }
+
+    private fun android.widget.EditText.spacingValue(): Float = text?.toString()?.toFloatOrNull()
+        ?.takeIf { it.isFinite() }
+        ?.coerceIn(HighlightRuleStore.MIN_MATCH_LETTER_SPACING, HighlightRuleStore.MAX_MATCH_LETTER_SPACING)
+        ?: 0f
+
+    private fun Float.spacingInputText(): String {
+        val value = takeIf { it.isFinite() }
+            ?.coerceIn(HighlightRuleStore.MIN_MATCH_LETTER_SPACING, HighlightRuleStore.MAX_MATCH_LETTER_SPACING)
+            ?: 0f
+        return if (value % 1f == 0f) value.toInt().toString() else value.toString()
     }
 
     private fun adjustWidth(delta: Float) {
@@ -1293,8 +1370,7 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
             binding.tvPatternError.visibility = View.VISIBLE
             binding.tvPatternError.text = patternError
         }
-        binding.tvPreview.text = HighlightRulePreview.build(
-            editingRule.copy(
+        val previewRule = editingRule.copy(
                 name = binding.etName.text?.toString().orEmpty(),
                 pattern = pattern,
                 isRegex = isRegexMode,
@@ -1315,8 +1391,9 @@ class HighlightRuleEditDialog @JvmOverloads constructor(
                 bgImageFit = binding.spBgImageFit.selectedItemPosition,
                 bgImageScale = (binding.sbBgImageScale.progress.coerceAtLeast(1) / 10f).coerceIn(0.1f, 5f),
                 font = editingRule.font?.takeIf { it.isNotBlank() },
-            ),
-        )
+            )
+        // 预览按控件实际宽度重新断行，命中字距/行距才能如实体现
+        binding.tvPreview.setPreview(previewRule, primaryTextColor)
     }
 
     private fun validatePattern(pattern: String): String? {

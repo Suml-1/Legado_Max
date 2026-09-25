@@ -137,7 +137,7 @@ class HighlightPresetRuleDialog @JvmOverloads constructor(
             binding.tvDesc.text = item.displayPattern()
             binding.tvDesc.setTextColor(secondaryTextColor)
             binding.tvPreviewLabel.setTextColor(secondaryTextColor)
-            binding.tvPreview.text = HighlightRulePreview.build(item)
+            binding.tvPreview.setPreview(item, primaryTextColor)
             binding.tvPreview.setTextColor(primaryTextColor)
             binding.ivAdd.setColorFilter(
                 if (ColorUtils.isColorLight(accentColor)) 0xFF000000.toInt() else 0xFFFFFFFF.toInt(),

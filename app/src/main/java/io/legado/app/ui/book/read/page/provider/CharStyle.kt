@@ -33,9 +33,29 @@ data class CharStyle(
     val bgSpacingTop: Float = 0f,
     /** 背景图下间距（em），正数向外撑大、负数向内收 */
     val bgSpacingBottom: Float = 0f,
+    /** 命中字距（px）：仅命中段首字符带左侧留白，其余字符为 0 */
+    val letterSpacingBefore: Float = 0f,
+    /** 命中字距（px）：仅命中段尾字符带右侧留白，其余字符为 0 */
+    val letterSpacingAfter: Float = 0f,
     /** 高亮字体路径，空串表示跟随阅读字体 */
     val font: String = "",
 ) {
+
+    /** 是否设置了命中字距：只影响排版留白，不影响字形绘制 */
+    val hasLetterSpacing: Boolean
+        get() = letterSpacingBefore > 0f || letterSpacingAfter > 0f
+
+    /**
+     * 命中段的首尾字符各自只保留外侧留白：留白属于命中段与邻字之间的空隙，
+     * 段内字符若也带上就会被从内部撑开。命中段只有一个字符时两侧都保留。
+     */
+    fun withMatchBoundary(startOfMatch: Boolean, endOfMatch: Boolean): CharStyle {
+        if (!hasLetterSpacing) return this
+        return copy(
+            letterSpacingBefore = if (startOfMatch) letterSpacingBefore else 0f,
+            letterSpacingAfter = if (endOfMatch) letterSpacingAfter else 0f,
+        )
+    }
 
     /**
      * 字段级合并重叠规则的样式，与旧 Span 实现中 extractHighlightStyle
@@ -49,7 +69,12 @@ data class CharStyle(
             later.bgColor != null &&
             later.textColor != null
         ) {
-            return later
+            // 整条覆盖时仅补上命中字距：重叠规则的留白取较大者，不能随覆盖丢失
+            if (!hasLetterSpacing) return later
+            return later.copy(
+                letterSpacingBefore = maxOf(letterSpacingBefore, later.letterSpacingBefore),
+                letterSpacingAfter = maxOf(letterSpacingAfter, later.letterSpacingAfter),
+            )
         }
         return CharStyle(
             textColor = later.textColor ?: textColor,
@@ -71,6 +96,8 @@ data class CharStyle(
             bgSpacingRight = if (later.bgImage.isNotEmpty()) later.bgSpacingRight else bgSpacingRight,
             bgSpacingTop = if (later.bgImage.isNotEmpty()) later.bgSpacingTop else bgSpacingTop,
             bgSpacingBottom = if (later.bgImage.isNotEmpty()) later.bgSpacingBottom else bgSpacingBottom,
+            letterSpacingBefore = maxOf(letterSpacingBefore, later.letterSpacingBefore),
+            letterSpacingAfter = maxOf(letterSpacingAfter, later.letterSpacingAfter),
             font = if (later.font.isNotEmpty()) later.font else font,
         )
     }

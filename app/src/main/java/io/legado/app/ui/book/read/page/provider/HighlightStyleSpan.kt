@@ -33,6 +33,8 @@ class HighlightStyleSpan(
     val bgSpacingRight: Float = 0f,
     val bgSpacingTop: Float = 0f,
     val bgSpacingBottom: Float = 0f,
+    val letterSpacingBefore: Float = 0f,
+    val letterSpacingAfter: Float = 0f,
 ) : CharacterStyle(), UpdateAppearance {
 
     constructor(style: HighlightRuleStyle) : this(
@@ -54,10 +56,48 @@ class HighlightStyleSpan(
         bgSpacingRight = style.bgSpacingRight,
         bgSpacingTop = style.bgSpacingTop,
         bgSpacingBottom = style.bgSpacingBottom,
+        letterSpacingBefore = style.letterSpacingBefore,
+        letterSpacingAfter = style.letterSpacingAfter,
     )
 
     override fun updateDrawState(tp: TextPaint) = Unit
 
+}
+
+/**
+ * 命中字距的占位 Span：让命中段首/尾字符分别多占 [leading] / [trailing] 像素，
+ * 其余表现不变。
+ *
+ * HTML 排版走 StaticLayout，只有把留白挂到字符自身的推进宽度上，断行与两端对齐
+ * 才会按真实宽度计算；绘制时按 [leading] 右移，留白就落在字形与邻字之间，而不是
+ * 挤进命中段内部。阅读页正文按列绘制，[draw] 只在直接绘制 Layout 的场景兜底。
+ */
+class BoundarySpacingSpan(
+    private val leading: Float = 0f,
+    private val trailing: Float = 0f,
+) : ReplacementSpan() {
+
+    override fun getSize(
+        paint: Paint,
+        text: CharSequence,
+        start: Int,
+        end: Int,
+        fm: Paint.FontMetricsInt?,
+    ): Int = (paint.measureText(text, start, end) + leading + trailing).toInt().coerceAtLeast(0)
+
+    override fun draw(
+        canvas: Canvas,
+        text: CharSequence,
+        start: Int,
+        end: Int,
+        x: Float,
+        top: Int,
+        y: Int,
+        bottom: Int,
+        paint: Paint,
+    ) {
+        canvas.drawText(text, start, end, x + leading, y.toFloat(), paint)
+    }
 }
 
 /**
