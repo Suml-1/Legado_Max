@@ -61,6 +61,7 @@ import io.legado.app.help.webView.WebViewPool.currentInlineContentGeneration
 import io.legado.app.help.webView.WebViewPool.scheduleInlineContentFit
 import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.help.source.exploreKinds
+import io.legado.app.help.source.obtainExploreInfoMap
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.login.SourceLoginActivity
@@ -102,7 +103,6 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         private const val PAYLOAD_TOGGLE_EXPAND = "toggle_expand"
         private const val PAYLOAD_RESUME = "resume"
         private const val PAYLOAD_FORCE_REFRESH = "force_refresh"
-        val exploreInfoMapList = LruCache<String, InfoMap>(99)
         private val exploreWebViewHeightCache = LruCache<String, Int>(99)
     }
     private val recycler = arrayListOf<TextView>()
@@ -280,11 +280,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
             flexbox.setTag(R.id.explore_content_signature, currentContentSignature)
             flexbox.visible()
             val source by lazy { appDb.bookSourceDao.getBookSource(sourceUrl) }
-            val infoMap by lazy {
-                exploreInfoMapList[sourceUrl] ?:  InfoMap(sourceUrl).also {
-                    exploreInfoMapList.put(sourceUrl, it)
-                }
-            }
+            val infoMap by lazy { obtainExploreInfoMap(sourceUrl) }
             val sourceJsExtensions by lazy {
                 SourceLoginJsExtensions(context as? AppCompatActivity, source,
                     callback = object : SourceLoginJsExtensions.Callback {
