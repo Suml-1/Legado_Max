@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.max
 
 /**
@@ -219,25 +220,39 @@ class BookshelfFragment2() :
      *
      * 根分组 = 文件夹 + 全部书籍；分组内只有书籍。标签栏显隐与条目提交绑在同一处，
      * 保证与列表内容同帧切换（原实现挂在 AsyncListDiffer 的提交回调上）。
+     *
+     * 条目建模是 O(书籍数) 的逐本计算（标签解析、简介清洗等），放后台执行；
+     * 构建期间分组可能又切走，提交前校验 groupId 防止旧分组内容回填。
      */
     private fun rebuildEntries() {
-        val bookItems = buildBookshelfBookItems(
-            context = requireContext(),
-            displays = shelfDisplays,
-            displayConfig = displayConfig,
-            isUpdating = ::isUpdate,
-        )
-        val entries = ArrayList<BookshelfEntry>(bookItems.size + bookGroups.size)
-        if (groupId == BookGroup.IdRoot) {
-            bookGroups.forEach { entries.add(BookshelfFolderEntry(BookshelfFolderItem.from(it))) }
+        val targetGroupId = groupId
+        val displays = shelfDisplays
+        val config = displayConfig
+        val groups = bookGroups
+        val appContext = requireContext().applicationContext
+        viewLifecycleOwner.lifecycleScope.launch {
+            val entries = withContext(Dispatchers.Default) {
+                val bookItems = buildBookshelfBookItems(
+                    context = appContext,
+                    displays = displays,
+                    displayConfig = config,
+                    isUpdating = ::isUpdate,
+                )
+                ArrayList<BookshelfEntry>(bookItems.size + groups.size).apply {
+                    if (targetGroupId == BookGroup.IdRoot) {
+                        groups.forEach { add(BookshelfFolderEntry(BookshelfFolderItem.from(it))) }
+                    }
+                    bookItems.forEach { add(BookshelfBookEntry(it)) }
+                }
+            }
+            if (groupId != targetGroupId) return@launch
+            shelfEntries = entries
+            lastCommittedGroupId = targetGroupId
+            updateTagBarVisibility()
+            val count = entries.size
+            binding.tvEmptyMsg.isGone = count > 0
+            binding.refreshLayout.isEnabled = enableRefresh && count > 0
         }
-        bookItems.forEach { entries.add(BookshelfBookEntry(it)) }
-        shelfEntries = entries
-        lastCommittedGroupId = groupId
-        updateTagBarVisibility()
-        val count = entries.size
-        binding.tvEmptyMsg.isGone = count > 0
-        binding.refreshLayout.isEnabled = enableRefresh && count > 0
     }
 
     private fun updateTagBarVisibility() {

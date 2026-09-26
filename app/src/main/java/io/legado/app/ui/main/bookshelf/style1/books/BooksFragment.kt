@@ -1,5 +1,6 @@
 package io.legado.app.ui.main.bookshelf.style1.books
 
+import android.content.Context
 import android.os.Bundle
 import android.view.View
 import androidx.compose.runtime.getValue
@@ -49,6 +50,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.max
 
 /**
@@ -157,14 +159,16 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books) {
     /**
      * 更新书籍列表数据。
      *
-     * 数据源、排序口径与标签筛选逻辑与原实现一致，只是在收集时把 [BookShelfDisplay]
-     * 转成条目 UI 模型再交给 Compose 渲染。
+     * 数据源、排序口径与标签筛选逻辑与原实现一致；标签筛选与条目建模是 O(书籍数) 的
+     * 逐本计算（标签解析、简介清洗等），必须留在 flowOn(Default) 的上游执行，
+     * collect 只做状态提交——书多时（千本级）在主线程做这两步会卡住整个启动期/刷新期。
      */
     private fun upRecyclerData() {
         booksFlowJob?.cancel()
+        val appContext = requireContext().applicationContext
         booksFlowJob = viewLifecycleOwner.lifecycleScope.launch {
             appDb.bookDao.flowShelfByGroup(groupId).map { list ->
-                when (bookSort) {
+                val sorted = when (bookSort) {
                     1 -> list.sortedByDescending { it.latestChapterTime }
                     2 -> list.sortedWith { o1, o2 -> o1.name.cnCompare(o2.name) }
                     3 -> list.sortedBy { it.order }
@@ -174,19 +178,25 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books) {
                     // SQL 已按 durChapterTime DESC 排序，无需再排
                     else -> list
                 }
+                val filtered = applyTagFilter(sorted, appContext)
+                val items = buildBookshelfBookItems(
+                    context = appContext,
+                    displays = filtered,
+                    displayConfig = displayConfig,
+                    isUpdating = ::isUpdate,
+                )
+                filtered to items
             }.flowWithLifecycleAndDatabaseChangeFirst(
                 viewLifecycleOwner.lifecycle,
                 Lifecycle.State.STARTED,
                 AppDatabase.BOOK_TABLE_NAME,
             ).catch {
                 AppLog.put("书架更新出错", it)
-            }.conflate().flowOn(Dispatchers.Default).collect { list ->
-                // 注意 flowOn 只影响上游，collect 仍运行在主线程
-                val filtered = applyTagFilter(list)
+            }.conflate().flowOn(Dispatchers.Default).collect { (filtered, items) ->
                 shelfDisplays = filtered
                 binding.tvEmptyMsg.isGone = filtered.isNotEmpty()
                 binding.refreshLayout.isEnabled = enableRefresh && filtered.isNotEmpty()
-                shelfItems = buildItems(filtered)
+                shelfItems = items
             }
         }
     }
@@ -199,9 +209,12 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books) {
             isUpdating = ::isUpdate,
         )
 
-    private fun applyTagFilter(list: List<BookShelfDisplay>): List<BookShelfDisplay> {
+    private fun applyTagFilter(
+        list: List<BookShelfDisplay>,
+        appContext: Context,
+    ): List<BookShelfDisplay> {
         val filterTag = tagFilter ?: return list
-        val smartRules = BookTagMatcher.enabledRules(requireContext())
+        val smartRules = BookTagMatcher.enabledRules(appContext)
         return list.filter {
             BookTagMatcher.matches(
                 filterTag,
@@ -222,7 +235,9 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books) {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 while (isActive) {
                     if (shelfDisplays.isNotEmpty()) {
-                        shelfItems = buildItems(shelfDisplays)
+                        // 相对时间刷新是 O(书籍数) 的逐本计算，放后台做
+                        val displays = shelfDisplays
+                        shelfItems = withContext(Dispatchers.Default) { buildItems(displays) }
                     }
                     delay(30 * 1000)
                 }
@@ -275,7 +290,14 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books) {
         observeEvent<String>(EventBus.BOOKSHELF_REFRESH) {
             displayConfig = BookshelfDisplayConfig.fromAppConfig()
             // 布局、边距、条目内容开关变化后需要重建条目，并重启相对时间刷新任务
-            shelfItems = buildItems(shelfDisplays)
+            val displays = shelfDisplays
+            val config = displayConfig
+            val appContext = requireContext().applicationContext
+            lifecycleScope.launch {
+                shelfItems = withContext(Dispatchers.Default) {
+                    buildBookshelfBookItems(appContext, displays, config, ::isUpdate)
+                }
+            }
             startLastUpdateTimeJob()
         }
     }
