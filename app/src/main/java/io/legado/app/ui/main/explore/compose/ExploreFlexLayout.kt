@@ -1,5 +1,6 @@
 package io.legado.app.ui.main.explore.compose
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
@@ -42,7 +43,13 @@ internal fun ExploreFlexLayout(
 ) {
     Layout(
         content = {
-            items.indices.forEach { index -> itemContent(index) }
+            items.indices.forEach { index ->
+                // 每项包一层 Box，保证"一个分类项 = 恰好一个布局节点"：
+                // html 项在内容解析完成前一个节点都不发，直接用项下标索引
+                // measurables 会让后续所有项错位（IndexOutOfBoundsException）。
+                // propagateMinConstraints 让胶囊撑满分到的格子（flexbox 的对齐语义由内部 justifySelf 决定）
+                Box(modifier = Modifier, propagateMinConstraints = true) { itemContent(index) }
+            }
         },
         modifier = modifier,
     ) { measurables, constraints ->
