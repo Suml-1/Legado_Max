@@ -42,6 +42,9 @@ class ExploreKindsController(
     private val sources = HashMap<String, BookSource?>()
     private val jsExtensions = HashMap<String, SourceLoginJsExtensions>()
 
+    /** [SourceLoginJsExtensions] 内部只弱引用 callback，这里强持有防止被 GC */
+    private val jsExtensionCallbacks = HashMap<String, SourceLoginJsExtensions.Callback>()
+
     /** 键为"书源 URL + 内容签名"，见 [attachWebView] */
     private val activeWebViews = linkedMapOf<String, PooledWebView>()
 
@@ -146,17 +149,17 @@ class ExploreKindsController(
     private suspend fun sourceJsExtensions(sourceUrl: String): SourceLoginJsExtensions {
         jsExtensions[sourceUrl]?.let { return it }
         val source = bookSource(sourceUrl)
-        val extensions = SourceLoginJsExtensions(
-            activity,
-            source,
-            callback = object : SourceLoginJsExtensions.Callback {
-                override fun upUiData(data: Map<String, Any?>?) = Unit
+        // SourceLoginJsExtensions 只弱引用 callback：这里必须自己强持有，
+        // 否则 GC 之后书源规则里的 java.refreshExplore() 会静默失效（表现为改了筛选不刷新）
+        val callback = object : SourceLoginJsExtensions.Callback {
+            override fun upUiData(data: Map<String, Any?>?) = Unit
 
-                override fun reUiView(deltaUp: Boolean) {
-                    requestRefresh(sourceUrl)
-                }
+            override fun reUiView(deltaUp: Boolean) {
+                requestRefresh(sourceUrl)
             }
-        )
+        }
+        jsExtensionCallbacks[sourceUrl] = callback
+        val extensions = SourceLoginJsExtensions(activity, source, callback = callback)
         jsExtensions[sourceUrl] = extensions
         return extensions
     }

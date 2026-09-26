@@ -1,17 +1,17 @@
 package io.legado.app.ui.main.explore.compose
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,8 +23,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import io.legado.app.R
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.ui.theme.AppDimens
 import io.legado.app.ui.theme.composeActionShape
@@ -75,20 +78,35 @@ internal fun ExploreKindSelectField(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = selected,
-                modifier = Modifier.padding(start = AppDimens.exploreKindSpacing),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // 值区域复刻 View 版 Spinner：文本居中 + 下方下划线，三角在行尾
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = AppDimens.exploreKindSpacing)
+            ) {
+                Column {
+                    Text(
+                        text = selected,
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(AppDimens.dividerThickness)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                    )
+                }
+            }
             // 装饰图标：点击目标是有 semantics 的整行，图标本身不需要单独描述
-            Icon(
-                imageVector = Icons.Default.ArrowDropDown,
+            Image(
+                painter = painterResource(R.drawable.ic_arrow_drop_down),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurfaceVariant),
                 modifier = Modifier.width(AppDimens.exploreTitleIconSize),
             )
         }
