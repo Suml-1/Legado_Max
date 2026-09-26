@@ -12,7 +12,7 @@ import kotlin.math.roundToInt
  * 参与弹性布局的一个分类项。
  *
  * @param style 书源里声明的子项样式
- * @param fillLine 该项独占整行（html / select 类：View 版里它们本身是 match_parent）
+ * @param fillLine 该项独占整行（html 类：View 版里它本身是 match_parent）
  */
 internal class ExploreFlexItemSpec(
     val style: FlexChildStyle,

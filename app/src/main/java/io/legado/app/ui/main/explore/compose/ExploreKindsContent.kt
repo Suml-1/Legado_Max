@@ -35,7 +35,9 @@ internal fun ExploreKindsContent(
         items = kinds.map { kind ->
             ExploreFlexItemSpec(
                 style = kind.style(),
-                fillLine = kind.type == ExploreKind.Type.html || kind.type == ExploreKind.Type.select,
+                // 只有 html 在 View 版里本身是 match_parent；select 跟随书源声明的基准宽度，
+                // 强制独占整行会破坏 createFilter 这类"一行放 2-3 个筛选"的布局
+                fillLine = kind.type == ExploreKind.Type.html,
             )
         },
         horizontalSpacing = AppDimens.exploreKindSpacing,
