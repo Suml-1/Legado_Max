@@ -33,6 +33,7 @@ import io.legado.app.ui.main.bookshelf.compose.BookshelfBookItem
 import io.legado.app.ui.main.bookshelf.compose.BookshelfDisplayConfig
 import io.legado.app.ui.main.bookshelf.compose.buildBookshelfBookItems
 import io.legado.app.ui.main.bookshelf.compose.updateBookshelfBookUpdating
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.utils.cnCompare
 import io.legado.app.utils.flowWithLifecycleAndDatabaseChangeFirst
 import io.legado.app.utils.observeEvent
@@ -118,16 +119,20 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books) {
             ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
         )
         binding.composeBookshelf.setContent {
-            BookshelfShelfContent(
-                shelfItems = shelfItems,
-                displayConfig = displayConfig,
-                bottomPaddingPx = bottomPaddingPx,
-                scrollToTopTick = scrollToTopTick,
-                immediateScrollToTopTick = immediateScrollToTopTick,
-                onScrollBackwardChange = { canScrollBackward = it },
-                onBookClick = ::onBookClick,
-                onBookLongClick = ::onBookLongClick,
-            )
+            // 内嵌 ComposeView 不带背景，这里只注入主题色板：
+            // 不包 LegadoTheme 的话 MaterialTheme 走 M3 默认色，角标/进度条/标题全部偏离应用主题
+            LegadoTheme {
+                BookshelfShelfContent(
+                    shelfItems = shelfItems,
+                    displayConfig = displayConfig,
+                    bottomPaddingPx = bottomPaddingPx,
+                    scrollToTopTick = scrollToTopTick,
+                    immediateScrollToTopTick = immediateScrollToTopTick,
+                    onScrollBackwardChange = { canScrollBackward = it },
+                    onBookClick = ::onBookClick,
+                    onBookLongClick = ::onBookLongClick,
+                )
+            }
         }
         startLastUpdateTimeJob()
     }

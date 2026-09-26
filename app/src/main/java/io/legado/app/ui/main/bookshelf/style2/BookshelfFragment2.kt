@@ -38,6 +38,7 @@ import io.legado.app.ui.main.bookshelf.compose.BookshelfFolderEntry
 import io.legado.app.ui.main.bookshelf.compose.BookshelfFolderItem
 import io.legado.app.ui.main.bookshelf.compose.buildBookshelfBookItems
 import io.legado.app.ui.main.bookshelf.compose.updateBookshelfEntryUpdating
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.RoundedTagBarView
 import io.legado.app.utils.cnCompare
 import io.legado.app.utils.flowWithLifecycleAndDatabaseChangeFirst
@@ -125,17 +126,20 @@ class BookshelfFragment2() :
             ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
         )
         binding.composeBookshelf.setContent {
-            BookshelfShelfTreeContent(
-                shelfEntries = shelfEntries,
-                displayConfig = displayConfig,
-                groupId = groupId,
-                bottomPaddingPx = bottomPaddingPx,
-                scrollToTopTick = scrollToTopTick,
-                immediateScrollToTopTick = immediateScrollToTopTick,
-                onScrollBackwardChange = { canScrollBackward = it },
-                onEntryClick = ::onEntryClick,
-                onEntryLongClick = ::onEntryLongClick,
-            )
+            // 与 style1 一致：只注入主题色板，不带背景（壁纸由外壳承载）
+            LegadoTheme {
+                BookshelfShelfTreeContent(
+                    shelfEntries = shelfEntries,
+                    displayConfig = displayConfig,
+                    groupId = groupId,
+                    bottomPaddingPx = bottomPaddingPx,
+                    scrollToTopTick = scrollToTopTick,
+                    immediateScrollToTopTick = immediateScrollToTopTick,
+                    onScrollBackwardChange = { canScrollBackward = it },
+                    onEntryClick = ::onEntryClick,
+                    onEntryLongClick = ::onEntryLongClick,
+                )
+            }
         }
     }
 
