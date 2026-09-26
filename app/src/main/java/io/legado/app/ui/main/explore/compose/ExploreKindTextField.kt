@@ -57,7 +57,7 @@ internal fun ExploreKindTextField(
     BasicTextField(
         value = text,
         onValueChange = { text = it },
-        modifier = modifier.then(style.sizeModifier()),
+        modifier = modifier,
         textStyle = MaterialTheme.typography.bodyMedium.copy(
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = alignment.toTextAlign(),

@@ -70,7 +70,7 @@ internal fun ExploreKindActionChip(
 ) {
     val name by rememberKindName(sourceUrl, kind, controller)
     ExploreKindChip(
-        modifier = modifier.then(kind.style().sizeModifier()),
+        modifier = modifier,
         text = name,
         horizontalAlignment = kind.style().horizontalAlignment(Alignment.CenterHorizontally),
         onClick = onClick,
@@ -103,7 +103,7 @@ internal fun ExploreKindToggleChip(
     }
     val prefix = style.layout_justifySelf != "right"
     ExploreKindChip(
-        modifier = modifier.then(style.sizeModifier()),
+        modifier = modifier,
         text = if (prefix) char + name else name + char,
         horizontalAlignment = style.horizontalAlignment(Alignment.CenterHorizontally),
         onClick = {

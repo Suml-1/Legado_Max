@@ -1,9 +1,5 @@
 package io.legado.app.ui.main.explore.compose
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -14,11 +10,10 @@ import io.legado.app.ui.theme.AppDimens
 /**
  * 展开书源的分类区。
  *
- * 布局对齐原 `flexbox`（`flexWrap=wrap` + `flexDirection=row`）：
- * 每一项按自身 `FlexChildStyle` 决定宽度（内容宽度 / 基准百分比 / 整行），`layout_wrapBefore`
- * 通过 [groupByWrapBefore] 拆成多个 [FlowRow] 表达。与原实现的差异见 `ExploreKindStyle` 的说明。
+ * 布局对齐原 `flexbox`（`flexWrap=wrap` + `flexDirection=row`），由 [ExploreFlexLayout] 复刻：
+ * 基准宽度、断行与 `flexGrow` 行内分配都按书源声明的 `FlexChildStyle` 计算；
+ * html / select 两类在 View 版里本身是 match_parent，这里声明为整行。
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ExploreKindsContent(
     modifier: Modifier = Modifier,
@@ -29,7 +24,7 @@ internal fun ExploreKindsContent(
 ) {
     val kinds = kindsState.kinds
     if (kinds.isEmpty()) return
-    Column(
+    ExploreFlexLayout(
         modifier = modifier
             .fillMaxWidth()
             .padding(
@@ -37,24 +32,21 @@ internal fun ExploreKindsContent(
                 end = AppDimens.exploreKindsHorizontalPadding,
                 top = AppDimens.exploreKindsTopSpacing,
             ),
-        verticalArrangement = Arrangement.spacedBy(AppDimens.exploreKindSpacing),
-    ) {
-        kinds.groupByWrapBefore().forEach { group ->
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(AppDimens.exploreKindSpacing),
-                verticalArrangement = Arrangement.spacedBy(AppDimens.exploreKindSpacing),
-            ) {
-                group.forEach { kind ->
-                    ExploreKindItem(
-                        kind = kind,
-                        sourceUrl = sourceItem.sourceUrl,
-                        controller = controller,
-                        actions = actions,
-                    )
-                }
-            }
-        }
+        items = kinds.map { kind ->
+            ExploreFlexItemSpec(
+                style = kind.style(),
+                fillLine = kind.type == ExploreKind.Type.html || kind.type == ExploreKind.Type.select,
+            )
+        },
+        horizontalSpacing = AppDimens.exploreKindSpacing,
+        verticalSpacing = AppDimens.exploreKindSpacing,
+    ) { index ->
+        ExploreKindItem(
+            kind = kinds[index],
+            sourceUrl = sourceItem.sourceUrl,
+            controller = controller,
+            actions = actions,
+        )
     }
 }
 

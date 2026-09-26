@@ -1,13 +1,11 @@
 package io.legado.app.ui.main.explore.compose
 
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.data.entities.rule.FlexChildStyle
@@ -69,25 +67,6 @@ internal fun rememberKindName(
 }
 
 /**
- * 把 View 侧 flexbox 的子项样式翻译成 Compose 尺寸。
- *
- * `layout_flexBasisPercent` 对应 flexbox 的"基准宽度百分比"，Compose 侧用
- * `fillMaxWidth(percent)` 表达；其余情况交给 `FlowRow` 按内容宽度排布（原实现里
- * url/button/toggle 等胶囊的 `flexGrow` 默认为 0，正是"按内容宽度"）。
- *
- * 有意保留的偏差：`layout_wrapBefore` 不在这里表达——它在 [groupByWrapBefore] 里
- * 拆行处理，因为 FlowRow 没有"强制换行"能力。
- */
-internal fun FlexChildStyle.sizeModifier(): Modifier {
-    val fraction = layout_flexBasisPercent
-    return when {
-        fraction >= 1f -> Modifier.fillMaxWidth()
-        fraction > 0f -> Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f))
-        else -> Modifier
-    }
-}
-
-/**
  * 子项在自己那一格内的水平对齐（原 `layout_justifySelf`）。
  *
  * @param default 样式未命中任何分支时的兜底对齐：url/button/toggle/select 居中、text 靠左。
@@ -138,25 +117,4 @@ internal fun Alignment.Horizontal.toTextAlign(): TextAlign {
         Alignment.End -> TextAlign.End
         else -> TextAlign.Center
     }
-}
-
-/**
- * 按 `layout_wrapBefore` 把分类切成若干组，每组渲染成一个 `FlowRow`。
- *
- * 拆组而不是给单个自增宽度，是为了让"强制换行"既不影响上一行的尾部留白，
- * 也不让下一行的第一项与上一行共享剩余宽度。
- */
-internal fun List<ExploreKind>.groupByWrapBefore(): List<List<ExploreKind>> {
-    if (isEmpty()) return emptyList()
-    val groups = mutableListOf<MutableList<ExploreKind>>()
-    var current = mutableListOf<ExploreKind>()
-    forEach { kind ->
-        if (kind.style().layout_wrapBefore && current.isNotEmpty()) {
-            groups.add(current)
-            current = mutableListOf()
-        }
-        current.add(kind)
-    }
-    groups.add(current)
-    return groups
 }
