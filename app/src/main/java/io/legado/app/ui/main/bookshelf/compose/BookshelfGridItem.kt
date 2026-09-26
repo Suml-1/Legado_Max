@@ -61,7 +61,7 @@ fun BookshelfGridItem(
             )
             .padding(AppDimens.shelfGridItemPadding),
     ) {
-        Box(modifier = Modifier.padding(AppDimens.shelfGridCoverMargin)) {
+        Box {
             AppBookCover(
                 modifier = Modifier
                     .fillMaxWidth()

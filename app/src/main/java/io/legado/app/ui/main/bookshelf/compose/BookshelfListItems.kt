@@ -134,6 +134,7 @@ private fun BookshelfCompactListItem(
                     iconRes = R.drawable.ic_author,
                     contentDescription = stringResource(R.string.author),
                 )
+                Spacer(modifier = Modifier.width(AppDimens.shelfMetaIconSpacing))
                 Text(
                     text = bookItem.display.author.orEmpty(),
                     modifier = Modifier.weight(1f, fill = false),

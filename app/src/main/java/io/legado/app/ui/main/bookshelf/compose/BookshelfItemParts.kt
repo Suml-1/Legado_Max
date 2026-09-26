@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -44,6 +46,9 @@ internal const val SHELF_META_TEXT_SIZE = 13
 internal const val SHELF_INTRO_TEXT_SIZE = 12
 internal const val SHELF_CHIP_TEXT_SIZE = 11
 
+/** 未读角标字号：对齐 archive-main 的 10sp，比原 BadgeView 的 11sp 再小一档 */
+internal const val SHELF_BADGE_TEXT_SIZE = 10
+
 /**
  * 未读角标 / 更新中转圈。
  *
@@ -72,14 +77,13 @@ internal fun BookshelfItemStatus(
         pageSecondaryTextColor()
     }
     val textColor = if (badgeColor.luminance() > 0.5f) Color.Black else Color.White
-    val shape = composeActionShape()
     Box(
         modifier = modifier
             .defaultMinSize(
                 minWidth = AppDimens.shelfBadgeMinSize,
                 minHeight = AppDimens.shelfBadgeMinSize,
             )
-            .clip(shape)
+            .clip(RoundedCornerShape(AppDimens.shelfBadgeCornerRadius))
             .background(badgeColor)
             .padding(
                 horizontal = AppDimens.shelfBadgePaddingHorizontal,
@@ -90,7 +94,7 @@ internal fun BookshelfItemStatus(
         Text(
             text = bookItem.unreadCount.toString(),
             color = textColor,
-            fontSize = SHELF_CHIP_TEXT_SIZE.sp,
+            fontSize = SHELF_BADGE_TEXT_SIZE.sp,
             textAlign = TextAlign.Center,
             maxLines = 1,
         )
@@ -114,6 +118,7 @@ internal fun BookshelfMetaLine(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BookshelfMetaIcon(iconRes = iconRes, contentDescription = contentDescription)
+        Spacer(modifier = Modifier.width(AppDimens.shelfMetaIconSpacing))
         Text(
             text = text.orEmpty(),
             modifier = Modifier.weight(1f),
@@ -143,9 +148,7 @@ internal fun BookshelfMetaIcon(
         painter = painterResource(iconRes),
         contentDescription = contentDescription,
         tint = pageSecondaryTextColor(),
-        modifier = modifier
-            .size(AppDimens.shelfMetaIconSize)
-            .padding(AppDimens.shelfMetaIconPadding),
+        modifier = modifier.size(AppDimens.shelfMetaIconSize),
     )
 }
 

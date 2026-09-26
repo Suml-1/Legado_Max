@@ -104,7 +104,7 @@ fun BookshelfFolderItemView(
                 )
                 .padding(AppDimens.shelfGridItemPadding),
         ) {
-            Box(modifier = Modifier.padding(AppDimens.shelfGridCoverMargin)) {
+            Box {
                 FolderCover(modifier = Modifier.fillMaxWidth(), folder = folder)
             }
             Text(

@@ -106,17 +106,17 @@ object AppDimens {
     /** 书名与未读角标之间的间距 */
     val shelfBadgeRowSpacing: Dp = 8.dp
 
-    /** 作者/阅读进度/最新章节行的图标尺寸 */
-    val shelfMetaIconSize: Dp = 18.dp
+    /** 作者/阅读进度/最新章节行的图标尺寸（对齐 archive-main 的 14dp 小图标） */
+    val shelfMetaIconSize: Dp = 14.dp
 
-    /** meta 行图标的内边距 */
-    val shelfMetaIconPadding: Dp = 2.dp
+    /** meta 行图标与文字之间的间距 */
+    val shelfMetaIconSpacing: Dp = 4.dp
 
-    /** 书名行与首个 meta 行之间的间距 */
-    val shelfMetaFirstSpacing: Dp = 8.dp
+    /** 书名行与首个 meta 行之间的间距（对齐 archive-main 的 6dp） */
+    val shelfMetaFirstSpacing: Dp = 6.dp
 
-    /** meta 行之间的间距 */
-    val shelfMetaSpacing: Dp = 4.dp
+    /** meta 行之间的间距（对齐 archive-main 的 3dp） */
+    val shelfMetaSpacing: Dp = 3.dp
 
     /** 阅读进度条与上一行、百分比的间距 */
     val shelfProgressSpacing: Dp = 2.dp
@@ -154,9 +154,6 @@ object AppDimens {
     /** 网格条目外内边距 */
     val shelfGridItemPadding: Dp = 4.dp
 
-    /** 网格封面与条目边缘的间距 */
-    val shelfGridCoverMargin: Dp = 4.dp
-
     /** 网格书名与封面之间的间距 */
     val shelfGridNameSpacing: Dp = 6.dp
 
@@ -173,13 +170,21 @@ object AppDimens {
     val shelfGridOverlayNamePadding: Dp = 4.dp
 
     /** 未读角标：字号以外的内边距 */
-    val shelfBadgePaddingHorizontal: Dp = 5.dp
+    val shelfBadgePaddingHorizontal: Dp = 4.dp
 
     /** 未读角标垂直内边距 */
     val shelfBadgePaddingVertical: Dp = 1.dp
 
     /** 未读角标最小尺寸 */
-    val shelfBadgeMinSize: Dp = 16.dp
+    val shelfBadgeMinSize: Dp = 14.dp
+
+    /**
+     * 未读角标圆角。
+     *
+     * 对齐原 [io.legado.app.ui.widget.text.BadgeView] 的 radius 8px（非主题圆角资源），
+     * 不走 composeActionShape：9dp 的胶囊圆角会让小角标看起来更胖。
+     */
+    val shelfBadgeCornerRadius: Dp = 3.dp
 
     /** 状态下标（角标 / 加载指示器）距条目边缘的间距 */
     val shelfBadgeMargin: Dp = 5.dp
