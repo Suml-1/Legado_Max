@@ -114,6 +114,7 @@ fun BookshelfFolderItemView(
                     .padding(top = AppDimens.shelfGridNameSpacing),
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = SHELF_GRID_FOLDER_NAME_TEXT_SIZE.sp,
+                lineHeight = SHELF_TITLE_LINE_HEIGHT.sp,
                 textAlign = TextAlign.Center,
                 minLines = 2,
                 maxLines = 2,
@@ -150,6 +151,7 @@ fun BookshelfFolderItemView(
                     ),
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp,
+                lineHeight = SHELF_TITLE_LINE_HEIGHT.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

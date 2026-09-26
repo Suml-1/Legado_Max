@@ -50,6 +50,19 @@ internal const val SHELF_CHIP_TEXT_SIZE = 11
 internal const val SHELF_BADGE_TEXT_SIZE = 10
 
 /**
+ * 各档文字的行高（sp）。
+ *
+ * 只传 fontSize 会继承 MaterialTheme 默认 bodyLarge 的 24sp 行高，13sp 的文字每行
+ * 自带约 5dp 的上下空隙，行与行之间看起来隔了一大截；这里逐档压紧到字号 +
+ * 3sp 左右，观感对齐 includeFontPadding=false 的 TextView。
+ */
+internal const val SHELF_TITLE_LINE_HEIGHT = 20
+internal const val SHELF_META_LINE_HEIGHT = 16
+internal const val SHELF_INTRO_LINE_HEIGHT = 16
+internal const val SHELF_CHIP_LINE_HEIGHT = 14
+internal const val SHELF_BADGE_LINE_HEIGHT = 12
+
+/**
  * 未读角标 / 更新中转圈。
  *
  * 更新中优先显示转圈（与 View 版一致）；角标在有新章节时用强调色，否则用中性灰
@@ -95,6 +108,7 @@ internal fun BookshelfItemStatus(
             text = bookItem.unreadCount.toString(),
             color = textColor,
             fontSize = SHELF_BADGE_TEXT_SIZE.sp,
+            lineHeight = SHELF_BADGE_LINE_HEIGHT.sp,
             textAlign = TextAlign.Center,
             maxLines = 1,
         )
@@ -124,6 +138,7 @@ internal fun BookshelfMetaLine(
             modifier = Modifier.weight(1f),
             color = pageSecondaryTextColor(),
             fontSize = SHELF_META_TEXT_SIZE.sp,
+            lineHeight = SHELF_META_LINE_HEIGHT.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -132,6 +147,7 @@ internal fun BookshelfMetaLine(
                 text = it,
                 color = pageSecondaryTextColor(),
                 fontSize = SHELF_META_TEXT_SIZE.sp,
+                lineHeight = SHELF_META_LINE_HEIGHT.sp,
                 maxLines = 1,
             )
         }
@@ -188,6 +204,7 @@ internal fun BookshelfReadProgress(
             modifier = Modifier.padding(start = AppDimens.shelfProgressPercentSpacing),
             color = pageSecondaryTextColor(),
             fontSize = SHELF_CHIP_TEXT_SIZE.sp,
+            lineHeight = SHELF_CHIP_LINE_HEIGHT.sp,
             maxLines = 1,
         )
     }
@@ -236,6 +253,7 @@ internal fun BookshelfChips(
                     text = chip.label(),
                     color = pageSecondaryTextColor(),
                     fontSize = SHELF_CHIP_TEXT_SIZE.sp,
+                    lineHeight = SHELF_CHIP_LINE_HEIGHT.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

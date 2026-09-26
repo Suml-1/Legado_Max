@@ -97,6 +97,7 @@ private fun BookshelfStandardListItem(
                     modifier = Modifier.padding(top = AppDimens.shelfIntroSpacing),
                     color = pageSecondaryTextColor(),
                     fontSize = SHELF_INTRO_TEXT_SIZE.sp,
+                    lineHeight = SHELF_INTRO_LINE_HEIGHT.sp,
                     maxLines = displayConfig.introLines,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -140,6 +141,7 @@ private fun BookshelfCompactListItem(
                     modifier = Modifier.weight(1f, fill = false),
                     color = pageSecondaryTextColor(),
                     fontSize = SHELF_META_TEXT_SIZE.sp,
+                    lineHeight = SHELF_META_LINE_HEIGHT.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -148,12 +150,14 @@ private fun BookshelfCompactListItem(
                     modifier = Modifier.padding(horizontal = AppDimens.shelfMetaSpacing),
                     color = pageSecondaryTextColor(),
                     fontSize = SHELF_CHIP_TEXT_SIZE.sp,
+                    lineHeight = SHELF_CHIP_LINE_HEIGHT.sp,
                 )
                 Text(
                     text = bookItem.display.durChapterTitle.orEmpty(),
                     modifier = Modifier.weight(1f),
                     color = pageSecondaryTextColor(),
                     fontSize = SHELF_META_TEXT_SIZE.sp,
+                    lineHeight = SHELF_META_LINE_HEIGHT.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -162,6 +166,7 @@ private fun BookshelfCompactListItem(
                         text = it,
                         color = pageSecondaryTextColor(),
                         fontSize = SHELF_META_TEXT_SIZE.sp,
+                        lineHeight = SHELF_META_LINE_HEIGHT.sp,
                         maxLines = 1,
                     )
                 }
@@ -255,6 +260,7 @@ private fun BookshelfItemTitleRow(
                 .padding(start = AppDimens.shelfTitleStartPadding),
             color = MaterialTheme.colorScheme.onSurface,
             fontSize = SHELF_TITLE_TEXT_SIZE.sp,
+            lineHeight = SHELF_TITLE_LINE_HEIGHT.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

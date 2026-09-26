@@ -115,8 +115,13 @@ object AppDimens {
     /** 书名行与首个 meta 行之间的间距（对齐 archive-main 的 6dp） */
     val shelfMetaFirstSpacing: Dp = 6.dp
 
-    /** meta 行之间的间距（对齐 archive-main 的 3dp） */
-    val shelfMetaSpacing: Dp = 3.dp
+    /**
+     * meta 行之间的额外间距。
+     *
+     * 行高已显式压紧（见 BookshelfItemParts 的行高常量），行与行不再加 padding，
+     * 观感对齐参考分支；紧凑列表的"作者 • 章节"分隔点仍复用它做左右留白。
+     */
+    val shelfMetaSpacing: Dp = 0.dp
 
     /** 阅读进度条与上一行、百分比的间距 */
     val shelfProgressSpacing: Dp = 2.dp

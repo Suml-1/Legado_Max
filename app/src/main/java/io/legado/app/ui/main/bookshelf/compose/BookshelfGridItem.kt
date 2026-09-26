@@ -28,7 +28,9 @@ private const val SHOW_BOOK_NAME_ON_COVER = 2
 
 /** 网格书名：下方 12sp 两行居中，封面上 11sp 两行左对齐 */
 private const val SHELF_GRID_NAME_TEXT_SIZE = 12
+private const val SHELF_GRID_NAME_LINE_HEIGHT = 15
 private const val SHELF_GRID_OVERLAY_NAME_TEXT_SIZE = 11
+private const val SHELF_GRID_OVERLAY_NAME_LINE_HEIGHT = 14
 
 /** 封面底部渐变遮罩，对齐原 bg_gradient_cover（底部黑 63% → 30% 处 38% → 顶部透明） */
 private val gridNameOverlayBrush = Brush.verticalGradient(
@@ -115,6 +117,7 @@ fun BookshelfGridItem(
                         ),
                     color = Color.White,
                     fontSize = SHELF_GRID_OVERLAY_NAME_TEXT_SIZE.sp,
+                    lineHeight = SHELF_GRID_OVERLAY_NAME_LINE_HEIGHT.sp,
                     minLines = 2,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -129,6 +132,7 @@ fun BookshelfGridItem(
                     .padding(top = AppDimens.shelfGridNameSpacing),
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = SHELF_GRID_NAME_TEXT_SIZE.sp,
+                lineHeight = SHELF_GRID_NAME_LINE_HEIGHT.sp,
                 textAlign = TextAlign.Center,
                 minLines = 2,
                 maxLines = 2,
