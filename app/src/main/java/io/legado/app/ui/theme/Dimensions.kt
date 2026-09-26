@@ -225,14 +225,19 @@ object AppDimens {
     /** 展开加载指示器的线宽（对齐原 RotateLoading 的 1dp 细线） */
     val exploreTitleProgressStroke: Dp = 1.dp
 
-    /** 书源分类区左右内边距（对齐原容器 8dp padding） */
-    val exploreKindsHorizontalPadding: Dp = 8.dp
+    /** 书源分类区左右内边距（对齐原 8dp 容器 padding + 3dp flexbox padding） */
+    val exploreKindsHorizontalPadding: Dp = 11.dp
 
-    /** 分类区与标题行之间的间距（对齐原 flexbox 的 marginTop 8dp） */
-    val exploreKindsTopSpacing: Dp = 8.dp
+    /** 分类区与标题行之间的间距（对齐原 flexbox 的 8dp marginTop + 3dp padding） */
+    val exploreKindsTopSpacing: Dp = 11.dp
 
-    /** 分类项之间的间距（对齐原 3dp margin + 8dp divider 的观感） */
-    val exploreKindSpacing: Dp = 6.dp
+    /**
+     * 分类项之间的间距。
+     *
+     * 对齐原 FlexboxLayout 的实际间隙：子项 margin 3dp×2 + divider 占位 8dp = 14dp。
+     * 这个值直接决定断行组成（同一行能放下几个胶囊），不能凭观感取小值。
+     */
+    val exploreKindSpacing: Dp = 14.dp
 
     /** 分类项左右内边距（对齐 item_fillet_* 的 12dp） */
     val exploreKindHorizontalPadding: Dp = 12.dp
