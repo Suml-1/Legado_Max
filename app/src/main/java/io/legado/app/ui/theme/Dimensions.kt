@@ -135,23 +135,36 @@ object AppDimens {
     /** 阅读进度百分比与进度条的间距 */
     val shelfProgressPercentSpacing: Dp = 4.dp
 
-    /** 标签胶囊的水平内边距 */
-    val shelfTagChipPaddingHorizontal: Dp = 8.dp
+    /**
+     * 标签胶囊圆角。
+     *
+     * 对齐原 bg_tag 的 8dp 固定值，不走 composeActionShape：胶囊本体缩小后
+     * 9dp 的主题圆角会让小胶囊接近半圆、显得更胖。
+     */
+    val shelfTagChipCornerRadius: Dp = 8.dp
+
+    /**
+     * 标签胶囊的水平内边距。
+     *
+     * 原 View 版 createTagView 写的是 setPadding(8,4,8,4)，单位是 px（约 2dp/1dp），
+     * 这里取 4dp/2dp：比"px 当 dp 用"的原版稍宽松，但明显小于第一版误放的 8dp/4dp。
+     */
+    val shelfTagChipPaddingHorizontal: Dp = 4.dp
 
     /** 标签胶囊的垂直内边距 */
-    val shelfTagChipPaddingVertical: Dp = 4.dp
+    val shelfTagChipPaddingVertical: Dp = 2.dp
 
     /** 标签胶囊描边粗细（对齐原 bg_tag 的 0.5dp） */
     val shelfTagChipBorderWidth: Dp = 0.5.dp
 
-    /** 标签胶囊之间的水平间距 */
-    val shelfTagChipSpacing: Dp = 4.dp
+    /** 标签胶囊之间的水平间距（对齐原 Flexbox 子项 margin 4px×2 ≈ 2dp） */
+    val shelfTagChipSpacing: Dp = 2.dp
 
-    /** 标签胶囊之间的垂直间距 */
-    val shelfTagChipVerticalSpacing: Dp = 2.dp
+    /** 标签胶囊换行时的垂直间距（对齐原 margin 2px×2 ≈ 1dp） */
+    val shelfTagChipVerticalSpacing: Dp = 1.dp
 
     /** 标签区与上一行的间距 */
-    val shelfTagRowsSpacing: Dp = 4.dp
+    val shelfTagRowsSpacing: Dp = 2.dp
 
     /** 简介与上一行的间距 */
     val shelfIntroSpacing: Dp = 4.dp

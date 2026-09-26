@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.help.book.BookTagMatcher
 import io.legado.app.ui.theme.AppDimens
-import io.legado.app.ui.theme.composeActionShape
 import io.legado.app.ui.theme.pageSecondaryTextColor
 
 /** 条目文字字号：对齐原 item_bookshelf_* 布局，避免换风格时观感漂移 */
@@ -219,7 +218,7 @@ internal fun BookshelfChips(
     showBorder: Boolean,
 ) {
     if (chips.isEmpty()) return
-    val shape = composeActionShape()
+    val shape = RoundedCornerShape(AppDimens.shelfTagChipCornerRadius)
     FlowRow(
         modifier = modifier
             .fillMaxWidth()
