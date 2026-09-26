@@ -227,10 +227,10 @@ object AppDimens {
     /** 书源条目左右内边距（对齐原 item_find_book 根布局的 16dp） */
     val exploreRowHorizontalPadding: Dp = 16.dp
 
-    /** 书源条目上内边距（对齐原根布局的 12dp） */
+    /** 书源条目上内边距（对齐原根布局的 12dp；底部为 0，相邻条目间距就是这 12dp） */
     val exploreRowTopPadding: Dp = 12.dp
 
-    /** 书源条目下内边距（原实现只有末项保留，这里每项都留，避免末项贴着底栏） */
+    /** 书源条目下内边距（原实现只有末项保留 12dp，这里并入列表的底部 contentPadding） */
     val exploreRowBottomPadding: Dp = 12.dp
 
     /** 书源标题行的左右内边距（对齐原 ll_title 的 10dp） */

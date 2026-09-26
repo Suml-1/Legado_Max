@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.theme.AppDimens
 import io.legado.app.ui.widget.components.VerticalScrollbar
 
 /**
@@ -33,8 +34,9 @@ internal fun ExploreSourceList(
 ) {
     val listState = rememberLazyListState()
     val density = LocalDensity.current
+    // 底部 contentPadding = 底栏高度 + 末条目自己的 12dp 下边距（原实现末项保留）
     val bottomPadding = remember(bottomPaddingPx, density) {
-        with(density) { bottomPaddingPx.toDp() }
+        with(density) { bottomPaddingPx.toDp() + AppDimens.exploreRowBottomPadding }
     }
 
     // 展开后把该行滚到列表顶部，对齐原实现的 scrollToPositionWithOffset(pos, 0)：
@@ -54,7 +56,6 @@ internal fun ExploreSourceList(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            // 底栏高度由 MainActivity 下发，内容要能滚到底栏之上
             contentPadding = PaddingValues(bottom = bottomPadding),
         ) {
             items(items = sourceItems, key = { it.sourceUrl }) { sourceItem ->

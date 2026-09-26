@@ -73,7 +73,8 @@ internal fun ExploreSourceRow(
                 start = AppDimens.exploreRowHorizontalPadding,
                 end = AppDimens.exploreRowHorizontalPadding,
                 top = AppDimens.exploreRowTopPadding,
-                bottom = AppDimens.exploreRowBottomPadding,
+                // 底部不留：相邻条目的间距 = 上内边距，与原根布局 padding(16,12,16,0) 一致；
+                // 末行与底栏的间隔由列表的 contentPadding 负责
             ),
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
