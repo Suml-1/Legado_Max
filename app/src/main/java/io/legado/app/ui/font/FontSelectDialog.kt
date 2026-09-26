@@ -201,9 +201,13 @@ class FontSelectDialog :
     }
 
     override fun onFontSelect(docItem: FileDoc) {
+        // FileDoc 转路径可能涉及 IO 放后台做；CallBack 必须在主线程触发，
+        // 否则实现方（如高亮规则编辑页）的视图更新会因子线程操作 UI 被协程吞掉，
+        // 表现为选完字体预览不实时刷新，要保存后才生效
         execute {
-            callBack?.selectFont(docItem.toString())
+            docItem.toString()
         }.onSuccess {
+            callBack?.selectFont(it)
             dismissAllowingStateLoss()
         }
     }
