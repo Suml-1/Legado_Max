@@ -300,11 +300,13 @@ abstract class BaseBookshelfFragment(layoutId: Int) :
                     }
                     if (showBookname != rgbLayout.getCheckedIndex()) {
                         AppConfig.showBookname = rgbLayout.getCheckedIndex()
-                        recreate = true
+                        // 书架列表已 Compose 化，条目读取走 BOOKSHELF_REFRESH 重新加载的显示配置，
+                        // 不再需要整页重建
+                        refreshBookshelf = true
                     }
                     if (AppConfig.bookshelfMargin != margin.progress) {
                         AppConfig.bookshelfMargin = margin.progress
-                        recreate = true
+                        refreshBookshelf = true
                     }
                     if (AppConfig.showUnread != swShowUnread.isChecked) {
                         AppConfig.showUnread = swShowUnread.isChecked

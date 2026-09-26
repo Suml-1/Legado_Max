@@ -323,8 +323,9 @@ class MainActivity :
             binding.viewPagerMain.postDelayed(1000) {
                 viewModel.ruleSubsUp()
             }
-            // 自动更新书籍
-            val isAutoRefreshedBook = savedInstanceState?.getBoolean("isAutoRefreshedBook") ?: false
+            // 自动更新书籍（recreate 走重启路径时标记通过 intent 传递，见 recreate()）
+            val isAutoRefreshedBook = savedInstanceState?.getBoolean("isAutoRefreshedBook")
+                ?: intent.getBooleanExtra("isAutoRefreshedBook", false)
             if (AppConfig.autoRefreshBook && !isAutoRefreshedBook) {
                 // 每次进入书架后5秒自动更新书籍目录
                 binding.viewPagerMain.postDelayed(5000) {
@@ -599,18 +600,33 @@ class MainActivity :
      */
     private var recreateOnResume = false
 
+    /** 一次重建只放行一个请求，避免同一实例周期内多次触发叠加 */
+    private var recreatePending = false
+
     /**
-     * 如果重启太快fragment不会重建,这里更新一下书架的排序
+     * 主界面重建统一走「清任务 + 全新启动」（theme-styles.md §7.8.1 强制）。
+     *
+     * 原地 `super.recreate()` 建立的新窗口里，Compose 实例首帧组合后重组/重绘调度即冻结
+     * （证据链见 docs/archive/主题列表应用主题后UI卡死根因分析.md §15）：书架与首页列表
+     * 现在都是 Compose，切书架布局配置后列表停在空态就是该缺陷的变现；View 侧不受影响，
+     * 所以书架还是 RecyclerView 时问题一直不可见。全新 startActivity 建立的窗口全链路健康。
+     *
+     * 本页是 singleTask，实例还在任务栈里时直接 startActivity 只会回调本实例的
+     * onNewIntent，必须带 FLAG_ACTIVITY_CLEAR_TASK 才能真正建出新窗口。
      */
     override fun recreate() {
-        try {
-            (fragmentMap[getFragmentId(bookshelfPosition())] as? BaseBookshelfFragment)?.run {
-                upSort()
-            }
-        } catch (e: Exception) {
-            // 忽略 upSort 异常，确保 super.recreate() 始终被调用
-        }
-        super.recreate()
+        if (recreatePending || isFinishing || isDestroyed) return
+        recreatePending = true
+        instanceCreateTime = System.currentTimeMillis()
+        startActivity(
+            Intent(this, MainActivity::class.java)
+                // 旧实例已做过自动更新目录，重启后不再重复（等价于原来 recreate 保留的
+                // savedInstanceState 标记，见 onPostCreate）
+                .putExtra("isAutoRefreshedBook", true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+        )
+        finish()
     }
 
     override fun observeLiveBus() {
@@ -629,6 +645,11 @@ class MainActivity :
             onUpBooksBadgeView!!.setBadgeCount(it)
         }
         observeEvent<String>(EventBus.RECREATE) {
+            // 本实例刚由重启建立 → 该广播是同一次操作的迟到重复（如 ThemeConfig 的防抖广播），
+            // 放行会在新窗口建立过程中触发二次重启
+            if (System.currentTimeMillis() - instanceCreateTime < RECREATE_IGNORE_MS) {
+                return@observeEvent
+            }
             if (lifecycle.currentState == Lifecycle.State.RESUMED) {
                 // 前台：直接刷新背景并重建（即使 recreate 失败或被跳过也能生效）
                 upBackgroundImage()
@@ -1463,5 +1484,24 @@ class MainActivity :
         } catch (e: Exception) {
             e.printOnDebug()
         }
+    }
+
+    companion object {
+
+        /**
+         * 重启后迟到的 RECREATE 广播宽限窗。
+         *
+         * 一次配置变更可能同时由事件总线与 ThemeConfig 防抖（1500ms）两条路触发，
+         * 窗口略大于防抖延迟即可兜住迟到广播，保证一次变更只经历一次重启。
+         */
+        private const val RECREATE_IGNORE_MS = 2000L
+
+        /**
+         * 最近一次由重启建立的主界面实例时刻。
+         *
+         * 必须是静态值：读取它的是重启后的**新**实例，实例字段无法跨实例传递。
+         */
+        @Volatile
+        private var instanceCreateTime = 0L
     }
 }
