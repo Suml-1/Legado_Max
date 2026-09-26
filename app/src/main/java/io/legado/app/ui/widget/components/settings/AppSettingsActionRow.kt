@@ -5,7 +5,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,8 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,7 +60,6 @@ fun AppSettingsActionRow(
 ) {
     val shape = composePanelShape()
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
     val titleColor = if (danger) {
         MaterialTheme.colorScheme.error
     } else {
@@ -76,14 +74,16 @@ fun AppSettingsActionRow(
             .semantics(mergeDescendants = true) {}
             .appSettingsRowDecoration(
                 shape = shape,
-                pressed = pressed,
-                pressedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                 dividerColor = MaterialTheme.colorScheme.outlineVariant,
                 showDivider = showDivider
             )
             .combinedClickable(
                 interactionSource = interactionSource,
-                indication = null,
+                // 必须走 indication 层而不是自己读按下态再画底色：后者要经一次重组才出现，
+                // 快速点击时按下/抬起在同一帧内结束，肉眼看不到任何反馈
+                indication = ripple(
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                ),
                 onClick = onClick,
                 onLongClick = onLongClick
             )

@@ -275,7 +275,17 @@ class MainActivity :
         )
         upBottomMenu()
         initView()
-        upHomePage()
+        // 本页重建走「清任务 + 全新启动」（见 recreate()），不带 savedInstanceState，
+        // 重建前所在的 Tab 只能记在进程级 lastTabFragmentId 里；
+        // 冷启动（-1）才落回 defaultHomePage，否则用户会被"踢"回默认首页。
+        // 记 id 而不是下标：导航项的显隐与顺序可被用户改，下标会错位，id 始终稳定
+        val restoredIndex = realPositions.indexOf(lastTabFragmentId)
+        if (restoredIndex in 0 until bottomMenuCount) {
+            binding.viewPagerMain.setCurrentItem(restoredIndex, false)
+        } else {
+            upHomePage()
+        }
+        lastTabFragmentId = realPositions[binding.viewPagerMain.currentItem]
         // setCurrentItem 到 position 0 时不会触发 onPageSelected 回调，
         // 需要显式更新底部导航栏的选中状态
         val position = binding.viewPagerMain.currentItem
@@ -770,6 +780,8 @@ class MainActivity :
 
         override fun onPageSelected(position: Int) {
             pagePosition = position
+            // recreate() 不带 savedInstanceState，这里实时记录，重建后才能回到本页
+            lastTabFragmentId = realPositions[position]
             val fragmentId = realPositions[position]
             val menuItemId = fragmentIdToMenuItemId(fragmentId)
             binding.bottomNavigationView.menu.findItem(menuItemId)?.isChecked = true
@@ -1503,5 +1515,14 @@ class MainActivity :
          */
         @Volatile
         private var instanceCreateTime = 0L
+
+        /**
+         * 重建前所在的 Tab 的 fragment id（[realPositions] 里的成员值）。
+         *
+         * 必须是静态值：[recreate] 走「清任务 + 全新启动」，新实例拿不到 savedInstanceState，
+         * 重建前的选中页只能放在进程级；`-1` 表示本进程尚未进过主界面，落回默认首页。
+         * 记 id 而非下标：导航项显隐与顺序可被用户改动，下标会错位。
+         */
+        private var lastTabFragmentId = -1
     }
 }
