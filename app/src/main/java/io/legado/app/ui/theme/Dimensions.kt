@@ -196,14 +196,6 @@ object AppDimens {
     /** 未读角标最小尺寸 */
     val shelfBadgeMinSize: Dp = 14.dp
 
-    /**
-     * 未读角标圆角。
-     *
-     * 对齐原 [io.legado.app.ui.widget.text.BadgeView] 的 radius 8px（非主题圆角资源），
-     * 不走 composeActionShape：9dp 的胶囊圆角会让小角标看起来更胖。
-     */
-    val shelfBadgeCornerRadius: Dp = 3.dp
-
     /** 状态下标（角标 / 加载指示器）距条目边缘的间距 */
     val shelfBadgeMargin: Dp = 5.dp
 

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -26,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -35,9 +37,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
+import io.legado.app.R
 import io.legado.app.help.book.BookTagMatcher
 import io.legado.app.ui.theme.AppDimens
 import io.legado.app.ui.theme.pageSecondaryTextColor
+import io.legado.app.utils.getCompatColor
 
 /** 条目文字字号：对齐原 item_bookshelf_* 布局，避免换风格时观感漂移 */
 internal const val SHELF_TITLE_TEXT_SIZE = 16
@@ -83,10 +87,12 @@ internal fun BookshelfItemStatus(
         return
     }
     if (!showUnread || bookItem.unreadCount <= 0) return
+    // 未高亮角标沿用 View 版 BadgeView 的固定浅灰（半透明 #AAAAAA），不随主题次要文字色走：
+    // 上一版误用 pageSecondaryTextColor，深色不透明，观感比原版重
     val badgeColor = if (bookItem.hasNewChapter) {
         MaterialTheme.colorScheme.primary
     } else {
-        pageSecondaryTextColor()
+        Color(LocalContext.current.getCompatColor(R.color.darker_gray))
     }
     val textColor = if (badgeColor.luminance() > 0.5f) Color.Black else Color.White
     Box(
@@ -95,7 +101,8 @@ internal fun BookshelfItemStatus(
                 minWidth = AppDimens.shelfBadgeMinSize,
                 minHeight = AppDimens.shelfBadgeMinSize,
             )
-            .clip(RoundedCornerShape(AppDimens.shelfBadgeCornerRadius))
+            // 胶囊形：方形圆角在小尺寸角标上观感生硬
+            .clip(CircleShape)
             .background(badgeColor)
             .padding(
                 horizontal = AppDimens.shelfBadgePaddingHorizontal,
