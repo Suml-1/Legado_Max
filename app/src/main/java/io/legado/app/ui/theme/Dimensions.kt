@@ -199,6 +199,62 @@ object AppDimens {
     /** 封面宽高比：书本封面高度 = 宽度 × 该系数（对齐 CoverImageView 的 4/3） */
     const val BOOK_COVER_ASPECT = 4f / 3f
 
+    // ── 发现页（书源列表 + 展开后的书源分类区）──
+
+    /** 书源条目左右内边距（对齐原 item_find_book 根布局的 16dp） */
+    val exploreRowHorizontalPadding: Dp = 16.dp
+
+    /** 书源条目上内边距（对齐原根布局的 12dp） */
+    val exploreRowTopPadding: Dp = 12.dp
+
+    /** 书源条目下内边距（原实现只有末项保留，这里每项都留，避免末项贴着底栏） */
+    val exploreRowBottomPadding: Dp = 12.dp
+
+    /** 书源标题行的左右内边距（对齐原 ll_title 的 10dp） */
+    val exploreTitleHorizontalPadding: Dp = 10.dp
+
+    /** 书源标题行的上下内边距（对齐原 ll_title 的 6dp） */
+    val exploreTitleVerticalPadding: Dp = 6.dp
+
+    /** 标题行尾部控件（加载圈 / 展开箭头）尺寸 */
+    val exploreTitleIconSize: Dp = 20.dp
+
+    /** 标题行尾部控件之间的间距（对齐原 rotate_loading 的 4dp marginRight） */
+    val exploreTitleIconSpacing: Dp = 4.dp
+
+    /** 展开加载指示器的线宽（对齐原 RotateLoading 的 1dp 细线） */
+    val exploreTitleProgressStroke: Dp = 1.dp
+
+    /** 书源分类区左右内边距（对齐原容器 8dp padding） */
+    val exploreKindsHorizontalPadding: Dp = 8.dp
+
+    /** 分类区与标题行之间的间距（对齐原 flexbox 的 marginTop 8dp） */
+    val exploreKindsTopSpacing: Dp = 8.dp
+
+    /** 分类项之间的间距（对齐原 3dp margin + 8dp divider 的观感） */
+    val exploreKindSpacing: Dp = 6.dp
+
+    /** 分类项左右内边距（对齐 item_fillet_* 的 12dp） */
+    val exploreKindHorizontalPadding: Dp = 12.dp
+
+    /** 分类项上下内边距（对齐 item_fillet_* 的 4dp） */
+    val exploreKindVerticalPadding: Dp = 4.dp
+
+    /** usehtml 文本内容的内边距（对齐原 ScrollTextView 的 8dp） */
+    val exploreHtmlContentPadding: Dp = 8.dp
+
+    /** usehtml 文本内容的最小高度（对齐原 ScrollTextView 的 minHeight 48dp） */
+    val exploreHtmlMinHeight: Dp = 48.dp
+
+    /** usehtml 图片可用宽度在屏幕宽度上的扣减（对齐原实现减去的 48dp 左右留白） */
+    val exploreHtmlImageMargin: Dp = 48.dp
+
+    /** useweb 内容加载中的占位高度（对齐原 120dp 的 loading 高度） */
+    val exploreWebLoadingHeight: Dp = 120.dp
+
+    /** 标题行背景填充透明度（对齐 bg_find_book_group 的 transparent10 = 6%） */
+    const val EXPLORE_TITLE_BG_ALPHA = 0.063f
+
     // ── 弹窗 ──
 
     /** 单选列表弹窗的选项区最大高度，超出后滚动，避免弹窗顶穿屏幕 */

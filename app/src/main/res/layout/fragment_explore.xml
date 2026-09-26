@@ -15,15 +15,13 @@
         app:layout_constraintTop_toTopOf="parent"
         app:title="@string/discovery" />
 
-    <io.legado.app.ui.widget.recycler.RecyclerViewAtPager2
-        android:id="@+id/rv_find"
+    <!-- 书源列表 Compose 化：顶栏仍是 View 体系（TopBarConfig 统一配色），列表交给 Compose 渲染 -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/compose_source_list"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:scrollbars="vertical"
-        android:scrollbarStyle="outsideOverlay"
         app:layout_constraintTop_toBottomOf="@+id/title_bar"
-        app:layout_constraintBottom_toBottomOf="parent"
-        tools:listitem="@layout/item_find_book" />
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <TextView
         android:id="@+id/tv_empty_msg"

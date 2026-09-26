@@ -30,13 +30,21 @@ import kotlinx.coroutines.Dispatchers.IO
  */
 class ExploreKindQueryDialog() : BaseDialogFragment(R.layout.dialog_explore_kind_query) {
 
+    /**
+     * 选中某个分类后的回调。
+     * 发现页 Compose 化后不再是 RecyclerView 适配器的 CallBack，宿主实现这个窄接口即可。
+     */
+    fun interface OnKindSelected {
+        fun openExplore(sourceUrl: String, title: String, exploreUrl: String?)
+    }
+
     private val binding by viewBinding(DialogExploreKindQueryBinding::bind)
     private val adapter by lazy { KindAdapter(requireContext()) }
     private var sourceUrl: String = ""
     private var sourceName: String = ""
     private var kinds: List<ExploreKind> = emptyList()
     private var filteredKinds: List<ExploreKind> = emptyList()
-    private var callBack: ExploreAdapter.CallBack? = null
+    private var callBack: OnKindSelected? = null
 
     constructor(sourceUrl: String, sourceName: String) : this() {
         arguments = Bundle().apply {
@@ -48,8 +56,8 @@ class ExploreKindQueryDialog() : BaseDialogFragment(R.layout.dialog_explore_kind
     override fun onAttach(context: android.content.Context) {
         super.onAttach(context)
         callBack = when {
-            parentFragment is ExploreAdapter.CallBack -> parentFragment as ExploreAdapter.CallBack
-            context is ExploreAdapter.CallBack -> context
+            parentFragment is OnKindSelected -> parentFragment as OnKindSelected
+            context is OnKindSelected -> context
             else -> null
         }
     }

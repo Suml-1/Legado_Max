@@ -5,15 +5,17 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.SubMenu
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.view.isGone
-import androidx.core.view.updatePadding
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.SimpleItemAnimator
 import io.legado.app.R
 import io.legado.app.base.VMBaseFragment
 import io.legado.app.constant.AppLog
@@ -21,25 +23,31 @@ import io.legado.app.data.AppDatabase
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.databinding.FragmentExploreBinding
-import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
-import io.legado.app.lib.theme.primaryColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.ui.book.explore.ExploreShowActivity
-import io.legado.app.ui.book.source.manage.BookSourceSort
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
+import io.legado.app.ui.book.source.manage.BookSourceSort
+import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.main.MainFragmentInterface
+import io.legado.app.ui.main.explore.compose.ExploreKindsController
+import io.legado.app.ui.main.explore.compose.ExploreSourceActions
+import io.legado.app.ui.main.explore.compose.ExploreSourceItem
+import io.legado.app.ui.main.explore.compose.ExploreSourceList
+import io.legado.app.ui.main.explore.compose.ExploreSourceMenuAction
+import io.legado.app.ui.main.explore.compose.toExploreSourceItems
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.dialog.PhotoDialog
+import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.cnCompare
 import io.legado.app.utils.flowWithLifecycleAndDatabaseChange
-import io.legado.app.utils.setEdgeEffectColor
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.transaction
 import io.legado.app.utils.viewbindingdelegate.viewBinding
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -51,11 +59,18 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
- * 发现界面
+ * 发现界面。
+ *
+ * 结构分工与书架 / 我的页一致：顶栏（搜索框、排序与分组菜单）仍是 View 体系——
+ * 主界面是 ViewPager + TitleBar 的 View 宿主，顶栏颜色必须继续走 TopBarConfig 统一体系；
+ * 顶栏以下的书源列表整体 Compose 化（内容见 [ExploreSourceList]）。
+ *
+ * 本类是宿主：持有搜索词、排序、展开状态与底栏内边距，执行平台操作（开 Activity、弹对话框），
+ * 把排序 / 过滤后的书源列表交给 Compose 渲染。
  */
 class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_explore),
     MainFragmentInterface,
-    ExploreAdapter.CallBack {
+    ExploreKindQueryDialog.OnKindSelected {
 
     constructor(position: Int) : this() {
         val bundle = Bundle()
@@ -67,13 +82,19 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
 
     override val viewModel by viewModels<ExploreViewModel>()
     private val binding by viewBinding(FragmentExploreBinding::bind)
-    private val adapter by lazy { ExploreAdapter(requireContext(), this) }
-    private val linearLayoutManager by lazy { LinearLayoutManager(context) }
     private val searchView: SearchView by lazy {
         binding.titleBar.findViewById(R.id.search_view)
     }
-    // 列表项差异比较回调
-    private val diffItemCallBack = ExploreDiffItemCallBack()
+
+    /** Compose 侧直接读这些快照状态，写入即触发重组 */
+    private var sourceItems by mutableStateOf<List<BookSourcePart>>(emptyList())
+
+    /** 条目 UI 模型：排序过滤后的结果转一次，列表重组时不再逐项加工 */
+    private var displayItems by mutableStateOf<List<ExploreSourceItem>>(emptyList())
+    private var expandedSourceUrl by mutableStateOf<String?>(null)
+    private var bottomPaddingPx by mutableIntStateOf(0)
+    private var scrollToTopTick by mutableIntStateOf(0)
+
     // 书源分组集合
     private val groups = linkedSetOf<String>()
     // 发现数据流任务
@@ -85,12 +106,57 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     // 是否升序排序
     private var sortAscending = true
 
+    /**
+     * 书源分类区的控制器：JS 求值、infoMap 与内联 WebView 的生命周期都挂在它的作用域上。
+     * 这里用 viewLifecycleOwner 的作用域，视图销毁后任务与 WebView 一并结束。
+     */
+    private val kindsController by lazy {
+        ExploreKindsController(
+            activity = requireActivity() as? AppCompatActivity,
+            scope = viewLifecycleOwner.lifecycleScope,
+        )
+    }
+
+    private val actions by lazy {
+        ExploreSourceActions(
+            onToggleExpand = { item ->
+                expandedSourceUrl = if (expandedSourceUrl == item.sourceUrl) null else item.sourceUrl
+            },
+            onMenuAction = ::onSourceMenuAction,
+            onOpenExplore = { sourceUrl, title, exploreUrl ->
+                openExplore(sourceUrl, title, exploreUrl)
+            },
+            onShowError = { message -> showDialogFragment(TextDialog("ERROR", message)) },
+            onShowPhoto = { url, sourceUrl -> showDialogFragment(PhotoDialog(url, sourceUrl)) },
+        )
+    }
+
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         setSupportToolbar(binding.titleBar.toolbar)
+        // 首次进入时主动取一次底栏高度，之后由 MainActivity 通过接口推送变化
+        bottomPaddingPx = (activity as? MainActivity)?.mainContentBottomPadding() ?: 0
         initSearchView()
-        initRecyclerView()
+        initComposeContent()
         initGroupData()
-        upExploreData()
+        upExploreData(searchView.query?.toString())
+    }
+
+    private fun initComposeContent() {
+        binding.composeSourceList.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+        binding.composeSourceList.setContent {
+            LegadoTheme {
+                ExploreSourceList(
+                    sourceItems = displayItems,
+                    expandedSourceUrl = expandedSourceUrl,
+                    bottomPaddingPx = bottomPaddingPx,
+                    scrollToTopTick = scrollToTopTick,
+                    controller = kindsController,
+                    actions = actions,
+                )
+            }
+        }
     }
 
     /**
@@ -134,29 +200,8 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         })
     }
 
-    private fun initRecyclerView() {
-        updateMainBottomPadding((activity as? MainActivity)?.mainContentBottomPadding() ?: 0)
-        binding.rvFind.setEdgeEffectColor(primaryColor)
-        binding.rvFind.layoutManager = linearLayoutManager
-        binding.rvFind.adapter = adapter
-        (binding.rvFind.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
-        binding.rvFind.setItemViewCacheSize(8)
-        adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-
-            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                super.onItemRangeInserted(positionStart, itemCount)
-                if (positionStart == 0) {
-                    binding.rvFind.scrollToPosition(0)
-                }
-            }
-        })
-    }
-
     override fun updateMainBottomPadding(bottomPadding: Int) {
-        if (view == null) return
-        binding.rvFind.clipToPadding = false
-        binding.rvFind.scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY
-        binding.rvFind.updatePadding(bottom = bottomPadding)
+        bottomPaddingPx = bottomPadding
     }
 
     private fun initGroupData() {
@@ -197,34 +242,24 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
             }.map { data ->
                 // 根据排序方式和排序方向对数据进行排序
                 if (sortAscending) {
-                    // 升序排序
                     when (sort) {
-                        // 按书源名称排序
                         BookSourceSort.Name -> data.sortedWith { o1, o2 ->
                             o1.bookSourceName.cnCompare(o2.bookSourceName)
                         }
 
-                        // 按书源URL排序
                         BookSourceSort.Url -> data.sortedBy { it.bookSourceUrl }
-                        // 按更新时间排序（最新的在前）
                         BookSourceSort.Update -> data.sortedByDescending { it.lastUpdateTime }
-                        // 按响应时间排序
                         BookSourceSort.Respond -> data.sortedBy { it.respondTime }
                         else -> data
                     }
                 } else {
-                    // 降序排序
                     when (sort) {
-                        // 按书源名称排序
                         BookSourceSort.Name -> data.sortedWith { o1, o2 ->
                             o2.bookSourceName.cnCompare(o1.bookSourceName)
                         }
 
-                        // 按书源URL排序
                         BookSourceSort.Url -> data.sortedByDescending { it.bookSourceUrl }
-                        // 按更新时间排序（最旧的在前）
                         BookSourceSort.Update -> data.sortedBy { it.lastUpdateTime }
-                        // 按响应时间排序
                         BookSourceSort.Respond -> data.sortedByDescending { it.respondTime }
                         else -> data.reversed()
                     }
@@ -235,34 +270,30 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
                 AppDatabase.BOOK_SOURCE_TABLE_NAME
             ).catch {
                 AppLog.put("发现界面更新数据出错", it)
-            }.conflate().flowOn(IO).collect {
-                binding.tvEmptyMsg.isGone = it.isNotEmpty() || searchView.query.isNotEmpty()
-                // 不能用 adapter 当前列表和新列表直接判等；BookSourcePart.equals 只比较 URL，
-                // 改名称这类“同一源内容变化”会被误判成相同，导致发现页不刷新。
-                adapter.setItems(it, diffItemCallBack)
-                binding.rvFind.post {
-                    binding.rvFind.refreshSystemScrollBar()
-                }
-                delay(500)
+            }.conflate().flowOn(IO).collect { data ->
+                sourceItems = data
+                displayItems = data.toExploreSourceItems()
+                // 搜索中不显示空态：搜索框里的字还没清掉，列表空着是正常的
+                binding.tvEmptyMsg.isGone = data.isNotEmpty() || searchView.query.isNotEmpty()
             }
         }
     }
 
     override fun onResume() {
         super.onResume()
-        adapter.upResumed(true)
-        adapter.onResume()
+        kindsController.resumeWebViews()
     }
 
     override fun onPause() {
-        adapter.upResumed(false)
         searchView.clearFocus()
-        adapter.onPause()
+        // WebView 只暂停不释放，回来时内容还在；infoMap 里标记为待保存的先落盘
+        kindsController.pauseWebViews()
         super.onPause()
     }
 
     override fun onDestroyView() {
-        adapter.onDestroy()
+        kindsController.releaseAllWebViews()
+        kindsController.saveInfoMaps()
         super.onDestroyView()
     }
 
@@ -272,9 +303,6 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
             subMenu.add(R.id.menu_group_text, Menu.NONE, Menu.NONE, it)
         }
     }
-
-    override val scope: CoroutineScope
-        get() = viewLifecycleOwner.lifecycleScope
 
     override fun onCompatOptionsItemSelected(item: MenuItem) {
         super.onCompatOptionsItemSelected(item)
@@ -320,13 +348,38 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         }
     }
 
-    override fun scrollTo(pos: Int) {
-        (binding.rvFind.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(pos, 0)
+    /** 再次点击"发现"标签：先收起展开项，没有展开项时回到顶部 */
+    fun compressExplore() {
+        if (expandedSourceUrl != null) {
+            expandedSourceUrl = null
+        } else {
+            scrollToTopTick += 1
+        }
+    }
+
+    // ── 书源条目动作（由 Compose 侧回调） ──
+
+    private fun onSourceMenuAction(item: ExploreSourceItem, action: ExploreSourceMenuAction) {
+        // 条目模型只带 url，置顶 / 删除 / 搜索要拿完整的 BookSourcePart，从当前列表里反查
+        val source = sourceItems.firstOrNull { it.bookSourceUrl == item.sourceUrl }
+        when (action) {
+            ExploreSourceMenuAction.Edit -> editSource(item.sourceUrl)
+            ExploreSourceMenuAction.ToTop -> source?.let(::toTop)
+            ExploreSourceMenuAction.Query -> source?.let(::showKindQueryDialog)
+            ExploreSourceMenuAction.Login -> startActivity<SourceLoginActivity> {
+                putExtra("type", "bookSource")
+                putExtra("key", item.sourceUrl)
+            }
+
+            ExploreSourceMenuAction.Search -> source?.let(::searchBook)
+            // 已展开行的"刷新"由 Compose 侧就地转成重新求值，不会走到这里
+            ExploreSourceMenuAction.Refresh -> Unit
+            ExploreSourceMenuAction.Delete -> source?.let(::deleteSource)
+        }
     }
 
     override fun openExplore(sourceUrl: String, title: String, exploreUrl: String?) {
         if (exploreUrl.isNullOrBlank()) return
-        adapter.clearPendingScrollToSource()
         startActivity<ExploreShowActivity> {
             putExtra("exploreName", title)
             putExtra("sourceUrl", sourceUrl)
@@ -334,17 +387,17 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         }
     }
 
-    override fun editSource(sourceUrl: String) {
+    private fun editSource(sourceUrl: String) {
         startActivity<BookSourceEditActivity> {
             putExtra("sourceUrl", sourceUrl)
         }
     }
 
-    override fun toTop(source: BookSourcePart) {
+    private fun toTop(source: BookSourcePart) {
         viewModel.topSource(source)
     }
 
-    override fun deleteSource(source: BookSourcePart) {
+    private fun deleteSource(source: BookSourcePart) {
         alert(R.string.draw) {
             setMessage(getString(R.string.sure_del) + "\n" + source.bookSourceName)
             noButton()
@@ -354,28 +407,15 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         }
     }
 
-    override fun searchBook(bookSource: BookSourcePart) {
+    private fun searchBook(bookSource: BookSourcePart) {
         SearchActivity.start(requireContext(), bookSource)
     }
 
     /**
      * 显示查询对话框
      */
-    override fun showKindQueryDialog(source: BookSourcePart) {
+    private fun showKindQueryDialog(source: BookSourcePart) {
         showDialogFragment(ExploreKindQueryDialog(source.bookSourceUrl, source.bookSourceName))
-    }
-    
-    /**
-     * 压缩目录
-     */
-    fun compressExplore() {
-        if (!adapter.compressExplore()) {
-            if (AppConfig.isEInkMode) {
-                binding.rvFind.scrollToPosition(0)
-            } else {
-                binding.rvFind.smoothScrollToPosition(0)
-            }
-        }
     }
 
 }
