@@ -174,15 +174,3 @@ https://gedoor.github.io/Disclaimer
     <img src="https://img.shields.io/badge/-返回顶部-orange.svg" alt="#" align="right">
 
 </a>
-
-# Interface-界面 [![](https://img.shields.io/badge/-Interface-F5F5F5.svg)](#Interface-界面-)
-
-<figure class="third">
-    <img src="https://gitee.com/raw/master/static/1.png" width="270">
-    <img src="https://gitee.com/raw/master/static/2.png" width="270">
-    <img src="https://gitee.com/raw/master/static/3.png" width="270">
-    <img src="https://gitee.com/raw/master/static/4.png" width="270">
-</figure>
-<a href="#readme">
-    <img src="https://img.shields.io/badge/-返回顶部-orange.svg" alt="#" align="right">
-</a>
