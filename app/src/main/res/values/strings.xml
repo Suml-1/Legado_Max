@@ -1765,6 +1765,7 @@
     <string name="show_source_comment">Show Source Comment</string>
     <string name="enable_locate">Enable Location</string>
     <string name="adapt_special_style">Adapt Special Style</string>
+    <string name="keep_blank_line">Keep Blank Lines</string>
     <string name="show_line_number">Show %d Lines</string>
     <string name="setting_show_line_number">Set number of lines for auxiliary buttons</string>
     <string name="menu_page">Page %d</string>

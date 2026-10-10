@@ -125,6 +125,7 @@ object PreferKey {
     const val textFullJustify = "textFullJustify"
     const val textBottomJustify = "textBottomJustify"
     const val adaptSpecialStyle = "adaptSpecialStyle"
+    const val keepBlankLine = "keepBlankLine"
     const val autoReadSpeed = "autoReadSpeed"
     const val barElevation = "barElevation"
     const val transparentStatusBar = "transparentStatusBar"

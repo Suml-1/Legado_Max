@@ -103,6 +103,13 @@
 
     <io.legado.app.lib.prefs.SwitchPreference
         android:defaultValue="true"
+        android:key="keepBlankLine"
+        android:title="@string/keep_blank_line"
+        app:iconSpaceReserved="false"
+        app:isBottomBackground="true" />
+
+    <io.legado.app.lib.prefs.SwitchPreference
+        android:defaultValue="true"
         android:key="mouseWheelPage"
         android:title="@string/mouse_wheel_page"
         app:iconSpaceReserved="false"

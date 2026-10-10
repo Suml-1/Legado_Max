@@ -250,6 +250,8 @@ class ContentProcessor private constructor(
             mContent = mContent.replace('\u00A0', ' ')
         }
         val contents = arrayListOf<String>()
+        // 保留空行：原文的空行以空段落的形式进 textList，排版时按一行高度留白
+        val keepBlankLine = AppConfig.keepBlankLine
         mContent.split("\n").forEach { str ->
             val paragraph = str.trim {
                 it.code <= 0x20 || it == '　'
@@ -260,6 +262,9 @@ class ContentProcessor private constructor(
                 } else {
                     contents.add("${ReadBookConfig.paragraphIndent}$paragraph")
                 }
+            } else if (keepBlankLine && contents.isNotEmpty()) {
+                // 章节开头的空行仍然丢掉（标题前/正文首行前不留空白）
+                contents.add("")
             }
         }
         return BookContent(sameTitleRemoved, contents, effectiveReplaceRules)

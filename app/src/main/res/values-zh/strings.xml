@@ -1701,6 +1701,7 @@
     <string name="show_source_comment">显示源注释</string>
     <string name="enable_locate">启用定位</string>
     <string name="adapt_special_style">适配特殊样式</string>
+    <string name="keep_blank_line">保留空行</string>
     <string name="show_line_number">显示 %d 行</string>
     <string name="setting_show_line_number">设置辅助按钮显示行数</string>
     <string name="menu_page">第 %d 页</string>

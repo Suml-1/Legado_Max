@@ -1378,6 +1378,7 @@
     <string name="sys_image_picker">系统圖片选择器</string>
     <!-- Menu/settings strings added after the base locale; keep these in Traditional Chinese to avoid fallback. -->
     <string name="adapt_special_style">適配特殊樣式</string>
+    <string name="keep_blank_line">保留空行</string>
     <string name="add_all_to_shelf">全部加入書架</string>
     <string name="all_versions">所有版本</string>
     <string name="auto_update">自動更新</string>

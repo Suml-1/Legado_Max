@@ -163,6 +163,8 @@ class TextChapterLayout(
     private val isRightTitle = ReadBookConfig.isRightTitle
     private val textFullJustify = ReadBookConfig.textFullJustify
     private val adaptSpecialStyle = AppConfig.adaptSpecialStyle
+    // 保留空行：ContentProcessor 会为空行放进空段落，这里给它一个等高的空行
+    private val keepBlankLine = AppConfig.keepBlankLine
     private val pageAnim = book.getPageAnim()
     private val compiledHighlightRules by lazy {
         HighlightRuleRepository.loadEnabledRules(appCtx).mapNotNull { rule ->
@@ -337,6 +339,11 @@ class TextChapterLayout(
                     }
                 }
             }
+            if (keepBlankLine && content.isBlank()) {
+                // 空行占位段落：只占一行的高度，不产生字符
+                addBlankLine()
+                continue
+            }
             var text = content.replace(srcReplaceChar, srcReplacementChar)
             if (isTextImageStyle) {
                 val srcList = LinkedList<String>()
@@ -464,6 +471,29 @@ class TextChapterLayout(
             stringBuilder.append("\n")
         }
         return wordCount
+    }
+
+    /**
+     * 排版一个空行：占一行的高度，不产生任何字符列。
+     *
+     * 空行由 [io.legado.app.help.book.ContentProcessor] 在开启"保留空行"时以空段落的形式
+     * 放进 textList，这里给它一个与正文行等高的空行，原文的空行在排版结果里就仍然留白。
+     */
+    private suspend fun addBlankLine() {
+        prepareNextPageIfNeed(durY + contentPaintTextHeight)
+        val textLine = TextLine()
+        textLine.text = ""
+        calcTextLinePosition(textPages, textLine, stringBuilder.length)
+        textLine.upTopBottom(durY, contentPaintTextHeight, contentPaintFontMetrics)
+        val textPage = pendingTextPage
+        textPage.addLine(textLine)
+        durY += contentPaintTextHeight * lineSpacingExtra
+        if (textPage.height < durY) {
+            textPage.height = durY
+        }
+        // 与普通段落一致：空段落同样算一个段落结尾，正文里对应一个换行
+        textLine.isParagraphEnd = true
+        stringBuilder.append("\n")
     }
 
     private class BodyImage(
