@@ -156,4 +156,9 @@
     <!-- 管理界面半透明层级色（日间用黑叠加，夜间用白叠加，随背景自然融合） -->
     <color name="background_card_surface">#0F000000</color>
     <color name="border_card_surface">#1A000000</color>
+    <!-- 视频播放器控制栏统一配色（R2/R3/R4/R8） -->
+    <color name="video_ctrl_bar_bg">#66000000</color>
+    <color name="video_panel_bg">#CC000000</color>
+    <color name="video_ctrl_text_primary">#FFFFFF</color>
+    <color name="video_ctrl_text_secondary">#B3FFFFFF</color>
 </resources>

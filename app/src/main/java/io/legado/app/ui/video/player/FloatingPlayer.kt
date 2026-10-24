@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.Surface
 import android.view.SurfaceView
+import android.view.View
 import android.widget.ImageView
 import androidx.core.view.isInvisible
 import androidx.core.view.isNotEmpty
@@ -12,6 +13,7 @@ import com.shuyu.gsyvideoplayer.video.base.GSYVideoPlayer
 import io.legado.app.R
 import io.legado.app.model.VideoPlay
 import java.io.File
+import java.lang.ref.WeakReference
 
 
 class FloatingPlayer : StandardGSYVideoPlayer {
@@ -20,6 +22,29 @@ class FloatingPlayer : StandardGSYVideoPlayer {
     constructor(context: Context, attrs: AttributeSet) : super(context, attrs)
 
     lateinit var fullscreenB: ImageView
+
+    /**
+     * 悬浮窗是长命对象（生命周期挂在 Service 上，可以比任何 Activity 活得久），
+     * 而 gsy 的 `cloneParams()` 会把源播放器的 `mBackFromFullScreenListener`
+     * （通常是 VideoPlayerActivity 的 lambda，捕获了 Activity 自身）一并复制过来。
+     * 长命对象强持有短命对象 = Activity 泄漏，LeakCanary 报的正是这条：
+     * `FloatingPlayer → mBackFromFullScreenListener → VideoPlayerActivity$$ExternalSyntheticLambda`。
+     *
+     * 这里统一用弱引用包装：即使某个调用方忘了显式置空，Activity 也能被正常回收，
+     * 只是点击时回调变为 no-op —— 对小窗来说这是安全降级（它有自己的 fullscreenB 监听）。
+     */
+    override fun setBackFromFullScreenListener(l: View.OnClickListener?) {
+        // 显式置空要真的置空（否则包装器本身还在，语义不对）
+        super.setBackFromFullScreenListener(l?.let { WeakClickListener(it) })
+    }
+
+    private class WeakClickListener(listener: View.OnClickListener?) : View.OnClickListener {
+        private val ref = WeakReference(listener)
+
+        override fun onClick(v: View?) {
+            ref.get()?.onClick(v)
+        }
+    }
 
     override fun init(context: Context?) {
         if (activityContext != null) {
@@ -127,6 +152,12 @@ class FloatingPlayer : StandardGSYVideoPlayer {
     /**********以下重载GSYVideoPlayer的GSYVideoViewBridge相关实现***********/
     override fun getGSYVideoManager(): ExoVideoManager {
         return VideoPlay.videoManager.apply { initContext(context.applicationContext) }
+    }
+
+    override fun release() {
+        super.release()
+        // 与 VideoPlayer 同理：gsy 正常销毁不释放网络监听模块，会挂住 Service/Context
+        releaseNetWorkState()
     }
     override fun releaseVideos() {
         VideoPlay.releaseAllVideos()

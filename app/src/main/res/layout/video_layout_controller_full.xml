@@ -29,98 +29,140 @@
         android:background="#000000"
         android:scaleType="fitCenter" />
 
+    <!-- 底部控制栏。
+         两行结构：[当前/总时长 | 进度条] 一行，其下是等高的操作行（▶ ⏮ ⏭ 小窗 / 快捷跳转 / 选集 倍速）。
+         行高 36dp、内边距收薄：底栏整体下沉，纵向空间还给画面（R2 的"控制栏别抢画面"）。
+         背景是与顶栏同一套渐变（video_ctrl_bar_bg），不是一条生硬的纯色横带。 -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layout_bottom"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:background="#80000000"
+        android:background="@drawable/video_ctrl_bar_bg"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingBottom="12dp"
+        android:paddingTop="@dimen/video_ctrl_padding_top"
+        android:paddingBottom="@dimen/video_ctrl_padding_bottom"
         android:visibility="invisible"
         tools:visibility="visible">
 
+        <!-- 当前/总时长贴在进度条两端（与竖屏同一排布），不再压在进度条上方 -->
         <TextView
             android:id="@+id/current"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="@dimen/video_ctrl_paddings_h"
+            android:includeFontPadding="false"
             android:text="00:00"
-            android:textColor="#ffffff"
+            android:textColor="@color/video_ctrl_text_secondary"
+            android:textSize="@dimen/video_ctrl_text_size"
+            app:layout_constraintBottom_toBottomOf="@+id/progress"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:ignore="HardcodedText" />
-
-        <TextView
-            android:id="@+id/sprit"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="/"
-            android:textColor="#ffffff"
-            app:layout_constraintStart_toEndOf="@+id/current"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:ignore="HardcodedText" />
-
-        <TextView
-            android:id="@+id/total"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="00:00"
-            android:textColor="#ffffff"
-            app:layout_constraintStart_toEndOf="@+id/sprit"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/progress"
             tools:ignore="HardcodedText" />
 
         <SeekBar
             android:id="@+id/progress"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:background="@null"
             android:max="100"
             android:maxHeight="4dp"
             android:minHeight="4dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
             android:progressDrawable="@drawable/video_seek_progress"
             android:thumb="@drawable/video_seek_thumb"
-            app:layout_constraintTop_toBottomOf="@+id/sprit" />
+            app:layout_constraintEnd_toStartOf="@+id/total"
+            app:layout_constraintStart_toEndOf="@+id/current"
+            app:layout_constraintTop_toTopOf="parent" />
 
+        <TextView
+            android:id="@+id/total"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="@dimen/video_ctrl_paddings_h"
+            android:includeFontPadding="false"
+            android:text="00:00"
+            android:textColor="@color/video_ctrl_text_secondary"
+            android:textSize="@dimen/video_ctrl_text_size"
+            app:layout_constraintBottom_toBottomOf="@+id/progress"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/progress"
+            tools:ignore="HardcodedText" />
+
+        <!-- 播放/暂停：白色线性图标（图片确认样式），与 ⏮ ⏭ 同为 24dp 视觉 -->
         <ImageView
             android:id="@+id/start"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_centerHorizontal="true"
-            android:layout_centerVertical="true"
+            android:layout_width="@dimen/video_ctrl_btn_size"
+            android:layout_height="@dimen/video_ctrl_btn_size"
             android:layout_gravity="center_vertical"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="@dimen/video_ctrl_paddings_h"
+            android:contentDescription="@null"
+            android:padding="@dimen/video_ctrl_icon_padding"
+            android:scaleType="centerInside"
             android:src="@drawable/ic_play_24dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/progress" />
 
+        <!-- R5：上一集按钮（播放键右侧、下一集左侧）。
+             ic_skip_previous 是公共图标（朗读/音频页在浅色底上使用，保持原深色填充），
+             这里用 tint 染白，避免与 ic_skip_next 的白色不一致、在深色控制栏上不可见 -->
+        <ImageView
+            android:id="@+id/prev"
+            android:layout_width="@dimen/video_ctrl_btn_size"
+            android:layout_height="@dimen/video_ctrl_btn_size"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="@dimen/video_ctrl_btn_gap"
+            android:contentDescription="@string/video_prev_episode"
+            android:padding="@dimen/video_ctrl_icon_padding"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_skip_previous"
+            android:tint="#FFFFFFFF"
+            app:layout_constraintStart_toEndOf="@+id/start"
+            app:layout_constraintTop_toTopOf="@+id/start" />
+
         <ImageView
             android:id="@+id/next"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_centerHorizontal="true"
-            android:layout_centerVertical="true"
+            android:layout_width="@dimen/video_ctrl_btn_size"
+            android:layout_height="@dimen/video_ctrl_btn_size"
             android:layout_gravity="center_vertical"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="@dimen/video_ctrl_btn_gap"
+            android:contentDescription="@null"
+            android:padding="@dimen/video_ctrl_icon_padding"
+            android:scaleType="centerInside"
             android:src="@drawable/ic_skip_next"
-            app:layout_constraintStart_toEndOf="@+id/start"
-            app:layout_constraintTop_toBottomOf="@+id/progress" />
+            app:layout_constraintStart_toEndOf="@+id/prev"
+            app:layout_constraintTop_toTopOf="@+id/start" />
+
+        <!-- R7：小窗播放按钮——紧跟在"下一集"右侧，与 ⏮ ▶ ⏭ 同一条水平线；
+             复用竖屏标题栏同一个入口与图标（ic_float_window），尺寸略小于常规功能键 -->
+        <ImageView
+            android:id="@+id/iv_float_window"
+            android:layout_width="@dimen/video_float_window_size"
+            android:layout_height="@dimen/video_float_window_size"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="@dimen/video_float_window_margin_start"
+            android:contentDescription="@string/float_window"
+            android:padding="@dimen/video_float_window_padding"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_float_window"
+            app:layout_constraintBottom_toBottomOf="@+id/next"
+            app:layout_constraintStart_toEndOf="@+id/next"
+            app:layout_constraintTop_toTopOf="@+id/next" />
 
         <!-- 快捷跳转按钮容器，居中显示 -->
         <LinearLayout
             android:id="@+id/quick_jump_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:gravity="center"
+            android:orientation="horizontal"
             android:visibility="gone"
-            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toBottomOf="@+id/start"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/progress">
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/start">
 
             <TextView
                 android:id="@+id/quick_jump_back_a"
@@ -128,7 +170,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
                 android:gravity="center"
-                android:textColor="#ffffff"
+                android:textColor="@color/video_ctrl_text_primary"
                 android:textSize="12sp"
                 tools:text="-5分" />
 
@@ -138,7 +180,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
                 android:gravity="center"
-                android:textColor="#ffffff"
+                android:textColor="@color/video_ctrl_text_primary"
                 android:textSize="12sp"
                 tools:text="-1分" />
 
@@ -148,7 +190,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
                 android:gravity="center"
-                android:textColor="#ffffff"
+                android:textColor="@color/video_ctrl_text_primary"
                 android:textSize="12sp"
                 tools:text="+1分" />
 
@@ -157,7 +199,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:textColor="#ffffff"
+                android:textColor="@color/video_ctrl_text_primary"
                 android:textSize="12sp"
                 tools:text="+5分" />
         </LinearLayout>
@@ -165,40 +207,47 @@
         <TextView
             android:id="@+id/toggle_danmaku"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_marginEnd="16dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="@dimen/video_ctrl_paddings_h"
             android:gravity="center"
             android:minEms="2"
             android:text="关弹幕"
-            android:textColor="#ffffff"
+            android:textColor="@color/video_ctrl_text_primary"
+            android:textSize="@dimen/video_ctrl_text_size"
             android:visibility="invisible"
+            app:layout_constraintBottom_toBottomOf="@+id/start"
             app:layout_constraintEnd_toStartOf="@+id/episode_list"
-            app:layout_constraintTop_toBottomOf="@+id/progress"
+            app:layout_constraintTop_toTopOf="@+id/start"
             tools:visibility="visible" />
 
         <TextView
             android:id="@+id/episode_list"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
+            android:layout_marginEnd="@dimen/video_ctrl_paddings_h"
             android:gravity="center"
             android:minEms="2"
             android:text="选集"
-            android:textColor="#ffffff"
+            android:textColor="@color/video_ctrl_text_primary"
+            android:textSize="@dimen/video_ctrl_text_size"
+            app:layout_constraintBottom_toBottomOf="@+id/start"
             app:layout_constraintEnd_toStartOf="@+id/playback_speed"
-            app:layout_constraintTop_toBottomOf="@+id/progress" />
+            app:layout_constraintTop_toTopOf="@+id/start" />
 
         <TextView
             android:id="@+id/playback_speed"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="32dp"
+            android:layout_marginEnd="@dimen/video_ctrl_paddings_h"
             android:gravity="center"
             android:minEms="2"
             android:text="倍速"
-            android:textColor="#ffffff"
+            android:textColor="@color/video_ctrl_text_primary"
+            android:textSize="@dimen/video_ctrl_text_size"
+            app:layout_constraintBottom_toBottomOf="@+id/start"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/progress" />
+            app:layout_constraintTop_toTopOf="@+id/start" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ProgressBar
@@ -249,6 +298,7 @@
         android:visibility="gone"
         tools:visibility="visible" />
 
+    <!-- 顶部栏：标题 14sp（原 18sp 在横屏上过于抢眼，压过画面） -->
     <LinearLayout
         android:id="@+id/layout_top"
         android:layout_width="match_parent"
@@ -256,13 +306,15 @@
         android:layout_alignParentTop="true"
         android:layout_toEndOf="@+id/back_tiny"
         android:background="@drawable/video_title_bg"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:paddingEnd="6dp">
 
         <ImageView
             android:id="@+id/back"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:paddingStart="10dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:contentDescription="@string/back"
+            android:padding="10dp"
             android:scaleType="centerInside"
             android:src="@drawable/video_back"
             tools:ignore="RtlSymmetry" />
@@ -272,15 +324,37 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:paddingStart="10dp"
             android:textColor="@android:color/white"
-            android:textSize="18sp"
+            android:textSize="14sp"
             tools:ignore="RtlSymmetry" />
+
+        <!-- R8：当前时间（HH:mm，每分钟对齐整点刷新） -->
+        <TextView
+            android:id="@+id/tv_current_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:clickable="false"
+            android:focusable="false"
+            android:includeFontPadding="false"
+            android:letterSpacing="0.05"
+            android:shadowColor="#99000000"
+            android:shadowDy="1"
+            android:shadowRadius="3"
+            android:singleLine="true"
+            android:textColor="@color/video_ctrl_text_secondary"
+            android:textSize="@dimen/video_ctrl_text_size"
+            android:textStyle="bold"
+            tools:ignore="HardcodedText" />
 
         <ImageView
             android:id="@+id/iv_settings"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:contentDescription="@string/setting"
             android:paddingEnd="10dp"
             android:scaleType="centerInside"
             android:src="@drawable/ic_more_horiz"
@@ -311,5 +385,46 @@
         android:padding="12dp"
         android:textColor="@android:color/white"
         android:visibility="invisible" />
+
+    <!-- R4：拖动进度预览（居中大号时间 + 偏移秒数，代码控制显隐） -->
+    <LinearLayout
+        android:id="@+id/seek_preview"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/seek_preview_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:shadowColor="#99000000"
+            android:shadowDy="1"
+            android:shadowRadius="4"
+            android:textColor="#FFFFFF"
+            android:textSize="30sp"
+            android:textStyle="bold"
+            tools:ignore="HardcodedText" />
+
+        <TextView
+            android:id="@+id/seek_preview_delta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:includeFontPadding="false"
+            android:shadowColor="#99000000"
+            android:shadowDy="1"
+            android:shadowRadius="4"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            tools:ignore="HardcodedText" />
+    </LinearLayout>
+
+    <!-- R4：双击快进/快退/播放暂停提示面板（居中，代码控制显隐） -->
+    <include layout="@layout/video_double_tap_tip" />
 
 </RelativeLayout>

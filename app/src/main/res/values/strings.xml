@@ -2718,4 +2718,10 @@ Night: %5$s / %6$s / %7$s / %8$s</string>
     <string name="backup_encrypt_s">AES-GCM applies to the uploaded WebDAV package only; set the backup password first</string>
     <string name="backup_keep_count_t">Keep recent backups</string>
     <string name="fvd_manifest_summary">%1$s · %2$s · %3$d items</string>
+    <!-- Video player controls (R4/R5) -->
+    <string name="video_prev_episode">Previous episode</string>
+    <string name="video_double_tap_forward">Forward %1$d s</string>
+    <string name="video_double_tap_backward">Rewind %1$d s</string>
+    <string name="video_double_tap_pause">Paused</string>
+    <string name="video_double_tap_resume">Playing</string>
 </resources>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 播放器进度条（覆盖 gsy 库内同名资源）。
+     库内版本 progress 用 @color/style_color（蓝），与播放器整体的白色控制栏不搭；
+     这里改成纯白进度 + 半透明白底轨 + 亮白缓存段，任何画面背景下都能看清。
+     轨道 4dp：3dp 在亮画面上几乎不可见（历史记录里的"进度条消失"根因）。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape>
+            <solid android:color="#4DFFFFFF" />
+            <size android:height="4dp" />
+            <corners android:radius="2dp" />
+        </shape>
+    </item>
+    <item android:id="@android:id/secondaryProgress">
+        <clip>
+            <shape>
+                <solid android:color="#B3FFFFFF" />
+                <size android:height="4dp" />
+                <corners android:radius="2dp" />
+            </shape>
+        </clip>
+    </item>
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape>
+                <solid android:color="#FFFFFFFF" />
+                <size android:height="4dp" />
+                <corners android:radius="2dp" />
+            </shape>
+        </clip>
+    </item>
+</layer-list>

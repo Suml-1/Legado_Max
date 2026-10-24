@@ -159,6 +159,9 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
     private var menuCustomBtn: MenuItem? = null
     // 标记当前实例正被新实例替换，跳过 finish 弹窗和 onDestroy 中的 saveRead
     private var isFinishingDueToReplacement = false
+    // 标记当前实例正把播放移交给悬浮窗：此时 VideoPlay 里的静态播放态引用要交给服务消费，
+    // 不能在 onDestroy 中清空（否则服务 clonePlayState 拿到 null，小窗无法接管播放）
+    private var isHandoffToFloatingWindow = false
     private val bookSourceEditResult =
         registerForActivityResult(StartActivityContract(BookSourceEditActivity::class.java)) {
             if (it.resultCode == RESULT_OK) {
@@ -210,6 +213,8 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
             startNewSession()
         } else {
             VideoPlay.clonePlayState(playerView)
+            // 从小窗回到播放页：参数已拷入本实例，断开静态引用，避免持有已销毁的悬浮窗/服务
+            VideoPlay.clearPlayState()
             playerView.setSurfaceToPlay()
             playerView.startAfterPrepared()
             binding.titleBar.title = VideoPlay.videoTitle
@@ -683,8 +688,16 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         layoutParams.height = if (height < screenHeight / 2) height else screenHeight / 2
         playerView.layoutParams = layoutParams
         playerView.isNeedOrientationUtils = false //关闭自带的屏幕方向控制
+        //R7：横屏小窗按钮与竖屏标题栏菜单共用同一悬浮窗入口
+        playerView.onFloatWindowClick = { startFloatingWindow() }
         playerView.fullscreenButton.setOnClickListener { toggleFullScreen() }
-        playerView.setBackFromFullScreenListener { toggleFullScreen() }
+        // 这个监听器会被 gsy 的 cloneParams() 复制到小窗播放器上，而小窗（挂在 Service 上）
+        // 比本 Activity 活得久 —— 直接传 lambda 会让小窗强持有已销毁的 Activity。
+        // 用弱引用包一层：退到小窗后本 Activity 可被回收，回调自动变 no-op。
+        val backFromFull = WeakReference(this)
+        playerView.setBackFromFullScreenListener {
+            backFromFull.get()?.toggleFullScreen()
+        }
         playerView.setVideoAllCallBack(object : GSYSampleCallBack() {
             @SuppressLint("SourceLockedOrientationActivity")
             override fun onPrepared(url: String?, vararg objects: Any?) {
@@ -869,13 +882,31 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
     }
 
     private fun startFloatingWindow() {
-        VideoPlay.savePlayState(playerView)
+        // 接管媒体的是"当前真正在播放"的那个实例：竖屏是 playerView 本身，横屏是全屏克隆实例。
+        // 为什么必须是 getCurrentPlayer()：gsy 全屏时把画面克隆到一个新实例上，小屏 playerView
+        // 已不是媒体监听者，它的进度/播放态停在进入全屏前（甚至 mHadPlay=false）。
+        // 直接保存 playerView 会让小窗克隆到这份陈旧状态 —— 表现为画面冻结在某一帧、按钮显示▶。
+        // 为什么两个都要 needDestroy=false：Activity 窗口销毁时，实例的 onSurfaceDestroyed
+        // 会走 gsy 的 super 分支把媒体一起释放，小窗随之冻结在最后一帧（横屏特有，竖屏正常）。
+        val handingOffPlayer = playerView.getCurrentPlayer()
+        VideoPlay.savePlayState(handingOffPlayer)
+        playerView.needDestroy = false
+        handingOffPlayer.needDestroy = false
         // 启动悬浮窗服务
         val intent = Intent(this, VideoPlayService::class.java).apply {
             putExtra("isNew", false)
         }
         ContextCompat.startForegroundService(this, intent)
-        playerView.needDestroy = false
+        // 注意：光在这里清 playerView（本 Activity 的实例）**并不能**解决小窗那条泄漏。
+        // gsy 的 cloneParams() 是在服务侧复制到 FloatingPlayer 上的，泄漏链指向的是
+        // FloatingPlayer → mBackFromFullScreenListener，清本 Activity 的实例无效。
+        // 真正的两处修复：
+        //   1) 下面把监听器包成"弱引用持有 this"，即使被复制过去也不会强引用 Activity；
+        //   2) VideoPlayService.onStartCommand 在 setupPlayerView() 之后对 FloatingPlayer 显式置空。
+        playerView.setBackFromFullScreenListener(null)
+        playerView.setVideoAllCallBack(null)
+        // 标记本次销毁是"移交给小窗"，静态播放态引用要留给服务消费，不能在 onDestroy 里清掉
+        isHandoffToFloatingWindow = true
         finish() //如果在播放器复刻前活动被销毁，会导致状态继承异常（这里服务创建很快，没发现异常）
     }
 
@@ -968,6 +999,13 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
      */
     override fun onPause() {
         super.onPause()
+        // 移交给小窗时不能暂停：本 Activity 退到后台是为了让悬浮窗接管播放，
+        // 无条件 onPause() 会让小窗一接管就是暂停态（画面定格、"▶"按钮），
+        // 用户必须先点一下才继续播放。这里只记录阅读时长，不打断播放。
+        if (isHandoffToFloatingWindow) {
+            VideoPlay.flushReadTime()
+            return
+        }
         VideoPlay.onPause()
     }
 
@@ -999,8 +1037,27 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
             VideoPlay.saveRead()
             VideoPlay.stopLoading()
         }
-        // 以下操作的是本实例自己的资源，被替换时也必须执行，否则媒体播放器资源泄漏
-        playerView.getCurrentPlayer().release()
+        // 移交给小窗时不能释放播放器：媒体要交给悬浮窗继续播。
+        // 横屏时 getCurrentPlayer() 返回的恰恰是"正在播放的全屏克隆实例"，
+        // 在这里 release() 会把刚移交的媒体释放掉 —— 这正是"横屏进小窗画面冻结在第一帧"的根因
+        //（竖屏时服务已先把监听者抢过去，isCurrentMediaListener() 为 false 才侥幸没触发，所以竖屏正常）。
+        // 未移交（正常退出/被替换）时才释放，避免资源泄漏。
+        if (!isHandoffToFloatingWindow) {
+            playerView.getCurrentPlayer().release()
+        }
+        // 网络状态监听必须无条件注销 —— 与是否移交小窗无关。
+        // 横屏会存在两个实例（小屏 + 全屏克隆），全屏那个不一定走 release()，
+        // 它的 ConnectivityBroadcastReceiver 会留在 LoadedApk.mReceivers 里，
+        // 经 mNetChangeListener → GSYVideoView$3 → this$0 把本 Activity 挂住（LeakCanary 实测的泄漏）。
+        // 两个实例都清一遍；该方法幂等，重复调用安全。
+        playerView.releaseNetworkStateForGood()
+        playerView.peekFullWindowPlayer()?.releaseNetworkStateForGood()
+        // 静态播放态引用若仍指向本实例（且本次不是移交给小窗），必须断开：
+        // 否则 VideoPlay.sMediaPlayerListener 会长期持有已销毁的 Activity（LeakCanary 报的 APPLICATION LEAK）。
+        // 移交给小窗时引用要留给服务 clonePlayState 消费，由服务侧 clone 完成后 clearPlayState()。
+        if (!isHandoffToFloatingWindow) {
+            VideoPlay.clearPlayState()
+        }
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 竖屏中央播放按钮：白色圆底 + 深色圆角三角。
+     两个 path 均为 fill，无 stroke —— 本项目实测 stroke 多子路径在部分真机会渲染成碎点，
+     所以从设计上就用实心几何体，任意尺寸缩放都不会退化。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <path
+        android:fillColor="#F2FFFFFF"
+        android:pathData="M32,3 C48.02,3 61,15.98 61,32 C61,48.02 48.02,61 32,61 C15.98,61 3,48.02 3,32 C3,15.98 15.98,3 32,3 Z" />
+    <path
+        android:fillColor="#E61A1A1A"
+        android:pathData="M26.5,21.6 C26.5,20.6 27.5,20.0 28.4,20.5 L45.3,30.9 C46.1,31.4 46.1,32.6 45.3,33.1 L28.4,43.5 C27.5,44.0 26.5,43.4 26.5,42.4 Z" />
+</vector>

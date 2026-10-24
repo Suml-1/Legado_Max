@@ -235,8 +235,10 @@ fun ModernExploreContent(
             onSearchSource = onSearchSource,
             modifier = Modifier.fillMaxWidth(),
         )
-        // 大分组条：仅当书源声明了整行分组项时显示
-        if (currentGroupValue != null) {
+        // 大分组条：仅当书源声明了整行分组项时显示；
+        // 分组数 <= 1 时整行不渲染（不组合即不占空间、不留无障碍焦点），
+        // 让二级标签条上移，为书籍列表腾出约 30dp
+        if (currentGroupValue != null && groups.size > 1) {
             ModernTagBar(
                 items = groups,
                 selectedIndex = groups.indexOf(currentGroupValue),

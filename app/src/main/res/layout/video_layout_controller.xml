@@ -49,12 +49,14 @@
 
     </LinearLayout>
 
+    <!-- 竖屏底部控制栏：高度收窄到 44dp（原 48dp），文字统一 13sp 次要色，
+         进度条白色，与横屏底栏同一套视觉 -->
     <LinearLayout
         android:id="@+id/layout_bottom"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
+        android:layout_height="@dimen/video_ctrl_bar_portrait_height"
         android:layout_alignParentBottom="true"
-        android:background="#99000000"
+        android:background="@drawable/video_ctrl_bar_bg"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:visibility="invisible">
@@ -63,9 +65,11 @@
             android:id="@+id/current"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
+            android:layout_marginStart="@dimen/video_ctrl_paddings_h"
+            android:includeFontPadding="false"
             android:text="00:00"
-            android:textColor="#ffffff" />
+            android:textColor="@color/video_ctrl_text_secondary"
+            android:textSize="@dimen/video_ctrl_text_size" />
 
         <SeekBar
             android:id="@+id/progress"
@@ -86,9 +90,11 @@
             android:id="@+id/total"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
+            android:layout_marginEnd="@dimen/video_ctrl_paddings_h"
+            android:includeFontPadding="false"
             android:text="00:00"
-            android:textColor="#ffffff" />
+            android:textColor="@color/video_ctrl_text_secondary"
+            android:textSize="@dimen/video_ctrl_text_size" />
 
         <TextView
             android:id="@+id/toggle_danmaku"
@@ -97,16 +103,18 @@
             android:gravity="center"
             android:minEms="2"
             android:text="关弹幕"
-            android:textColor="#ffffff"
+            android:textColor="@color/video_ctrl_text_primary"
+            android:textSize="@dimen/video_ctrl_text_size"
             android:visibility="gone"
             tools:visibility="visible" />
 
         <ImageView
             android:id="@+id/fullscreen"
-            android:layout_width="wrap_content"
-            android:layout_height="fill_parent"
-            android:padding="16dp"
-            android:scaleType="center"
+            android:layout_width="@dimen/video_ctrl_btn_size"
+            android:layout_height="@dimen/video_ctrl_btn_size"
+            android:contentDescription="@string/full_screen"
+            android:padding="@dimen/video_ctrl_icon_padding"
+            android:scaleType="centerInside"
             android:src="@drawable/video_enlarge" />
     </LinearLayout>
 
@@ -135,13 +143,16 @@
         android:layout_centerVertical="true"
         android:visibility="invisible" />
 
-    <moe.codeest.enviews.ENPlayView
+    <ImageView
         android:id="@+id/start"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
+        android:layout_width="@dimen/video_play_center_size"
+        android:layout_height="@dimen/video_play_center_size"
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true"
-        android:layout_gravity="center_vertical" />
+        android:layout_gravity="center_vertical"
+        android:contentDescription="@null"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_player_play_circle" />
 
     <RelativeLayout
         android:id="@+id/preview_layout"
@@ -166,5 +177,43 @@
         android:padding="12dp"
         android:textColor="@android:color/white"
         android:visibility="invisible" />
+
+    <!-- R4：拖动进度预览（居中大号时间 + 偏移秒数，代码控制显隐） -->
+    <LinearLayout
+        android:id="@+id/seek_preview"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/seek_preview_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:shadowColor="#99000000"
+            android:shadowDy="1"
+            android:shadowRadius="4"
+            android:textColor="#FFFFFF"
+            android:textSize="30sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/seek_preview_delta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:includeFontPadding="false"
+            android:shadowColor="#99000000"
+            android:shadowDy="1"
+            android:shadowRadius="4"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <!-- R4：双击快进/快退/播放暂停提示面板（居中，代码控制显隐） -->
+    <include layout="@layout/video_double_tap_tip" />
 
 </RelativeLayout>

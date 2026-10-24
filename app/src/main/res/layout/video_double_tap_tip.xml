@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 双击快进/快退/播放暂停的居中提示面板。
+     不放背景：中间播放/暂停提示只要图标 + 文案，加一块黑底会在画面上留下生硬的方块；
+     文字与图标自带投影（shadow），亮画面上同样可读。
+     由代码控制显隐（alpha 动画），不拦截触摸。 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/double_tap_tip"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_centerInParent="true"
+    android:alpha="0"
+    android:clickable="false"
+    android:focusable="false"
+    android:gravity="center_horizontal"
+    android:minWidth="140dp"
+    android:orientation="vertical"
+    android:visibility="invisible">
+
+    <ImageView
+        android:id="@+id/dtp_icon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:contentDescription="@null"
+        android:src="@drawable/ic_fast_forward" />
+
+    <TextView
+        android:id="@+id/dtp_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:shadowColor="#99000000"
+        android:shadowDy="1"
+        android:shadowRadius="4"
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        tools:ignore="HardcodedText" />
+
+    <TextView
+        android:id="@+id/dtp_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:includeFontPadding="false"
+        android:shadowColor="#99000000"
+        android:shadowDy="1"
+        android:shadowRadius="4"
+        android:textColor="#B3FFFFFF"
+        android:textSize="12sp" />
+
+    <ProgressBar
+        android:id="@+id/dtp_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="120dp"
+        android:layout_height="3dp"
+        android:layout_marginTop="6dp"
+        android:max="100"
+        android:progressDrawable="@drawable/video_double_tap_progress" />
+</LinearLayout>

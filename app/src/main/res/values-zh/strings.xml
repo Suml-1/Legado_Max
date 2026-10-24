@@ -2702,4 +2702,10 @@
     <string name="backup_encrypt_s">仅对上传到 WebDAV 的备份包使用 AES-GCM 加密，需先设置备份密码</string>
     <string name="backup_keep_count_t">保留最近备份数</string>
     <string name="fvd_manifest_summary">%1$s · %2$s · %3$d 项</string>
+    <!-- 视频播放器控制（R4/R5） -->
+    <string name="video_prev_episode">上一集</string>
+    <string name="video_double_tap_forward">快进 %1$d 秒</string>
+    <string name="video_double_tap_backward">快退 %1$d 秒</string>
+    <string name="video_double_tap_pause">已暂停</string>
+    <string name="video_double_tap_resume">继续播放</string>
 </resources>
