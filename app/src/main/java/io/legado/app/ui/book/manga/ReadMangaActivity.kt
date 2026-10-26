@@ -24,6 +24,8 @@ import com.bumptech.glide.util.FixedPreloadSizeProvider
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
+import com.script.rhino.runScriptWithContext
+import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.MangaReadMode
@@ -35,10 +37,15 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.databinding.ActivityMangaBinding
 import io.legado.app.databinding.DialogDownloadChoiceBinding
 import io.legado.app.databinding.ViewLoadMoreBinding
+import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isImage
+import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.removeType
 import io.legado.app.help.ConcurrentRateLimiter
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.help.source.getSourceType
 import io.legado.app.help.storage.Backup
 import io.legado.app.model.CacheBook
 import io.legado.app.lib.dialogs.alert
@@ -47,6 +54,9 @@ import io.legado.app.receiver.NetworkChangedListener
 import io.legado.app.ui.book.changesource.ChangeBookSourceDialog
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
+import io.legado.app.ui.browser.WebViewActivity
+import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.ui.book.manga.config.MangaColorFilterConfig
 import io.legado.app.ui.book.manga.config.MangaColorFilterDialog
 import io.legado.app.ui.book.manga.config.MangaEpaperDialog
@@ -73,8 +83,11 @@ import io.legado.app.utils.findCenterViewPosition
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getCompatColor
 import io.legado.app.utils.gone
+import io.legado.app.utils.isAbsUrl
+import io.legado.app.utils.isTrue
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.showDialogFragment
+import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.toggleSystemBar
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -660,6 +673,76 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             sourceEditActivity.launch {
                 putExtra("sourceUrl", it.bookSourceUrl)
             }
+        }
+    }
+
+    /**
+     * 打开书源登录页（漫画模式）
+     */
+    override fun showLogin() {
+        ReadManga.bookSource?.let {
+            startActivity<SourceLoginActivity> {
+                putExtra("bookType", BookType.image)
+            }
+        }
+    }
+
+    /**
+     * 章节购买（漫画模式）
+     */
+    override fun payAction() {
+        val book = ReadManga.book ?: return
+        if (book.isLocal) return
+        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadManga.durChapterIndex)
+        if (chapter == null) {
+            toastOnUi("no chapter")
+            return
+        }
+        alert(R.string.chapter_pay) {
+            setMessage(chapter.title)
+            yesButton {
+                Coroutine.async(lifecycleScope) {
+                    val source =
+                        ReadManga.bookSource ?: throw NoStackTraceException("no book source")
+                    val payAction = source.getContentRule().payAction
+                    if (payAction.isNullOrBlank()) {
+                        throw NoStackTraceException("no pay action")
+                    }
+                    val java =
+                        SourceLoginJsExtensions(this@ReadMangaActivity, source, BookType.image)
+                    runScriptWithContext {
+                        source.evalJS(payAction) {
+                            put("java", java)
+                            put("book", book)
+                            put("chapter", chapter)
+                            put("title", chapter.title)
+                            put("baseUrl", chapter.url)
+                            put("result", null)
+                            put("src", null)
+                        }.toString()
+                    }
+                }.onSuccess(IO) {
+                    if (it.isAbsUrl()) {
+                        startActivity<WebViewActivity> {
+                            val bookSource = ReadManga.bookSource
+                            putExtra("title", getString(R.string.chapter_pay))
+                            putExtra("url", it)
+                            putExtra("sourceOrigin", bookSource?.bookSourceUrl)
+                            putExtra("sourceName", bookSource?.bookSourceName)
+                            putExtra("sourceType", bookSource?.getSourceType())
+                        }
+                    } else if (it.isTrue()) {
+                        // 购买成功后清除本章缓存并重新加载图片
+                        BookHelp.delContent(book, chapter)
+                        ReadManga.clearMangaChapter()
+                        ReadManga.loadOrUpContent()
+                        binding.mangaMenu.upBookView()
+                    }
+                }.onError {
+                    AppLog.put("执行购买操作出错\n${it.localizedMessage}", it, true)
+                }
+            }
+            noButton()
         }
     }
 
