@@ -27,6 +27,7 @@ import io.legado.app.ui.book.manga.entities.MangaContent
 import io.legado.app.ui.book.manga.entities.MangaPage
 import io.legado.app.ui.book.manga.entities.ReaderLoading
 import io.legado.app.utils.mapIndexed
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers.IO
@@ -34,6 +35,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -60,6 +62,19 @@ object ReadManga : CoroutineScope by MainScope() {
     var simulatedChapterSize = 0
     var mCallback: Callback? = null
     var preDownloadTask: Job? = null
+
+    // —— 卷轴模式「向后预下载」（按页预下载图片）——
+    // 漫画页真正的显示路径是 MangaVH.loadImageWithRetry，它只认 BookHelp 的图片文件缓存
+    // （BookHelp.getImage(book, url) 是否存在）。Glide 的磁盘缓存不在那条路径上，
+    // 所以页级预下载必须直接写进 BookHelp 的图片目录，否则翻页时仍旧重新下载。
+    private val pagePreDownloadChannel = Channel<String>(Channel.UNLIMITED)
+    // 当前预下载窗口（每次翻页整体替换）
+    private val pagePreDownloadWanted = LinkedHashSet<String>()
+    // 已入队但还没下完的地址，避免同一张图重复入队
+    private val pagePreDownloadScheduled = hashSetOf<String>()
+    private val pagePreDownloadFailed = hashSetOf<String>()
+    private var pagePreDownloadJob: Job? = null
+
     val downloadedChapters = hashSetOf<Int>()
     val downloadFailChapters = hashMapOf<Int, Int>()
     val downloadScope = CoroutineScope(SupervisorJob() + IO)
@@ -358,6 +373,112 @@ object ReadManga : CoroutineScope by MainScope() {
     fun curPageChanged() {
         upReadTime()
         preDownload()
+        preDownloadNextPages()
+    }
+
+    /**
+     * 卷轴模式「向后预下载」：从当前页之后取 [AppConfig.mangaPreDownloadNum] 页图片预先落盘。
+     *
+     * 为什么不复用 Glide 的 RecyclerViewPreloader：它只把字节写进 Glide 自己的磁盘缓存
+     * （key 是图片 URL），而漫画页显示走的是 [BookHelp.getImage] 的图片文件缓存
+     * （key 是 URL 的 MD5 文件名）。两条路径的 key 完全不同，预下载再多，
+     * 翻页时 [io.legado.app.ui.book.manga.recyclerview.MangaVH] 依然判定为未缓存并重新下载。
+     * 所以这里直接用显示路径的写入函数落盘，预下载过的页翻到时才真正命中。
+     */
+    fun preDownloadNextPages() {
+        val book = book ?: return
+        val count = AppConfig.mangaPreDownloadNum
+        if (count <= 0 || book.isLocal) return
+        val wanted = LinkedHashSet<String>()
+        // 先取当前章剩余页，再越过章尾取下一章，凑满 count 页（卷轴模式下会自然跨章）
+        val curPages = curMangaChapter?.pages
+        if (curPages != null) {
+            for (page in curPages) {
+                if (wanted.size >= count) break
+                if (page is MangaPage && page.index > durChapterPos && page.mImageUrl.isNotBlank()) {
+                    wanted.add(page.mImageUrl)
+                }
+            }
+        }
+        if (wanted.size < count) {
+            val nextPages = nextMangaChapter?.pages
+            if (nextPages != null) {
+                for (page in nextPages) {
+                    if (wanted.size >= count) break
+                    if (page is MangaPage && page.mImageUrl.isNotBlank()) {
+                        wanted.add(page.mImageUrl)
+                    }
+                }
+            }
+        }
+        if (wanted.isEmpty()) return
+        synchronized(pagePreDownloadWanted) {
+            // 每次翻页整体替换窗口：滚动越快只追最新的一段，不积压历史请求。
+            // 注意不清 scheduled：已经排队的地址仍然有效，再入队会造成重复下载。
+            pagePreDownloadWanted.clear()
+            pagePreDownloadWanted.addAll(wanted)
+            wanted.forEach { url ->
+                if (url !in pagePreDownloadScheduled && url !in pagePreDownloadFailed) {
+                    pagePreDownloadScheduled.add(url)
+                    pagePreDownloadChannel.trySend(url)
+                }
+            }
+        }
+        startPagePreDownload(book)
+    }
+
+    private fun startPagePreDownload(book: Book) {
+        if (pagePreDownloadJob?.isActive == true) return
+        pagePreDownloadJob = downloadScope.launch {
+            while (true) {
+                val url = pagePreDownloadChannel.receive()
+                val obsolete = synchronized(pagePreDownloadWanted) {
+                    url !in pagePreDownloadWanted
+                }
+                if (obsolete) {
+                    // 窗口已经换成更新的位置，这条排队中的地址不再需要
+                    synchronized(pagePreDownloadWanted) {
+                        pagePreDownloadScheduled.remove(url)
+                    }
+                    continue
+                }
+                var success = false
+                try {
+                    if (!BookHelp.isImageExist(book, url)) {
+                        // 与漫画页显示共用同一把锁和同一个写入函数，避免同一张图被并发写坏
+                        BookHelp.saveImage(bookSource, book, url)
+                    }
+                    success = true
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    AppLog.putDebug("漫画预下载失败 $url\n${e.localizedMessage}")
+                } finally {
+                    synchronized(pagePreDownloadWanted) {
+                        pagePreDownloadScheduled.remove(url)
+                        if (!success) {
+                            // 明确失败的地址记下来，翻页时不再反复重试
+                            pagePreDownloadFailed.add(url)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    //取消页级预下载（离开阅读页时调用，避免退出后继续耗流量）
+    fun cancelPagePreDownload() {
+        pagePreDownloadJob?.cancel()
+        pagePreDownloadJob = null
+        synchronized(pagePreDownloadWanted) {
+            pagePreDownloadWanted.clear()
+            pagePreDownloadScheduled.clear()
+            pagePreDownloadFailed.clear()
+        }
+        // 丢弃 channel 中尚未取走的残留任务，避免下次进入阅读页时先跑旧书的地址
+        while (true) {
+            pagePreDownloadChannel.tryReceive().getOrNull() ?: break
+        }
     }
     //保存阅读进度
     fun saveRead(pageChanged: Boolean = false) {
@@ -448,6 +569,7 @@ object ReadManga : CoroutineScope by MainScope() {
             preDownloadTask?.cancel()
             downloadScope.coroutineContext.cancelChildren()
         }
+        cancelPagePreDownload()
     }
 
     private suspend fun downloadIndex(index: Int) {
