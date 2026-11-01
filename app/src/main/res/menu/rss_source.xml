@@ -127,6 +127,12 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/menu_check_rss_sources"
+        android:icon="@drawable/ic_check_source"
+        android:title="@string/check_rss_sources"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/menu_content_query"
         android:icon="@drawable/ic_search"
         android:title="@string/content_query"

@@ -277,6 +277,24 @@
             android:summary="@string/show_add_to_shelf_alert_summary"
             android:title="@string/show_add_to_shelf_alert_title" />
 
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="false"
+            android:key="autoAddShelfEnabled"
+            android:summary="@string/auto_add_shelf_summary"
+            android:title="@string/auto_add_shelf_title" />
+
+        <io.legado.app.lib.prefs.EditTextPreference
+            android:key="autoAddShelfMinMinutes"
+            android:inputType="number"
+            android:summary="@string/auto_add_shelf_min_summary"
+            android:title="@string/auto_add_shelf_min_title" />
+
+        <io.legado.app.lib.prefs.EditTextPreference
+            android:key="autoAddShelfMaxMinutes"
+            android:inputType="number"
+            android:summary="@string/auto_add_shelf_max_summary"
+            android:title="@string/auto_add_shelf_max_title" />
+
         <io.legado.app.lib.prefs.NameListPreference
             android:defaultValue="default_version"
             android:key="updateToVariant"

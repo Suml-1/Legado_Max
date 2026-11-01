@@ -209,6 +209,9 @@ object PreferKey {
     /** 按键翻页动画速度(毫秒) */
     const val keyPageAnimSpeed = "keyPageAnimSpeed"
     const val showAddToShelfAlert = "showAddToShelfAlert"
+    const val autoAddShelfEnabled = "autoAddShelfEnabled"
+    const val autoAddShelfMinMinutes = "autoAddShelfMinMinutes"
+    const val autoAddShelfMaxMinutes = "autoAddShelfMaxMinutes"
     const val ignoreAudioFocus = "ignoreAudioFocus"
     const val parallelExportBook = "parallelExportBook"
     const val progressBarBehavior = "progressBarBehavior"

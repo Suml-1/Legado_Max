@@ -47,6 +47,7 @@ import io.legado.app.ui.widget.recycler.VerticalDivider
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.launch
 import io.legado.app.help.ExportResultHandler
+import io.legado.app.model.rss.Rss
 import io.legado.app.utils.StringUtils
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setEdgeEffectColor
@@ -55,9 +56,11 @@ import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.showHelp
 import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.startActivity
+import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.transaction
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
@@ -65,6 +68,8 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 /**
  * 订阅源管理
@@ -268,6 +273,8 @@ class RssSourceActivity :
                 showDialogFragment(RssSourceContentSearchDialog())
             }
 
+            R.id.menu_check_rss_sources -> checkRssSources()
+
             R.id.menu_help -> showHelp("SourceMRssHelp")
             else -> if (item.groupId == R.id.source_group) {
                 searchView.setQuery("group:${item.title}", true)
@@ -411,6 +418,43 @@ class RssSourceActivity :
         alert(titleResource = R.string.draw, messageResource = R.string.sure_del) {
             yesButton { viewModel.del(*adapter.selection.toTypedArray()) }
             noButton()
+        }
+    }
+
+    /**
+     * 校验订阅源是否还能正常使用，校验失败的源可一键删除
+     */
+    private fun checkRssSources() {
+        if (adapter.itemCount == 0) {
+            toastOnUi(R.string.check_rss_source_success)
+            return
+        }
+        val sources = appDb.rssSourceDao.all
+        val broken = arrayListOf<RssSource>()
+        lifecycleScope.launch(Dispatchers.Main) {
+            withContext(Dispatchers.IO) {
+                sources.forEach { source ->
+                    runCatching {
+                        withTimeout(60_000L) {
+                            val sortUrl = source.sortUrl ?: source.sourceUrl
+                            Rss.getArticlesAwait("", sortUrl, source, 1)
+                        }
+                    }.onFailure {
+                        broken.add(source)
+                    }
+                }
+            }
+            if (broken.isEmpty()) {
+                toastOnUi(R.string.check_rss_source_success)
+            } else {
+                alert(titleResource = R.string.check_rss_sources) {
+                    setMessage(getString(R.string.check_rss_source_fail, broken.size))
+                    positiveButton(R.string.delete_broken_sources) {
+                        viewModel.del(*broken.toTypedArray())
+                    }
+                    noButton()
+                }
+            }
         }
     }
 
