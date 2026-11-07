@@ -13,6 +13,7 @@ import android.app.PendingIntent.getService
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.ClipData
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -49,6 +50,7 @@ import io.legado.app.ui.book.audio.AudioPlayActivity
 import io.legado.app.ui.video.VideoPlayerActivity
 import io.legado.app.ui.book.manga.ReadMangaActivity
 import io.legado.app.ui.book.read.ReadBookActivity
+import io.legado.app.ui.shared.SharedReceiverActivity
 import splitties.systemservices.clipboardManager
 import splitties.systemservices.connectivityManager
 import splitties.systemservices.uiModeManager
@@ -79,7 +81,6 @@ fun Context.startActivityForBook(
     intent.apply(configIntent)
     startActivity(intent)
 }
-
 
 inline fun <reified T : Service> Context.startService(configIntent: Intent.() -> Unit = {}) {
     startService(Intent(this, T::class.java).apply(configIntent))
@@ -163,83 +164,67 @@ fun Context.startForegroundServiceCompat(intent: Intent) {
 val Context.defaultSharedPreferences: SharedPreferences
     get() = PreferenceManager.getDefaultSharedPreferences(this)
 
-fun Context.getPrefBoolean(key: String, defValue: Boolean = false): Boolean {
-    return try {
-        defaultSharedPreferences.getBoolean(key, defValue)
-    } catch (e: ClassCastException) {
-        // 值可能以其他类型（如 String）存储，尝试兼容读取
-        val strValue = defaultSharedPreferences.getString(key, null)
-        strValue?.toBooleanStrictOrNull() ?: defValue
-    }
+fun Context.getPrefBoolean(key: String, defValue: Boolean = false): Boolean = try {
+    defaultSharedPreferences.getBoolean(key, defValue)
+} catch (e: ClassCastException) {
+    // 值可能以其他类型（如 String）存储，尝试兼容读取
+    val strValue = defaultSharedPreferences.getString(key, null)
+    strValue?.toBooleanStrictOrNull() ?: defValue
 }
 
-fun Context.putPrefBoolean(key: String, value: Boolean = false) =
-    defaultSharedPreferences.edit { putBoolean(key, value) }
+fun Context.putPrefBoolean(key: String, value: Boolean = false) = defaultSharedPreferences.edit { putBoolean(key, value) }
 
-fun Context.getPrefInt(key: String, defValue: Int = 0): Int {
-    return try {
-        defaultSharedPreferences.getInt(key, defValue)
-    } catch (e: ClassCastException) {
-        // 值可能以 String 类型存储（如从其他 Legado 变体恢复备份），尝试兼容读取
-        val strValue = defaultSharedPreferences.getString(key, null)
-        strValue?.toIntOrNull() ?: defValue
-    }
+fun Context.getPrefInt(key: String, defValue: Int = 0): Int = try {
+    defaultSharedPreferences.getInt(key, defValue)
+} catch (e: ClassCastException) {
+    // 值可能以 String 类型存储（如从其他 Legado 变体恢复备份），尝试兼容读取
+    val strValue = defaultSharedPreferences.getString(key, null)
+    strValue?.toIntOrNull() ?: defValue
 }
 
-fun Context.putPrefInt(key: String, value: Int) =
-    defaultSharedPreferences.edit { putInt(key, value) }
+fun Context.putPrefInt(key: String, value: Int) = defaultSharedPreferences.edit { putInt(key, value) }
 
-fun Context.getPrefLong(key: String, defValue: Long = 0L): Long {
-    return try {
-        defaultSharedPreferences.getLong(key, defValue)
-    } catch (e: ClassCastException) {
-        // 值可能以 String 类型存储，尝试兼容读取
-        val strValue = defaultSharedPreferences.getString(key, null)
-        strValue?.toLongOrNull() ?: defValue
-    }
+fun Context.getPrefLong(key: String, defValue: Long = 0L): Long = try {
+    defaultSharedPreferences.getLong(key, defValue)
+} catch (e: ClassCastException) {
+    // 值可能以 String 类型存储，尝试兼容读取
+    val strValue = defaultSharedPreferences.getString(key, null)
+    strValue?.toLongOrNull() ?: defValue
 }
 
-fun Context.putPrefLong(key: String, value: Long) =
-    defaultSharedPreferences.edit { putLong(key, value) }
+fun Context.putPrefLong(key: String, value: Long) = defaultSharedPreferences.edit { putLong(key, value) }
 
-fun Context.getPrefString(key: String, defValue: String? = null) =
-    defaultSharedPreferences.getString(key, defValue)
+fun Context.getPrefString(key: String, defValue: String? = null) = defaultSharedPreferences.getString(key, defValue)
 
-fun Context.putPrefString(key: String, value: String?) =
-    defaultSharedPreferences.edit { putString(key, value) }
+fun Context.putPrefString(key: String, value: String?) = defaultSharedPreferences.edit { putString(key, value) }
 
 fun Context.getPrefStringSet(
     key: String,
     defValue: MutableSet<String>? = null,
 ): MutableSet<String>? = defaultSharedPreferences.getStringSet(key, defValue)
 
-fun Context.putPrefStringSet(key: String, value: MutableSet<String>) =
-    defaultSharedPreferences.edit { putStringSet(key, value) }
+fun Context.putPrefStringSet(key: String, value: MutableSet<String>) = defaultSharedPreferences.edit { putStringSet(key, value) }
 
-fun Context.removePref(key: String) =
-    defaultSharedPreferences.edit { remove(key) }
-
+fun Context.removePref(key: String) = defaultSharedPreferences.edit { remove(key) }
 
 fun Context.getCompatColor(@ColorRes id: Int): Int = ContextCompat.getColor(this, id)
 
 fun Context.getCompatDrawable(@DrawableRes id: Int): Drawable? = ContextCompat.getDrawable(this, id)
 
-fun Context.getCompatColorStateList(@ColorRes id: Int): ColorStateList? =
-    ContextCompat.getColorStateList(this, id)
+fun Context.getCompatColorStateList(@ColorRes id: Int): ColorStateList? = ContextCompat.getColorStateList(this, id)
 
-fun Context.checkSelfUriPermission(uri: Uri, modeFlags: Int): Int =
-    checkUriPermission(uri, Process.myPid(), Process.myUid(), modeFlags)
+fun Context.checkSelfUriPermission(uri: Uri, modeFlags: Int): Int = checkUriPermission(uri, Process.myPid(), Process.myUid(), modeFlags)
 
 fun Context.restart() {
     val intent: Intent? = packageManager.getLaunchIntentForPackage(packageName)
     intent?.let {
         intent.addFlags(
             Intent.FLAG_ACTIVITY_NEW_TASK
-                    or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                or Intent.FLAG_ACTIVITY_CLEAR_TOP,
         )
         startActivity(intent)
-        //杀掉以前进程
+        // 杀掉以前进程
         Process.killProcess(Process.myPid())
         exitProcess(0)
     }
@@ -274,6 +259,31 @@ val Context.navigationBarHeight: Int
         return resources.getDimensionPixelSize(resourceId)
     }
 
+/**
+ * 建一个「不包含自己」的分享选择器。
+ *
+ * 本 App 的 [SharedReceiverActivity] 注册了 `ACTION_SEND` + `text/plain` 接收器，
+ * 分享纯文本（如主题/顶栏/底栏的配置 JSON）时会被自己接住，落地成「搜索」页——
+ * 用户看到的就是"点分享怎么跳到搜索去了"。排除自身后才是真正的对外分享。
+ */
+private fun Context.hasExternalShareTarget(intent: Intent): Boolean {
+    val self = ComponentName(this, SharedReceiverActivity::class.java)
+    return packageManager.queryIntentActivities(intent, 0).any { info ->
+        ComponentName(info.activityInfo.packageName, info.activityInfo.name) != self
+    }
+}
+
+private fun Context.createShareChooser(intent: Intent, title: String): Intent {
+    val chooser = Intent.createChooser(intent, title)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        chooser.putExtra(
+            Intent.EXTRA_EXCLUDE_COMPONENTS,
+            arrayOf(ComponentName(this, SharedReceiverActivity::class.java)),
+        )
+    }
+    return chooser
+}
+
 fun Context.share(text: String, title: String = getString(R.string.share)) {
     kotlin.runCatching {
         val intent = Intent(Intent.ACTION_SEND)
@@ -281,7 +291,14 @@ fun Context.share(text: String, title: String = getString(R.string.share)) {
         intent.putExtra(Intent.EXTRA_SUBJECT, title)
         intent.putExtra(Intent.EXTRA_TEXT, text)
         intent.type = "text/plain"
-        startActivity(Intent.createChooser(intent, title))
+        if (!hasExternalShareTarget(intent)) {
+            // 设备上没有任何第三方分享目标（纯净 ROM / 模拟器）：选择器只剩一句
+            // 「没有应用可执行此操作」，用户拿不到内容——退回剪贴板，
+            // 正好对接配置页的「从剪贴板导入」
+            sendToClip(text)
+            return
+        }
+        startActivity(createShareChooser(intent, title))
     }
 }
 
@@ -292,12 +309,7 @@ fun Context.share(file: File, type: String = "text/*") {
     intent.putExtra(Intent.EXTRA_STREAM, fileUri)
     intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    startActivity(
-        Intent.createChooser(
-            intent,
-            getString(R.string.share_selected_source)
-        )
-    )
+    startActivity(createShareChooser(intent, getString(R.string.share_selected_source)))
 }
 
 @SuppressLint("SetWorldReadable")
@@ -432,11 +444,14 @@ fun Context.openFileUri(uri: Uri, type: String? = null) {
     intent.action = Intent.ACTION_VIEW
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        //7.0版本以上
+        // 7.0版本以上
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    val uri = if (uri.isContentScheme()) uri
-    else FileProvider.getUriForFile(this, AppConst.authority, File(uri.path!!))
+    val uri = if (uri.isContentScheme()) {
+        uri
+    } else {
+        FileProvider.getUriForFile(this, AppConst.authority, File(uri.path!!))
+    }
     intent.setDataAndType(uri, type ?: IntentType.from(uri))
     try {
         startActivity(intent)

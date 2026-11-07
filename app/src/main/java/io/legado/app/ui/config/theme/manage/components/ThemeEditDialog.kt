@@ -1,31 +1,23 @@
 package io.legado.app.ui.config.theme.manage.components
 
-import io.legado.app.lib.theme.eInkGrayscale
-
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -38,7 +30,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -46,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import io.legado.app.R
 import io.legado.app.help.config.ThemeConfig
+import io.legado.app.ui.config.widget.ConfigEditDialogFrame
 import io.legado.app.utils.BitmapUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -70,100 +62,78 @@ fun ThemeEditDialog(
 ) {
     val config = draft ?: return
 
-    AlertDialog(
-        modifier = Modifier.eInkGrayscale(),
+    // 走统一外框：`AlertDialog` + 无上限的 `verticalScroll` 会被长表单顶出屏幕，
+    // 底部的「取消/确认」跟着被裁掉（小屏或放大字号时完全看不见）
+    ConfigEditDialogFrame(
+        title = stringResource(if (isNew) R.string.add_theme else R.string.edit_theme),
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = if (isNew) stringResource(R.string.add_theme) else stringResource(R.string.edit_theme),
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(0.dp),
-            ) {
-                // 主题名称
-                OutlinedTextField(
-                    value = config.themeName,
-                    onValueChange = { name -> onUpdateDraft { cfg -> cfg.copy(themeName = name) } },
-                    label = { Text(stringResource(R.string.theme_name)) },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                )
+        onConfirm = onSave,
+        confirmEnabled = config.themeName.isNotBlank(),
+    ) {
+        // 主题名称
+        OutlinedTextField(
+            value = config.themeName,
+            onValueChange = { name -> onUpdateDraft { cfg -> cfg.copy(themeName = name) } },
+            label = { Text(stringResource(R.string.theme_name)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
 
-                // 主色调
-                ColorRow(
-                    title = stringResource(R.string.primary),
-                    hexColor = config.primaryColor,
-                    isAccent = false,
-                    onClick = { onColorClick("primaryColor", config.primaryColor) },
-                )
+        // 主色调
+        ColorRow(
+            title = stringResource(R.string.primary),
+            hexColor = config.primaryColor,
+            isAccent = false,
+            onClick = { onColorClick("primaryColor", config.primaryColor) },
+        )
 
-                // 强调色
-                ColorRow(
-                    title = stringResource(R.string.accent_color),
-                    hexColor = config.accentColor,
-                    isAccent = true,
-                    onClick = { onColorClick("accentColor", config.accentColor) },
-                )
+        // 强调色
+        ColorRow(
+            title = stringResource(R.string.accent_color),
+            hexColor = config.accentColor,
+            isAccent = true,
+            onClick = { onColorClick("accentColor", config.accentColor) },
+        )
 
-                // 背景色
-                ColorRow(
-                    title = stringResource(R.string.background_color),
-                    hexColor = config.backgroundColor,
-                    isAccent = false,
-                    onClick = { onColorClick("backgroundColor", config.backgroundColor) },
-                )
+        // 背景色
+        ColorRow(
+            title = stringResource(R.string.background_color),
+            hexColor = config.backgroundColor,
+            isAccent = false,
+            onClick = { onColorClick("backgroundColor", config.backgroundColor) },
+        )
 
-                // 底栏背景色
-                ColorRow(
-                    title = stringResource(R.string.bottom_background_color),
-                    hexColor = config.bottomBackground,
-                    isAccent = false,
-                    onClick = { onColorClick("bottomBackground", config.bottomBackground) },
-                )
+        // 底栏背景色
+        ColorRow(
+            title = stringResource(R.string.bottom_background_color),
+            hexColor = config.bottomBackground,
+            isAccent = false,
+            onClick = { onColorClick("bottomBackground", config.bottomBackground) },
+        )
 
-                // 导航栏颜色透明
-                SwitchRow(
-                    title = stringResource(R.string.top_bar_transparent),
-                    subtitle = stringResource(R.string.top_bar_transparent_hint),
-                    checked = config.transparentNavBar,
-                    onCheckedChange = { checked -> onUpdateDraft { cfg -> cfg.copy(transparentNavBar = checked) } },
-                )
+        // 导航栏颜色透明
+        SwitchRow(
+            title = stringResource(R.string.top_bar_transparent),
+            subtitle = stringResource(R.string.top_bar_transparent_hint),
+            checked = config.transparentNavBar,
+            onCheckedChange = { checked -> onUpdateDraft { cfg -> cfg.copy(transparentNavBar = checked) } },
+        )
 
-                // 背景图片
-                BackgroundImageRow(
-                    title = stringResource(R.string.background_image),
-                    path = config.backgroundImgPath,
-                    onClick = onSelectImage,
-                    onClear = { onUpdateDraft { cfg -> cfg.copy(backgroundImgPath = null, backgroundImgBlur = 0) } },
-                )
+        // 背景图片
+        BackgroundImageRow(
+            title = stringResource(R.string.background_image),
+            path = config.backgroundImgPath,
+            onClick = onSelectImage,
+            onClear = { onUpdateDraft { cfg -> cfg.copy(backgroundImgPath = null, backgroundImgBlur = 0) } },
+        )
 
-                // 背景图片虚化
-                OptionRow(
-                    title = stringResource(R.string.background_image_blurring),
-                    value = "${config.backgroundImgBlur}",
-                    onClick = { onBlurClick(config.backgroundImgBlur) },
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onSave) {
-                Text(stringResource(R.string.ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-        },
-    )
+        // 背景图片虚化
+        OptionRow(
+            title = stringResource(R.string.background_image_blurring),
+            value = "${config.backgroundImgBlur}",
+            onClick = { onBlurClick(config.backgroundImgBlur) },
+        )
+    }
 }
 
 /**

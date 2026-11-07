@@ -19,7 +19,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import io.legado.app.R
@@ -51,6 +53,9 @@ fun ConfigEditDialogFrame(
     confirmEnabled: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    // 弹窗总高必须能被屏幕装下：只给内容区限高是不够的，标题 + 480dp 表单 + 按钮
+    // 加起来仍可能超过屏幕（矮屏 / 放大字号），超出的部分是按钮行，会被直接裁掉
+    val maxDialogHeight = (LocalConfiguration.current.screenHeightDp * 0.85f).dp
     BasicAlertDialog(
         onDismissRequest = onDismissRequest,
         // 弹层是独立窗口，页面那层灰阶罩不到，这里再贴一次
@@ -60,7 +65,11 @@ fun ConfigEditDialogFrame(
             shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = maxDialogHeight),
+            ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,
@@ -75,7 +84,7 @@ fun ConfigEditDialogFrame(
                         bottom = AppDimens.panelTitleBottomPadding,
                     ),
                 )
-                Box {
+                Box(modifier = Modifier.weight(1f, fill = false)) {
                     val scrollState = rememberScrollState()
                     Column(
                         modifier = Modifier
