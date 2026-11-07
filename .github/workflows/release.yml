@@ -10,6 +10,7 @@ jobs:
     outputs:
       version: ${{ steps.set-ver.outputs.version }}
       gitee: ${{ steps.check.outputs.gitee }}
+      contributors_content: ${{ steps.contributors.outputs.content }}
     steps:
       - id: set-ver
         run: |
@@ -19,6 +20,24 @@ jobs:
           if [ -n "${{ secrets.GITEE_TOKEN }}" ]; then
             echo "gitee=yes" >> $GITHUB_OUTPUT
           fi
+
+      # 发布说明的「PR + 贡献者」章节（与 test.yml 共用同一脚本）
+      - uses: actions/checkout@v5
+      - name: Setup Node (release notes)
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - id: contributors
+        name: Generate Contributor Notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_HEAD_REF: ${{ github.sha }}
+          RELEASE_CURRENT_TAG: ${{ steps.set-ver.outputs.version }}
+        run: |
+          node .github/scripts/release-notes.mjs --out release-notes-contributors.md || echo "::warning::贡献者章节生成失败，本次发版不附带该章节"
+          CONTENT_JSON=$(jq -Rs . release-notes-contributors.md 2>/dev/null || echo '""')
+          echo "content=$CONTENT_JSON" >> $GITHUB_OUTPUT
 
   build:
     needs: prepare
@@ -101,6 +120,8 @@ jobs:
             - 📱 阅读·Max
             
             两个版本可以同时安装，互不冲突。
+
+            ${{ fromJSON(needs.prepare.outputs.contributors_content || '""') }}
           files: all_apks/*.apk
           fail_on_unmatched_files: true
         env:
@@ -124,6 +145,7 @@ jobs:
           GITEE_USER: "GEd520"
           GITEE_REPO: "legados"
           VERSION: ${{ needs.prepare.outputs.version }}
+          CONTRIBUTORS_JSON: ${{ needs.prepare.outputs.contributors_content || '""' }}
         run: |
           sudo apt-get update && sudo apt-get install -y jq curl
           API_BASE="https://gitee.com/api/v5/repos/$GITEE_USER/$GITEE_REPO"
@@ -131,20 +153,24 @@ jobs:
           
           TAG_NAME="$VERSION"
           RELEASE_NAME="阅读双包版 $VERSION"
-          BODY="## 自动打包：两个版本共存\n\n- 📱 阅读A·Max\n- 📱 阅读·Max\n- 📱 阅读·兼容版\n\n三个版本可以同时安装，互不冲突。"
+          CONTRIBUTORS=$(printf '%s' "$CONTRIBUTORS_JSON" | jq -r . 2>/dev/null || true)
+          RELEASE_BODY=$(printf '## 自动打包：两个版本共存\n\n- 📱 阅读A·Max\n- 📱 阅读·Max\n- 📱 阅读·兼容版\n\n三个版本可以同时安装，互不冲突。\n')
+          if [ -n "$CONTRIBUTORS" ]; then
+            RELEASE_BODY=$(printf '%s\n%s\n' "$RELEASE_BODY" "$CONTRIBUTORS")
+          fi
           
           echo "📦 直接创建新release，保留历史版本"
           
+          PAYLOAD=$(jq -n \
+            --arg tag_name "$TAG_NAME" \
+            --arg name "$RELEASE_NAME" \
+            --arg body "$RELEASE_BODY" \
+            --arg target_commitish "main" \
+            '{tag_name: $tag_name, name: $name, body: $body, target_commitish: $target_commitish, prerelease: false}')
           RELEASE_JSON=$(curl -sS -X POST \
               -H "Content-Type: application/json" \
               -H "$AUTH_HEADER" \
-              -d '{
-                "tag_name": "'"$TAG_NAME"'",
-                "name": "'"$RELEASE_NAME"'",
-                "body": "'"$BODY"'",
-                "target_commitish": "main",
-                "prerelease": false
-              }' \
+              -d "$PAYLOAD" \
               "$API_BASE/releases")
           
           RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id // empty')

@@ -6,16 +6,42 @@
 
 ## 当前 workflows
 
-| 文件                   | 名称                   | 触发                                                   | 作用                                                                                       |
-| ---------------------- | ---------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| `test.yml`             | Test Build             | push / pull_request / workflow_run / workflow_dispatch | 构建全部 3 个 release flavor；自动创建 GitHub/Gitee 发布并从 `updateLog.md` 生成 changelog |
-| `web.yml`              | Build Web              | push / pull_request / workflow_dispatch                | `modules/web/` 有过改动时构建 Vue 前端，并把产物提交到 `app/src/main/assets/web/vue/`      |
-| `cronet.yml`           | Update Cronet          | schedule / workflow_dispatch                           | 更新 Cronet 原生库                                                                         |
-| `lint.yaml`            | Quick Lint and Compile | push / pull_request                                    | commit 规范(commitlint) + 编译 + spotless 格式检查(可选) + Android lint + 帮助文档映射校验 |
-| `unit-test.yaml`       | Unit Test              | push / pull_request                                    | 单元测试                                                                                   |
-| `build-onlyDebug.yaml` | Build Debug APK        | push / pull_request                                    | 构建 Debug APK                                                                             |
-| `release.yml`          | Release Build 双包打包 | workflow_dispatch                                      | 手动触发，打双包发布                                                                       |
-| `stale.yml`            | closeStaleIssue        | schedule / workflow_dispatch                           | 清理 stale issue                                                                           |
+| 文件                   | 名称                   | 触发                                                   | 作用                                                                                                        |
+| ---------------------- | ---------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `test.yml`             | Test Build             | push / pull_request / workflow_run / workflow_dispatch | 构建全部 3 个 release flavor；自动创建 GitHub/Gitee 发布，正文 = `updateLog.md` 摘要 + 自动生成的贡献者章节 |
+| `web.yml`              | Build Web              | push / pull_request / workflow_dispatch                | `modules/web/` 有过改动时构建 Vue 前端，并把产物提交到 `app/src/main/assets/web/vue/`                       |
+| `cronet.yml`           | Update Cronet          | schedule / workflow_dispatch                           | 更新 Cronet 原生库                                                                                          |
+| `lint.yaml`            | Quick Lint and Compile | push / pull_request                                    | commit 规范(commitlint) + 编译 + spotless 格式检查(可选) + Android lint + 帮助文档映射校验                  |
+| `unit-test.yaml`       | Unit Test              | push / pull_request                                    | 单元测试                                                                                                    |
+| `build-onlyDebug.yaml` | Build Debug APK        | push / pull_request                                    | 构建 Debug APK                                                                                              |
+| `release.yml`          | Release Build 双包打包 | workflow_dispatch                                      | 手动触发，打双包发布（同样带自动生成的贡献者章节）                                                          |
+| `stale.yml`            | closeStaleIssue        | schedule / workflow_dispatch                           | 清理 stale issue                                                                                            |
+
+## 发布说明（Release Notes）的组成
+
+发布正文由两段拼成，分别对应「面向用户的变化」和「谁贡献了什么」：
+
+| 段落       | 来源                                                             | 维护方式                               |
+| ---------- | ---------------------------------------------------------------- | -------------------------------------- |
+| 更新内容   | `app/src/main/assets/web/help/md/updateLog.md` 首个日期分组      | 人工维护，规范见 `update-log-rules.md` |
+| 贡献者章节 | `.github/scripts/release-notes.mjs`（Node 20，仅用全局 `fetch`） | CI 每次发布自动生成，无需人工维护      |
+
+贡献者章节的生成规则：
+
+- **区间**：以上一次已发布 Release（跳过草稿与「本次正在发布的 tag」）为基线，`compare(base...head)` 取本次发布包含的提交；没有 Release 时退化为最近 100 个提交。
+- **PR 归属**：对每个提交调 `GET /commits/{sha}/pulls` 反查已合并 PR（默认最多 250 次，超出部分只列提交不列 PR）。
+- **过滤**：跳过合并提交（多父提交）与自动化账号提交（`*[bot]`、`github-actions`、`actions-user`、`web-flow` 等），跳过的条数会在正文里注明。
+- **分组**：PR 记在 PR 作者名下，提交记在提交作者名下；`Co-authored-by` 尾注能映射到 GitHub 账号时补出协作贡献者，其提交标注「（协作）」。
+- **输出结构**：`### 🤝 本次发布的贡献者` → 汇总（PR 数 / 提交数 / 贡献者数 + 对比范围链接）→ `#### 📌 PR 一览` 表格（PR、标题、贡献者）→ `#### 👤 按贡献者查看`（每人列出其 PR 与提交记录）。
+- **降级**：任一 API 失败都只写一句提示，退出码仍为 0，绝不阻塞发版；生成结果同时写进 job 日志便于排查。
+- **落地渠道**：GitHub Release（正式 + 预发布）与 Gitee Release 的正文；Telegram 频道只推更新内容（单条消息有长度上限，不追加贡献者明细）。
+
+本地调试（无 token 时受 GitHub 未认证 60 次/小时的限流约束，可先传 `--base` 缩小范围）：
+
+```bash
+node .github/scripts/release-notes.mjs --repo Suml-1/Legado_Max --base <tag> --head main \
+  --out notes.md --max-pr-lookups 20
+```
 
 ## 检查项与工具链清单
 

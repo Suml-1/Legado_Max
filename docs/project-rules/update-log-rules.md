@@ -31,4 +31,5 @@
 
 - 路径固定为 `app/src/main/assets/web/help/md/updateLog.md`（注意无下划线），App 内帮助文档同步使用。
 - `CHANGELOG.md` 是从 git 提交自动生成的清单，与本文档分工不同：前者机器生成、后者面向用户人工维护，两者并存不重复。
+- 发布正文 = 本文档首个日期分组 + CI 自动生成的「PR / 贡献者」章节（`.github/scripts/release-notes.mjs`，规则见 `ci-cd.md`）；贡献者章节不要手写进本文档。
 - 更新日志改动与对应功能改动同批提交，不留"事后补日志"的孤立提交，避免行为与日志脱节。

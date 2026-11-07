@@ -41,6 +41,7 @@ jobs:
       sgithub: ${{ steps.check.outputs.sgithub }}
       updateLog_updated: ${{ steps.updateLog.outputs.updated }}
       updateLog_content: ${{ steps.updateLog.outputs.body }}
+      contributors_content: ${{ steps.contributors.outputs.content }}
       build_matrix: ${{ steps.set-matrix.outputs.build_matrix }}
     steps:
       - uses: actions/checkout@v5
@@ -137,6 +138,26 @@ jobs:
           CONTENT_JSON=$(echo "$UPDATED_CONTENT" | jq -Rs . 2>/dev/null || echo "\"Error generating update content\"")
           echo "DEBUG: CONTENT_JSON=$CONTENT_JSON"
           echo "body=$CONTENT_JSON" >> $GITHUB_OUTPUT
+
+      # 发布说明的「PR + 贡献者」章节：按上一次 Release 至今的区间统计 PR 与提交
+      - name: Setup Node (release notes)
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - id: contributors
+        name: Generate Contributor Notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_HEAD_REF: ${{ github.sha }}
+          RELEASE_CURRENT_TAG: ${{ steps.set-ver.outputs.version }}
+        run: |
+          # 生成失败只降级成提示，不阻塞发版
+          node .github/scripts/release-notes.mjs --out release-notes-contributors.md || echo "::warning::贡献者章节生成失败，本次发版不附带该章节"
+          CONTENT_JSON=$(jq -Rs . release-notes-contributors.md 2>/dev/null || echo '""')
+          echo "content=$CONTENT_JSON" >> $GITHUB_OUTPUT
+
       - id: set-matrix
         run: |
           # 新增 debug 构建类型
@@ -331,6 +352,8 @@ jobs:
             ⚠️ **每次安装前请备份！**
             ### 更新内容
             ${{ fromJSON(needs.prepare.outputs.updateLog_content) }}
+
+            ${{ fromJSON(needs.prepare.outputs.contributors_content || '""') }}
           prerelease: false
           files: ${{ github.workspace }}/apk/*.apk
           fail_on_unmatched_files: true
@@ -365,6 +388,8 @@ jobs:
 
             ### 更新内容
             ${{ fromJSON(needs.prepare.outputs.updateLog_content) }}
+
+            ${{ fromJSON(needs.prepare.outputs.contributors_content || '""') }}
           prerelease: true
           files: ${{ github.workspace }}/apk/*.apk
           fail_on_unmatched_files: true
@@ -482,6 +507,7 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.version }}
           UPDATE_CONTENT: ${{ fromJSON(needs.prepare.outputs.updateLog_content) }}
           UPDATE_UPDATED: ${{ needs.prepare.outputs.updateLog_updated }}
+          CONTRIBUTORS_JSON: ${{ needs.prepare.outputs.contributors_content || '""' }}
         run: |
           sudo apt-get update && sudo apt-get install -y jq curl 
           API_BASE="https://gitee.com/api/v5/repos/$GITEE_USER/$GITEE_REPO"
@@ -506,19 +532,25 @@ jobs:
           RETRY_COUNT=0
           RELEASE_ID=""
           RELEASE_JSON=""
-          BODY_ESCAPED=$(echo "$UPDATE_CONTENT" | jq -Rs .)
+          CONTRIBUTORS=$(printf '%s' "$CONTRIBUTORS_JSON" | jq -r . 2>/dev/null || true)
+          if [ -n "$CONTRIBUTORS" ]; then
+            RELEASE_BODY=$(printf '%s\n\n%s\n' "$UPDATE_CONTENT" "$CONTRIBUTORS")
+          else
+            RELEASE_BODY="$UPDATE_CONTENT"
+          fi
           PAYLOAD=$(jq -n \
             --arg tag_name "$TAG_NAME" \
             --arg name "$RELEASE_NAME" \
+            --arg body "$RELEASE_BODY" \
             --arg target_commitish "main" \
             --argjson prerelease "$PRERELEASE" \
-            "{
-              tag_name: \$tag_name,
-              name: \$name,
-              body: ${BODY_ESCAPED},
-              target_commitish: \$target_commitish,
-              prerelease: \$prerelease
-            }")
+            '{
+              tag_name: $tag_name,
+              name: $name,
+              body: $body,
+              target_commitish: $target_commitish,
+              prerelease: $prerelease
+            }')
           while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ -z "$RELEASE_ID" ]; do
             set +e
             RELEASE_JSON=$(curl -sS --fail --tlsv1.2 --retry 3 --retry-delay 5 --retry-connrefused --connect-timeout 20 -X POST \

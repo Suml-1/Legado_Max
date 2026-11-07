@@ -25,7 +25,7 @@
 | 文件                                         | 内容                                                                                                 | 什么时候读                                                                             |
 | -------------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | [build-commands.md](./build-commands.md)     | 构建命令全表、Web 前端命令、3 个 flavor、SDK/JDK/版本目录                                            | 构建报错、首次构建、不认识 flavor / 命令、动 `libs.versions.toml` 或 `modules/web/` 时 |
-| [ci-cd.md](./ci-cd.md)                       | `.github/workflows/` 各 workflow 职责与触发条件                                                      | CI 报错、调整 workflow、确认发版 / 构建流程时                                          |
+| [ci-cd.md](./ci-cd.md)                       | `.github/workflows/` 各 workflow 职责与触发条件、发布正文的组成与贡献者章节生成规则                  | CI 报错、调整 workflow、确认发版 / 构建流程、改发布说明内容时                          |
 | [android-lint.md](./android-lint.md)         | Android Lint 工具说明：与普通 lint 的区别、查什么、基线机制、本地看报告                              | 看不懂 lint 报错、想用 lint 检查新代码时                                               |
 | [testing.md](./testing.md)                   | 单元/集成测试位置与命令、覆盖率口径、Mockk / coroutines-test / LeakCanary、测试文件提交约定          | 写测试前、跑测试、决定提交测试文件时                                                   |
 | [update-log-rules.md](./update-log-rules.md) | 对外更新日志 `app/src/main/assets/web/help/md/updateLog.md` 的更新时机、收录范围、格式与用户措辞约定 | 提交 app 用户可见改动后、发版前维护 `updateLog.md`，或 Review 日志条目时               |
