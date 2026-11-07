@@ -125,7 +125,9 @@ fun ApplicationThemeScreen(
                 viewModel.toTop(selected)
                 state.exitMultiSelect()
             }
-            ConfigMultiSelectTextAction(stringResource(R.string.export)) {
+            // 批量导出实际是「序列化成一个 JSON 数组写剪贴板」（见 copyJsonList），
+            // 单条的落盘导出在卡片「更多 → 导出」里，这里按真实行为标成「复制」
+            ConfigMultiSelectTextAction(stringResource(R.string.copy)) {
                 viewModel.copyJsonList(selected)
                 state.exitMultiSelect()
             }
