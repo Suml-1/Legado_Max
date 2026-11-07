@@ -277,6 +277,25 @@ data class NavigationBarConfig(
             return configs
         }
 
+        /**
+         * 将指定配置在所在日/夜分组内置顶。
+         *
+         * 存储顺序即列表顺序（内置项恒在数组最前、不落盘），因此把目标项移到
+         * 自定义项首位再整体保存即可；同时刷新 `updatedAt`，让摘要里的时间跟随变化。
+         */
+        fun toTop(context: Context, config: NavigationBarConfig) {
+            if (config.isBuiltin) return
+            val configs = loadConfigs(context)
+            val index = configs.indexOfFirst { it.id == config.id }
+            if (index < 0) return
+            val target = configs.removeAt(index).copy(updatedAt = System.currentTimeMillis())
+            val insertAt = configs.indexOfFirst { !it.isBuiltin && it.isNight == target.isNight }
+                .takeIf { it >= 0 }
+                ?: configs.indexOfLast { it.isBuiltin }.plus(1)
+            configs.add(insertAt, target)
+            saveConfigs(context, configs)
+        }
+
         /** 保存用户自定义配置到 SharedPreferences（内置配置不入库） */
         fun saveConfigs(context: Context, configs: List<NavigationBarConfig>) {
             context.defaultSharedPreferences.edit(commit = true) {

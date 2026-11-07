@@ -547,6 +547,22 @@ object ApplicationThemeManager {
     }
 
     /**
+     * 将指定配置按给定顺序移到用户配置区最前。
+     *
+     * 落盘顺序即列表顺序（内置默认主题由代码生成、恒在首位），因此按 [ids] 的迭代顺序
+     * 取出目标项再整体保存即可；内置主题不在 [Config.id] 命中范围内，天然不受影响。
+     */
+    fun toTop(ids: Set<String>) {
+        if (ids.isEmpty()) return
+        val items = load().filterNot { it.id == builtinThemeId }.toMutableList()
+        val moved = items.filter { it.id in ids }
+        if (moved.isEmpty()) return
+        items.removeAll { it.id in ids }
+        items.addAll(0, moved)
+        save(items)
+    }
+
+    /**
      * 删除配置并可选删除关联组件。
      *
      * @param context 上下文

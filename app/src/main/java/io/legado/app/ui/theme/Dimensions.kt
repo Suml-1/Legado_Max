@@ -95,6 +95,21 @@ object AppDimens {
     /** 顶部 Tab 栏距列表的间距 */
     val manageTabTopPadding: Dp = 10.dp
 
+    // ── 主题管理系列卡片（ConfigManageCard）──
+
+    /** 卡片标题与摘要之间的间距 */
+    val manageCardTitleSpacing: Dp = 4.dp
+
+    /** 卡片描边粗细（沿用 XML 侧 0.5dp 的细描边观感） */
+    val manageCardBorderWidth: Dp = 0.5.dp
+
+    /** 卡片上胶囊标签的内边距 */
+    val manageBadgePaddingHorizontal: Dp = 8.dp
+    val manageBadgePaddingVertical: Dp = 1.dp
+
+    /** 配置编辑弹窗内容区最大高度，超出后内部滚动（避免长表单顶穿屏幕） */
+    val dialogEditMaxHeight: Dp = 480.dp
+
     // ── 书籍封面（AppBookCover）──
 
     /** 封面圆角，对齐 View 版 CoverImageView 的 12px 描边圆角 */

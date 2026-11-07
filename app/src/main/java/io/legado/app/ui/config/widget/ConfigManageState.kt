@@ -1,6 +1,7 @@
 package io.legado.app.ui.config.widget
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -8,6 +9,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
+import androidx.compose.ui.platform.LocalContext
+import io.legado.app.constant.PreferKey
+import io.legado.app.help.config.AppConfig
+import io.legado.app.utils.getPrefBoolean
+import io.legado.app.utils.putPrefBoolean
 
 /**
  * 配置管理通用 UI 状态 Holder（与具体数据类型解耦）。
@@ -135,4 +141,25 @@ enum class ConfigTab(val isNight: Boolean) {
 @Composable
 fun rememberConfigManageState(initialTab: ConfigTab = ConfigTab.DAY): ConfigManageState {
     return remember { ConfigManageState(initialTab) }
+}
+
+/**
+ * 创建「日/夜 Tab 状态三页共用」的 [ConfigManageState]。
+ *
+ * 主题列表、底栏管理、顶栏管理都要按日/夜列出不同配置，此前各自持有私有偏好键
+ * （`navBarIsNight` / `topBarIsNight`）且只在 onCreate 读一次，导致在某一页切到夜间、
+ * 进入另一页又落回日间。这里统一读写 [PreferKey.manageIsNight]，键不存在时以当前主题为初值。
+ */
+@Composable
+fun rememberSharedConfigManageState(): ConfigManageState {
+    val context = LocalContext.current
+    val initialTab = remember(context) {
+        val isNight = context.getPrefBoolean(PreferKey.manageIsNight, AppConfig.isNightTheme)
+        if (isNight) ConfigTab.NIGHT else ConfigTab.DAY
+    }
+    val state = remember { ConfigManageState(initialTab) }
+    LaunchedEffect(state.tab) {
+        context.putPrefBoolean(PreferKey.manageIsNight, state.tab.isNight)
+    }
+    return state
 }

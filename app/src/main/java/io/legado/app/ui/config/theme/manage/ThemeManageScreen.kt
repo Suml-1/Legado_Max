@@ -2,23 +2,17 @@ package io.legado.app.ui.config.theme.manage
 
 import io.legado.app.lib.theme.eInkGrayscale
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,15 +24,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ThemeConfig
 import io.legado.app.ui.config.theme.manage.components.ThemeCard
 import io.legado.app.ui.config.theme.manage.components.ThemeEditDialog
+import io.legado.app.ui.config.widget.ConfigAddBottomBar
 import io.legado.app.ui.config.widget.ConfigList
 import io.legado.app.ui.config.widget.ConfigManageScaffold
 import io.legado.app.ui.config.widget.ConfigMultiSelectBar
@@ -47,7 +38,7 @@ import io.legado.app.ui.config.widget.DayNightPager
 import io.legado.app.ui.config.widget.ImportFromClipboardAction
 import io.legado.app.ui.config.widget.MultiSelectAction
 import io.legado.app.ui.config.widget.SelectAllAction
-import io.legado.app.ui.config.widget.rememberConfigManageState
+import io.legado.app.ui.config.widget.rememberSharedConfigManageState
 import io.legado.app.ui.widget.components.AppSearchBar
 import io.legado.app.ui.widget.components.VerticalScrollbar
 
@@ -66,8 +57,7 @@ fun ThemeManageScreen(
     onColorClick: (colorKey: String, currentColor: String) -> Unit = { _, _ -> },
     onBlurClick: (currentBlur: Int) -> Unit = {},
 ) {
-    val initialTab = if (AppConfig.isNightTheme) ConfigTab.NIGHT else ConfigTab.DAY
-    val state = rememberConfigManageState(initialTab)
+    val state = rememberSharedConfigManageState()
     var searchQuery by remember { mutableStateOf("") }
     val allItems by viewModel.items.collectAsState()
     val editDraft by viewModel.editDraft.collectAsState()
@@ -150,7 +140,8 @@ fun ThemeManageScreen(
                     ),
                 )
             } else {
-                ThemeAddBottomBar(
+                ConfigAddBottomBar(
+                    text = stringResource(R.string.add_theme),
                     onClick = {
                         val draft = viewModel.startNew(state.tab.isNight)
                         state.openEditDialog(isNew = true, editingKey = draft.editingKey)
@@ -252,30 +243,6 @@ fun ThemeManageScreen(
                     Text(stringResource(R.string.cancel))
                 }
             },
-        )
-    }
-}
-
-@Composable
-private fun ThemeAddBottomBar(onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
-        color = colorResource(R.color.background_add_button),
-        border = BorderStroke(1.dp, colorResource(R.color.border_add_button)),
-    ) {
-        Text(
-            text = stringResource(R.string.add_theme),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 13.dp),
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyLarge,
         )
     }
 }

@@ -280,6 +280,21 @@ object TopBarConfig {
         resetActiveIfNeeded(entry)
     }
 
+    /**
+     * 将指定配置包置顶。
+     *
+     * 列表顺序由 [loadEntries] 按 `updatedAt` 倒序生成，因此「置顶」= 把包内的
+     * `updatedAt` 刷成当前时刻后重写 JSON；内置默认包恒在首位，不参与排序。
+     */
+    fun toTop(entry: Entry) {
+        if (entry.dirName == DEFAULT_DIR_NAME) return
+        val dir = entry.localDir ?: localDir(entry.config.isNightMode, entry.dirName)
+        val file = File(dir, packageFileName)
+        if (!file.isFile) return
+        val config = GSON.fromJsonObject<Config>(file.readText()).getOrNull() ?: return
+        file.writeText(GSON.toJson(config.copy(updatedAt = System.currentTimeMillis())))
+    }
+
     /** 将配置包导出为 zip 文件 */
     fun exportZip(entry: Entry): File {
         val dir = entry.localDir ?: localDir(entry.config.isNightMode, entry.dirName)

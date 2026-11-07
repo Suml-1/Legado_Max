@@ -1,5 +1,6 @@
 package io.legado.app.base
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
@@ -46,16 +47,22 @@ abstract class BaseComposeActivity : AppCompatActivity() {
     }
 
     /**
-     * 合并同一实例周期内的多次重建请求。
+     * 重建统一走「销毁 + 全新 startActivity」。
      *
-     * 一次配置变更（应用主题/顶栏/底栏等）可能同时被 AppCompat 模式切换、事件总线、
-     * onConfigurationChanged 等多路触发，竞态双重建会在部分 ROM 上破坏窗口/输入状态
-     * （见 docs/archive/主题列表应用主题后UI卡死根因分析.md）。重建完成前只放行一次。
+     * 两点原因：
+     * 1. 合并同一实例周期内的多次重建请求。一次配置变更（应用主题/顶栏/底栏等）可能同时
+     *    被 AppCompat 模式切换、事件总线、onConfigurationChanged 等多路触发，竞态双重建
+     *    会在部分 ROM 上破坏窗口/输入状态（见 docs/archive/主题列表应用主题后UI卡死根因分析.md）。
+     * 2. 原地 `super.recreate()` 走的是 ActivityTaskManager 的「原地重启动」，重建出的
+     *    Compose 实例存在缺陷：输入与状态写入正常，但重组/重绘调度不再触发
+     *    （见 `docs/project-rules/compose/theme-styles.md` §7.8.1）。全新启动的实例链路健康，
+     *    因此这里接管为「先启动新实例、再销毁旧实例」，并透传原 intent 以保留启动参数。
      */
     override fun recreate() {
         if (recreateRequested || isFinishing || isDestroyed) return
         recreateRequested = true
-        super.recreate()
+        startActivity(Intent(intent).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION))
+        finish()
     }
 
     /**
