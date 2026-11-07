@@ -43,10 +43,10 @@ fun String?.isContentScheme(): Boolean = this?.startsWith("content://") == true
 
 fun String.toEditable(): Editable = Editable.Factory.getInstance().newEditable(this)
 
-fun String.parseToUri(): Uri {
-    return if (isUri()) this.toUri() else {
-        Uri.fromFile(File(this))
-    }
+fun String.parseToUri(): Uri = if (isUri()) {
+    this.toUri()
+} else {
+    Uri.fromFile(File(this))
 }
 
 fun String?.isUri(): Boolean {
@@ -54,43 +54,37 @@ fun String?.isUri(): Boolean {
     return this.startsWith("file://", true) || isContentScheme()
 }
 
-fun String?.isAbsUrl() =
-    this?.let {
-        it.startsWith("http://", true) || it.startsWith("https://", true)
-    } ?: false
+fun String?.isAbsUrl() = this?.let {
+    it.startsWith("http://", true) || it.startsWith("https://", true)
+} ?: false
 
-fun String?.isDataUrl() =
-    this?.let {
-        dataUriRegex.matches(it)
-    } ?: false
+fun String?.isDataUrl() = this?.let {
+    dataUriRegex.matches(it)
+} ?: false
 
-fun String?.isJson(): Boolean =
-    this?.run {
-        val str = this.trim()
-        when {
-            str.startsWith("{") && str.endsWith("}") -> true
-            str.startsWith("[") && str.endsWith("]") -> true
-            else -> false
-        }
-    } ?: false
+fun String?.isJson(): Boolean = this?.run {
+    val str = this.trim()
+    when {
+        str.startsWith("{") && str.endsWith("}") -> true
+        str.startsWith("[") && str.endsWith("]") -> true
+        else -> false
+    }
+} ?: false
 
-fun String?.isJsonObject(): Boolean =
-    this?.run {
-        val str = this.trim()
-        str.startsWith("{") && str.endsWith("}")
-    } ?: false
+fun String?.isJsonObject(): Boolean = this?.run {
+    val str = this.trim()
+    str.startsWith("{") && str.endsWith("}")
+} ?: false
 
-fun String?.isJsonArray(): Boolean =
-    this?.run {
-        val str = this.trim()
-        str.startsWith("[") && str.endsWith("]")
-    } ?: false
+fun String?.isJsonArray(): Boolean = this?.run {
+    val str = this.trim()
+    str.startsWith("[") && str.endsWith("]")
+} ?: false
 
-fun String?.isXml(): Boolean =
-    this?.run {
-        val str = this.trim()
-        str.startsWith("<") && str.endsWith(">")
-    } ?: false
+fun String?.isXml(): Boolean = this?.run {
+    val str = this.trim()
+    str.startsWith("<") && str.endsWith(">")
+} ?: false
 
 fun String?.isTrue(nullIsTrue: Boolean = false): Boolean {
     if (this.isNullOrBlank() || this == "null") {
@@ -99,10 +93,8 @@ fun String?.isTrue(nullIsTrue: Boolean = false): Boolean {
     return !this.trim().matches("(?i)^(?:false|no|not|0|0.0)$".toRegex())
 }
 
-fun String.isHex(): Boolean {
-    return all {c ->
-        c in '0'..'9' || c in 'A'..'F' || c in 'a'..'f'
-    }
+fun String.isHex(): Boolean = all { c ->
+    c in '0'..'9' || c in 'A'..'F' || c in 'a'..'f'
 }
 
 fun String.splitNotBlank(vararg delimiter: String, limit: Int = 0): Array<String> = run {
@@ -115,12 +107,10 @@ fun String.splitNotBlank(regex: Regex, limit: Int = 0): Array<String> = run {
 }
 
 @SuppressLint("ObsoleteSdkInt")
-fun String.cnCompare(other: String): Int {
-    return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-        Collator.getInstance(ULocale.SIMPLIFIED_CHINESE).compare(this, other)
-    } else {
-        java.text.Collator.getInstance(Locale.CHINA).compare(this, other)
-    }
+fun String.cnCompare(other: String): Int = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+    Collator.getInstance(ULocale.SIMPLIFIED_CHINESE).compare(this, other)
+} else {
+    java.text.Collator.getInstance(Locale.CHINA).compare(this, other)
 }
 
 /**
@@ -156,26 +146,52 @@ fun CharSequence.toStringArray(): Array<String> {
     }
 }
 
-fun String.escapeRegex(): String {
-    return replace(AppPattern.regexCharRegex, "\\\\$0")
-}
+fun String.escapeRegex(): String = replace(AppPattern.regexCharRegex, "\\\\$0")
 
 fun String.encodeURI(): String = URLEncodeUtil.encodeQuery(this)
 
-fun String.normalizeFileName(): String {
-    return replace(AppPattern.fileNameRegex2, "_")
+fun String.normalizeFileName(): String = replace(AppPattern.fileNameRegex2, "_")
+
+/**
+ * 文件名非法字符 → 全角同形字符（导出书籍时用）。
+ *
+ * 导出文件名由书名/作者/章节名拼出来，其中 `/`、`\` 会被当成目录分隔符（导出的书跑进
+ * 多出来的子目录、文件名只剩后半段），`:`、`*`、`?`、`"`、`<`、`>`、`|` 在部分文件系统
+ * 与 SAF 上直接创建失败（表现为"文件不存在"）。
+ *
+ * 换成同形的全角字符既能写进文件系统，又保留原书名的可读性：`A/B` → `A／B`，
+ * 也不会像统一替换成 `_` 那样让 `A/B` 与 `A_B` 撞成同一个名字。
+ * 章节标题里残留的换行、制表符等控制字符替换为空格。
+ */
+private val fileNameCharMap: Map<Char, Char> = mapOf(
+    '/' to '／',
+    '\\' to '＼',
+    ':' to '：',
+    '*' to '＊',
+    '?' to '？',
+    '"' to '＂',
+    '<' to '＜',
+    '>' to '＞',
+    '|' to '｜',
+)
+
+fun String.toSafeFileName(): String = buildString(length) {
+    for (c in this@toSafeFileName) {
+        when {
+            c < ' ' -> append(' ')
+            else -> append(fileNameCharMap[c] ?: c)
+        }
+    }
 }
 
 /**
  * 将ip字符串转为InetAddress
  */
-fun String.parseIpsFromString(): List<InetAddress>? =
-    split(",")
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
-        .mapNotNull { it.runCatching { InetAddress.getByName(this) }.getOrNull() }
-        .takeIf { it.isNotEmpty() }
-
+fun String.parseIpsFromString(): List<InetAddress>? = split(",")
+    .map { it.trim() }
+    .filter { it.isNotEmpty() }
+    .mapNotNull { it.runCatching { InetAddress.getByName(this) }.getOrNull() }
+    .takeIf { it.isNotEmpty() }
 
 fun String.quoteReplacementJs(): String {
     if (!this.contains('\\') && !this.contains('$')) {

@@ -54,6 +54,7 @@ import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.upType
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.LocalConfig
+import io.legado.app.help.config.NavigationBarConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ThemeConfig
 import io.legado.app.model.VideoPlay.VIDEO_PREF_NAME
@@ -86,7 +87,6 @@ import io.legado.app.utils.toastOnUi
 import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
@@ -120,8 +120,6 @@ object Restore {
     private const val bookCacheFolderName = "book_cache"
     private const val bookCacheIndexFileName = "bookCacheIndex.json"
     private const val bookCacheBooksFileName = "bookCacheBooks.json"
-
-
 
     private const val TAG = "Restore"
     private val themeRestorePrefKeys = arrayOf(
@@ -720,6 +718,16 @@ object Restore {
             }
         }
 
+        // 底栏自定义图标路径修正：备份里存的是绝对路径，跨包名恢复后仍指向原包名的外部目录
+        // （当前进程读是 EACCES），主界面 resume 时加载图标会崩。这里一次性收敛到当前应用目录。
+        if (plan.has("config.xml")) {
+            runCatching {
+                NavigationBarConfig.repairIconPaths(appCtx)
+            }.onFailure {
+                AppLog.put("修正底栏图标路径出错\n${it.localizedMessage}", it)
+            }
+        }
+
         // 主题背景
         progress("themeBackgroundImages")
         restoreThemeBackgrounds(
@@ -794,11 +802,9 @@ object Restore {
         }
     }
 
-    private fun snapshotChapters(): Map<String, List<BookChapter>> {
-        return appDb.bookDao.all.associate { book ->
-            book.bookUrl to appDb.bookChapterDao.getChapterList(book.bookUrl)
-        }.filterValues { it.isNotEmpty() }
-    }
+    private fun snapshotChapters(): Map<String, List<BookChapter>> = appDb.bookDao.all.associate { book ->
+        book.bookUrl to appDb.bookChapterDao.getChapterList(book.bookUrl)
+    }.filterValues { it.isNotEmpty() }
 
     /**
      * 覆盖恢复后，为包内没有目录的书籍回填恢复前的章节。

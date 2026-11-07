@@ -25,7 +25,7 @@ import io.legado.app.utils.exists
 import io.legado.app.utils.find
 import io.legado.app.utils.inputStream
 import io.legado.app.utils.isUri
-import io.legado.app.utils.normalizeFileName
+import io.legado.app.utils.toSafeFileName
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 import java.io.File
@@ -311,10 +311,19 @@ fun Book.isSameNameAuthor(other: Any?): Boolean {
     return false
 }
 
+/**
+ * 导出文件名。
+ *
+ * 名字来自书名/作者（或用户自定义的 JS 规则），可能带 `/`、`\`、`:`、`*`、`|` 等字符：
+ * `/`、`\` 会被当成目录分隔符，导出的书跑进多出来的子目录、文件名也只剩后半段；
+ * 其余字符在部分文件系统/SAF 上直接创建失败，表现为"文件不存在"。
+ * 统一把非法字符换成全角同形字符（见 [toSafeFileName]），保留原书名的可读性。
+ */
 fun Book.getExportFileName(suffix: String): String {
     val jsStr = AppConfig.bookExportFileName
+    val default = "$name 作者：${getRealAuthor()}.$suffix"
     if (jsStr.isNullOrBlank()) {
-        return "$name 作者：${getRealAuthor()}.$suffix"
+        return default.toSafeFileName()
     }
     val bindings = buildScriptBindings { bindings ->
         bindings["epubIndex"] = "" // 兼容老版本,修复可能存在的错误
@@ -325,7 +334,7 @@ fun Book.getExportFileName(suffix: String): String {
         RhinoScriptEngine.eval(jsStr, bindings).toString() + "." + suffix
     }.onFailure {
         AppLog.put("导出书名规则错误,使用默认规则\n${it.localizedMessage}", it)
-    }.getOrDefault("$name 作者：${getRealAuthor()}.$suffix")
+    }.getOrDefault(default).toSafeFileName()
 }
 
 /**
@@ -339,7 +348,7 @@ fun Book.getExportFileName(
     // 默认规则
     val default = "$name 作者：${getRealAuthor()} [$epubIndex].$suffix"
     if (jsStr.isNullOrBlank()) {
-        return default
+        return default.toSafeFileName()
     }
     val bindings = buildScriptBindings { bindings ->
         bindings["name"] = name
@@ -350,7 +359,7 @@ fun Book.getExportFileName(
         RhinoScriptEngine.eval(jsStr, bindings).toString() + "." + suffix
     }.onFailure {
         AppLog.put("导出书名规则错误,使用默认规则\n${it.localizedMessage}", it)
-    }.getOrDefault(default).normalizeFileName()
+    }.getOrDefault(default).toSafeFileName()
 }
 
 // 根据当前日期计算章节总数
