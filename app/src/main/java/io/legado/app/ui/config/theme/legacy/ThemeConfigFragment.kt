@@ -44,7 +44,6 @@ import io.legado.app.ui.widget.seekbar.SeekBarChangeListener
 import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
-import io.legado.app.utils.applyTint
 import io.legado.app.utils.applyTopBarTint
 import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.externalFiles

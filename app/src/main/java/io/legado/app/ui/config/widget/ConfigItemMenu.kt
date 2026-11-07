@@ -26,7 +26,7 @@ import io.legado.app.lib.theme.eInkGrayscale
  */
 data class ConfigMenuItem(
     val text: String,
-    val onClick: () -> Unit
+    val onClick: () -> Unit,
 )
 
 /**
@@ -46,12 +46,12 @@ fun ConfigActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     highlighted: Boolean = false,
-    enabled: Boolean = true
+    enabled: Boolean = true,
 ) {
     TextButton(
         onClick = onClick,
         modifier = modifier,
-        enabled = enabled
+        enabled = enabled,
     ) {
         Text(
             text = text,
@@ -60,7 +60,7 @@ fun ConfigActionButton(
                 !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 highlighted -> MaterialTheme.colorScheme.primary
                 else -> MaterialTheme.colorScheme.onSurface
-            }
+            },
         )
     }
 }
@@ -78,7 +78,7 @@ fun ConfigActionIconMenu(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,
     items: List<ConfigMenuItem>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
     IconButton(onClick = { expanded = true }, modifier = modifier) {
@@ -87,7 +87,7 @@ fun ConfigActionIconMenu(
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = { expanded = false },
-        modifier = Modifier.eInkGrayscale()
+        modifier = Modifier.eInkGrayscale(),
     ) {
         items.forEach { item ->
             DropdownMenuItem(
@@ -95,7 +95,7 @@ fun ConfigActionIconMenu(
                 onClick = {
                     expanded = false
                     item.onClick()
-                }
+                },
             )
         }
     }
@@ -113,24 +113,24 @@ fun ConfigActionIconMenu(
 @Composable
 fun RowScope.ConfigItemMoreButton(
     items: List<ConfigMenuItem>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
     TextButton(
         onClick = { expanded = true },
-        modifier = modifier
+        modifier = modifier,
     ) {
         Text(
             text = stringResource(R.string.more),
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = { expanded = false },
         // 下拉菜单是独立窗口，页面那层灰阶罩不到，这里再贴一次
-        modifier = Modifier.eInkGrayscale()
+        modifier = Modifier.eInkGrayscale(),
     ) {
         items.forEach { item ->
             DropdownMenuItem(
@@ -138,7 +138,7 @@ fun RowScope.ConfigItemMoreButton(
                 onClick = {
                     expanded = false
                     item.onClick()
-                }
+                },
             )
         }
     }

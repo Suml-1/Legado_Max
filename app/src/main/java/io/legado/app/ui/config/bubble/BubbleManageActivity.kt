@@ -107,8 +107,8 @@ class BubbleManageActivity :
                     }
                     svgEditor.launch(intent)
                 },
-                onHelp = ::showHelp
-            )
+                onHelp = ::showHelp,
+            ),
         )
     }
 
@@ -147,8 +147,8 @@ class BubbleManageActivity :
                 title = getString(R.string.bubble_manage),
                 content = content,
                 mode = TextDialog.Mode.MD,
-                helpDocName = "bubbleHelp"
-            )
+                helpDocName = "bubbleHelp",
+            ),
         )
     }
 }

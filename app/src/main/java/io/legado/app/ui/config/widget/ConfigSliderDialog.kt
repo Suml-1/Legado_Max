@@ -40,7 +40,7 @@ fun ConfigSliderDialog(
     onConfirm: (Int) -> Unit,
     onDismissRequest: () -> Unit,
     range: IntRange = 0..100,
-    valueText: (Int) -> String = { "$it%" }
+    valueText: (Int) -> String = { "$it%" },
 ) {
     var current by rememberSaveable(value, range) {
         mutableIntStateOf(value.coerceIn(range.first, range.last))
@@ -56,14 +56,14 @@ fun ConfigSliderDialog(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(AppDimens.manageActionSpacing)
+                    horizontalArrangement = Arrangement.spacedBy(AppDimens.manageActionSpacing),
                 ) {
                     TextButton(
-                        onClick = { current = (current - 1).coerceAtLeast(range.first) }
+                        onClick = { current = (current - 1).coerceAtLeast(range.first) },
                     ) {
                         Text(stringResource(R.string.reduce))
                     }
@@ -72,10 +72,10 @@ fun ConfigSliderDialog(
                         onValueChange = { current = it.toInt() },
                         valueRange = range.first.toFloat()..range.last.toFloat(),
                         steps = (range.last - range.first - 1).coerceAtLeast(0),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                     TextButton(
-                        onClick = { current = (current + 1).coerceAtMost(range.last) }
+                        onClick = { current = (current + 1).coerceAtMost(range.last) },
                     ) {
                         Text(stringResource(R.string.plus))
                     }
@@ -91,6 +91,6 @@ fun ConfigSliderDialog(
             TextButton(onClick = onDismissRequest) {
                 Text(stringResource(R.string.cancel))
             }
-        }
+        },
     )
 }

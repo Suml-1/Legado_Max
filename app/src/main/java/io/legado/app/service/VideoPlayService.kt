@@ -45,7 +45,6 @@ import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.glide.ImageLoader
 import io.legado.app.ui.video.player.FloatingPlayer
 import io.legado.app.model.VideoPlay
-import io.legado.app.model.BookCover
 import io.legado.app.receiver.MediaButtonReceiver
 import io.legado.app.ui.video.VideoPlayerActivity
 import io.legado.app.utils.activityPendingIntent
@@ -116,9 +115,7 @@ class VideoPlayService : BaseService() {
 
     private val layoutParamsXProperty =
         object : FloatPropertyCompat<WindowManager.LayoutParams>("x") {
-            override fun getValue(layoutParams: WindowManager.LayoutParams): Float {
-                return layoutParams.x.toFloat()
-            }
+            override fun getValue(layoutParams: WindowManager.LayoutParams): Float = layoutParams.x.toFloat()
 
             override fun setValue(layoutParams: WindowManager.LayoutParams, value: Float) {
                 layoutParams.x = value.toInt()
@@ -159,8 +156,8 @@ class VideoPlayService : BaseService() {
             }
         }
         animator = SpringAnimation(params, layoutParamsXProperty, endX.toFloat()).apply {
-            spring.stiffness = SpringForce.STIFFNESS_LOW  // 低刚度更Q弹
-            spring.dampingRatio = SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY  // 中等阻尼
+            spring.stiffness = SpringForce.STIFFNESS_LOW // 低刚度更Q弹
+            spring.dampingRatio = SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY // 中等阻尼
             start()
         }
     }
@@ -246,7 +243,7 @@ class VideoPlayService : BaseService() {
     private fun initMediaSession() {
         mediaSessionCompat.setFlags(
             MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
-                    MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
+                MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS,
         )
         mediaSessionCompat.setCallback(object : MediaSessionCompat.Callback() {
             override fun onSeekTo(pos: Long) = playerView.seekTo(pos)
@@ -268,7 +265,7 @@ class VideoPlayService : BaseService() {
             }
         })
         mediaSessionCompat.setMediaButtonReceiver(
-            broadcastPendingIntent<MediaButtonReceiver>(Intent.ACTION_MEDIA_BUTTON)
+            broadcastPendingIntent<MediaButtonReceiver>(Intent.ACTION_MEDIA_BUTTON),
         )
         mediaSessionCompat.isActive = true
     }
@@ -290,7 +287,7 @@ class VideoPlayService : BaseService() {
             startForeground(NotificationId.VideoPlayService, notification.build())
         } catch (e: Exception) {
             AppLog.put("创建视频播放通知出错,${e.localizedMessage}", e, true)
-            //创建通知出错不结束服务就会崩溃,服务必须绑定通知
+            // 创建通知出错不结束服务就会崩溃,服务必须绑定通知
             stopSelf()
         }
     }
@@ -367,9 +364,9 @@ class VideoPlayService : BaseService() {
                 .addCustomAction(
                     APP_ACTION_STOP,
                     getString(R.string.stop),
-                    R.drawable.ic_stop_black_24dp
+                    R.drawable.ic_stop_black_24dp,
                 )
-                .build()
+                .build(),
         )
     }
 
@@ -384,41 +381,41 @@ class VideoPlayService : BaseService() {
             .setContentTitle(nTitle)
             .setContentText(nSubtitle)
             .setContentIntent(
-                activityPendingIntent<VideoPlayerActivity>("activity")
+                activityPendingIntent<VideoPlayerActivity>("activity"),
             )
         builder.setLargeIcon(cover)
         builder.addAction(
             R.drawable.ic_skip_previous,
             getString(R.string.previous),
-            servicePendingIntent<VideoPlayService>(IntentAction.prev)
+            servicePendingIntent<VideoPlayService>(IntentAction.prev),
         )
         if (pause) {
             builder.addAction(
                 R.drawable.ic_play_24dp,
                 getString(R.string.resume),
-                servicePendingIntent<VideoPlayService>(IntentAction.resume)
+                servicePendingIntent<VideoPlayService>(IntentAction.resume),
             )
         } else {
             builder.addAction(
                 R.drawable.ic_pause_24dp,
                 getString(R.string.pause),
-                servicePendingIntent<VideoPlayService>(IntentAction.pause)
+                servicePendingIntent<VideoPlayService>(IntentAction.pause),
             )
         }
         builder.addAction(
             R.drawable.ic_skip_next,
             getString(R.string.next),
-            servicePendingIntent<VideoPlayService>(IntentAction.next)
+            servicePendingIntent<VideoPlayService>(IntentAction.next),
         )
         builder.addAction(
             R.drawable.ic_stop_black_24dp,
             getString(R.string.stop),
-            servicePendingIntent<VideoPlayService>(IntentAction.stop)
+            servicePendingIntent<VideoPlayService>(IntentAction.stop),
         )
         builder.setStyle(
             androidx.media.app.NotificationCompat.MediaStyle()
                 .setShowActionsInCompactView(0, 1, 2)
-                .setMediaSession(mediaSessionCompat.sessionToken)
+                .setMediaSession(mediaSessionCompat.sessionToken),
         )
         builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         return builder
@@ -432,9 +429,9 @@ class VideoPlayService : BaseService() {
         val videoWidth = playerView.currentVideoWidth
         val videoHeight = playerView.currentVideoHeight
         val windowWidth = if (videoHeight > videoWidth * 1.2) {
-            screenWidth / 2 //竖屏时为屏幕的1/2
+            screenWidth / 2 // 竖屏时为屏幕的1/2
         } else {
-            screenWidth * 3 / 4 //默认为屏幕3/4宽
+            screenWidth * 3 / 4 // 默认为屏幕3/4宽
         }
         val windowHeight = if (videoWidth > 0 && videoHeight > 0) (windowWidth * videoHeight / videoWidth) else (windowWidth * 9 / 16) // 默认16:9比例
         // 设置窗口参数
@@ -448,9 +445,9 @@ class VideoPlayService : BaseService() {
                 WindowManager.LayoutParams.TYPE_PHONE
             },
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.START or Gravity.TOP
             x = 30
@@ -458,7 +455,6 @@ class VideoPlayService : BaseService() {
         }
         floatingView.setOnTouchListener(FloatingTouchListener())
         windowManager.addView(floatingView, params)
-
     }
 
     inner class FloatingTouchListener : OnTouchListener {
@@ -500,13 +496,11 @@ class VideoPlayService : BaseService() {
                     } else {
                         startEdgeAnimation()
                     }
-
                 }
             }
             return false
         }
     }
-
 
     private fun setupPlayerView() {
         playerView.fullscreenB.setOnClickListener {
@@ -522,14 +516,14 @@ class VideoPlayService : BaseService() {
                 upMediaMetadata()
                 upPlayProgress()
                 upVideoPlayNotification()
-                //根据实际视频比例再次调整悬浮窗高度,来适配竖屏视频。如果是全屏切换过来的时候不会触发
+                // 根据实际视频比例再次调整悬浮窗高度,来适配竖屏视频。如果是全屏切换过来的时候不会触发
                 val videoWidth = playerView.currentVideoWidth
                 val videoHeight = playerView.currentVideoHeight
                 val screenWidth = resources.displayMetrics.widthPixels
                 if (videoWidth > 0 && videoHeight > 0) {
                     val parentWidth = if (videoHeight > videoWidth * 1.2) {
                         VideoPlay.isPortraitVideo = true
-                        screenWidth / 2 //竖屏时为屏幕的1/2
+                        screenWidth / 2 // 竖屏时为屏幕的1/2
                     } else {
                         VideoPlay.isPortraitVideo = false
                         params.width
@@ -572,7 +566,6 @@ class VideoPlayService : BaseService() {
         playerView.needDestroy = false
     }
 
-
     private fun upMediaMetadata() {
         val metadata = MediaMetadataCompat.Builder()
             .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, cover)
@@ -603,5 +596,4 @@ class VideoPlayService : BaseService() {
             e.printStackTrace()
         }
     }
-
 }

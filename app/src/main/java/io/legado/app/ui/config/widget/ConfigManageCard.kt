@@ -69,7 +69,7 @@ fun ConfigManageCard(
     trailing: (@Composable () -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     onToggleSelect: () -> Unit = {},
-    actions: @Composable RowScope.() -> Unit = {}
+    actions: @Composable RowScope.() -> Unit = {},
 ) {
     val isLightBg = MaterialTheme.colorScheme.background.luminance() > 0.5f
     val cardColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isLightBg) 0.55f else 0.42f)
@@ -83,17 +83,17 @@ fun ConfigManageCard(
             .border(AppDimens.manageCardBorderWidth, borderColor, shape),
         shape = shape,
         color = cardColor,
-        shadowElevation = 0.dp
+        shadowElevation = 0.dp,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(
                     onClick = { if (isMultiSelectMode) onToggleSelect() },
-                    onLongClick = { if (!isMultiSelectMode) onLongClick?.invoke() }
+                    onLongClick = { if (!isMultiSelectMode) onLongClick?.invoke() },
                 )
                 .padding(AppDimens.manageCardPadding),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             if (leading != null) {
                 leading()
@@ -102,7 +102,7 @@ fun ConfigManageCard(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .semantics(mergeDescendants = true) {}
+                    .semantics(mergeDescendants = true) {},
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -112,7 +112,7 @@ fun ConfigManageCard(
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                     if (showBuiltinBadge) {
                         Spacer(Modifier.width(AppDimens.panelRowTitleSpacing))
@@ -122,7 +122,7 @@ fun ConfigManageCard(
                         Spacer(Modifier.width(AppDimens.panelRowTitleSpacing))
                         ConfigBadge(
                             text = stringResource(R.string.applied),
-                            highlighted = true
+                            highlighted = true,
                         )
                     }
                 }
@@ -133,14 +133,14 @@ fun ConfigManageCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 Spacer(Modifier.height(AppDimens.panelRowTitleSpacing))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(AppDimens.manageActionSpacing),
                     verticalAlignment = Alignment.CenterVertically,
-                    content = actions
+                    content = actions,
                 )
             }
             if (trailing != null) {
@@ -149,7 +149,7 @@ fun ConfigManageCard(
             if (isMultiSelectMode) {
                 Checkbox(
                     checked = isSelected,
-                    onCheckedChange = { onToggleSelect() }
+                    onCheckedChange = { onToggleSelect() },
                 )
             }
         }
@@ -166,7 +166,7 @@ fun ConfigManageCard(
 fun ConfigBadge(
     text: String,
     modifier: Modifier = Modifier,
-    highlighted: Boolean = false
+    highlighted: Boolean = false,
 ) {
     val color = if (highlighted) {
         MaterialTheme.colorScheme.primary
@@ -184,14 +184,14 @@ fun ConfigBadge(
             .background(background)
             .padding(
                 horizontal = AppDimens.manageBadgePaddingHorizontal,
-                vertical = AppDimens.manageBadgePaddingVertical
-            )
+                vertical = AppDimens.manageBadgePaddingVertical,
+            ),
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
             color = color,
-            maxLines = 1
+            maxLines = 1,
         )
     }
 }

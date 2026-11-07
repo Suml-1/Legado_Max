@@ -56,7 +56,7 @@ data class ApplicationThemeActions(
     val onExportFile: (java.io.File) -> Unit = {},
     val onOpenEditor: (String?) -> Unit = {},
     val onPickImportFile: () -> Unit = {},
-    val onRestart: () -> Unit = {}
+    val onRestart: () -> Unit = {},
 )
 
 /**
@@ -70,7 +70,7 @@ data class ApplicationThemeActions(
 fun ApplicationThemeScreen(
     viewModel: ApplicationThemeViewModel,
     actions: ApplicationThemeActions,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val state = rememberConfigManageState(ConfigTab.DAY)
     val items by viewModel.items.collectAsState()
@@ -114,7 +114,7 @@ fun ApplicationThemeScreen(
             if (state.isMultiSelectMode) {
                 SelectAllAction(
                     isAllSelected = state.isAllSelected(visibleKeys),
-                    onSelectAll = { state.selectAllVisible(visibleKeys) }
+                    onSelectAll = { state.selectAllVisible(visibleKeys) },
                 )
             } else {
                 IconButton(onClick = {
@@ -123,7 +123,7 @@ fun ApplicationThemeScreen(
                 }) {
                     Icon(
                         imageVector = Icons.Default.FileDownload,
-                        contentDescription = stringResource(R.string.application_theme_import)
+                        contentDescription = stringResource(R.string.application_theme_import),
                     )
                 }
             }
@@ -140,7 +140,7 @@ fun ApplicationThemeScreen(
                             onClick = {
                                 viewModel.toTop(selected)
                                 state.exitMultiSelect()
-                            }
+                            },
                         ),
                         MultiSelectAction(
                             icon = Icons.Default.Share,
@@ -148,35 +148,35 @@ fun ApplicationThemeScreen(
                             onClick = {
                                 viewModel.copyJsonList(selected)
                                 state.exitMultiSelect()
-                            }
+                            },
                         ),
                         MultiSelectAction(
                             icon = Icons.Default.Delete,
                             contentDescription = stringResource(R.string.delete),
                             tint = MaterialTheme.colorScheme.error,
-                            onClick = { pendingDelete = selected }
-                        )
-                    )
+                            onClick = { pendingDelete = selected },
+                        ),
+                    ),
                 )
             } else {
                 ConfigAddBottomBar(
                     text = stringResource(R.string.application_theme_create),
-                    onClick = { actions.onOpenEditor(null) }
+                    onClick = { actions.onOpenEditor(null) },
                 )
             }
-        }
+        },
     ) { contentPadding ->
         val listState = rememberLazyListState()
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(contentPadding)
+                .padding(contentPadding),
         ) {
             ConfigList(
                 items = items,
                 listState = listState,
                 itemKey = { it.id },
-                emptyText = stringResource(R.string.empty)
+                emptyText = stringResource(R.string.empty),
             ) { item ->
                 val isBuiltin = ApplicationThemeManager.isBuiltin(item)
                 val isCurrent = item.id == currentId
@@ -188,7 +188,9 @@ fun ApplicationThemeScreen(
                     isMultiSelectMode = state.isMultiSelectMode,
                     isSelected = item.id in state.multiSelect.selectedKeys,
                     leading = { ApplicationThemePreview(config = item) },
-                    onLongClick = if (isBuiltin) null else {
+                    onLongClick = if (isBuiltin) {
+                        null
+                    } else {
                         { state.enterMultiSelect(item.id) }
                     },
                     onToggleSelect = { state.toggleSelection(item.id) },
@@ -196,12 +198,12 @@ fun ApplicationThemeScreen(
                         ConfigActionButton(
                             text = stringResource(R.string.apply),
                             onClick = { viewModel.apply(item) },
-                            highlighted = isCurrent
+                            highlighted = isCurrent,
                         )
                         if (!isBuiltin) {
                             ConfigActionButton(
                                 text = stringResource(R.string.edit),
-                                onClick = { actions.onOpenEditor(item.id) }
+                                onClick = { actions.onOpenEditor(item.id) },
                             )
                         }
                         ConfigItemMoreButton(
@@ -210,8 +212,8 @@ fun ApplicationThemeScreen(
                                     add(
                                         ConfigMenuItem(
                                             text = stringResource(R.string.to_top),
-                                            onClick = { viewModel.toTop(listOf(item)) }
-                                        )
+                                            onClick = { viewModel.toTop(listOf(item)) },
+                                        ),
                                     )
                                 }
                                 add(ConfigMenuItem(stringResource(R.string.apply)) { viewModel.apply(item) })
@@ -219,45 +221,45 @@ fun ApplicationThemeScreen(
                                     add(
                                         ConfigMenuItem(stringResource(R.string.edit)) {
                                             actions.onOpenEditor(item.id)
-                                        }
+                                        },
                                     )
                                     add(
                                         ConfigMenuItem(stringResource(R.string.application_theme_update_current)) {
                                             viewModel.updateFromCurrent(item)
-                                        }
+                                        },
                                     )
                                     add(
                                         ConfigMenuItem(stringResource(R.string.application_theme_rename)) {
                                             renameTarget = item
-                                        }
+                                        },
                                     )
                                 }
                                 add(
                                     ConfigMenuItem(stringResource(R.string.copy)) {
                                         viewModel.copyJson(item)
-                                    }
+                                    },
                                 )
                                 add(
                                     ConfigMenuItem(stringResource(R.string.export_str)) {
                                         exportTarget = item
-                                    }
+                                    },
                                 )
                                 if (!isBuiltin && !isCurrent) {
                                     add(
                                         ConfigMenuItem(stringResource(R.string.delete)) {
                                             deleteSelection = viewModel.deleteSelection()
                                             deleteTarget = item
-                                        }
+                                        },
                                     )
                                 }
-                            }
+                            },
                         )
-                    }
+                    },
                 )
             }
             VerticalScrollbar(
                 state = listState,
-                modifier = Modifier.align(Alignment.CenterEnd)
+                modifier = Modifier.align(Alignment.CenterEnd),
             )
         }
     }
@@ -272,7 +274,7 @@ fun ApplicationThemeScreen(
                 showImportOptions = false
                 actions.onPickImportFile()
             },
-            onDismissRequest = { showImportOptions = false }
+            onDismissRequest = { showImportOptions = false },
         )
     }
 
@@ -286,7 +288,7 @@ fun ApplicationThemeScreen(
                 viewModel.delete(target.id, selection)
                 deleteTarget = null
             },
-            onDismissRequest = { deleteTarget = null }
+            onDismissRequest = { deleteTarget = null },
         )
     }
 
@@ -299,7 +301,7 @@ fun ApplicationThemeScreen(
                 viewModel.rename(target.id, name)
                 renameTarget = null
             },
-            onDismissRequest = { renameTarget = null }
+            onDismissRequest = { renameTarget = null },
         )
     }
 
@@ -314,7 +316,7 @@ fun ApplicationThemeScreen(
                 exportTarget = null
                 if (format != null) viewModel.export(target, format)
             },
-            onDismissRequest = { exportTarget = null }
+            onDismissRequest = { exportTarget = null },
         )
     }
 
@@ -329,19 +331,17 @@ fun ApplicationThemeScreen(
                 pendingDelete = emptyList()
                 state.exitMultiSelect()
             },
-            onDismissRequest = { pendingDelete = emptyList() }
+            onDismissRequest = { pendingDelete = emptyList() },
         )
     }
 }
 
 @Composable
-private fun formatLabel(format: ApplicationThemeManager.ExportFormat): String {
-    return stringResource(
-        when (format) {
-            ApplicationThemeManager.ExportFormat.NATIVE -> R.string.export_format_native
-            ApplicationThemeManager.ExportFormat.ARCHIVE -> R.string.export_format_archive
-            ApplicationThemeManager.ExportFormat.MD3 -> R.string.export_format_md3
-            ApplicationThemeManager.ExportFormat.RED -> R.string.export_format_red
-        }
-    )
-}
+private fun formatLabel(format: ApplicationThemeManager.ExportFormat): String = stringResource(
+    when (format) {
+        ApplicationThemeManager.ExportFormat.NATIVE -> R.string.export_format_native
+        ApplicationThemeManager.ExportFormat.ARCHIVE -> R.string.export_format_archive
+        ApplicationThemeManager.ExportFormat.MD3 -> R.string.export_format_md3
+        ApplicationThemeManager.ExportFormat.RED -> R.string.export_format_red
+    },
+)

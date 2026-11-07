@@ -33,7 +33,7 @@ fun ConfigManageScaffold(
     modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
-    content: @Composable (PaddingValues) -> Unit
+    content: @Composable (PaddingValues) -> Unit,
 ) {
     // 多选模式下系统返回键先退出多选，而不是直接退出页面（与旧版气泡页行为一致）
     BackHandler(enabled = isMultiSelectMode) {
@@ -51,10 +51,10 @@ fun ConfigManageScaffold(
                         onBackClick()
                     }
                 },
-                actions = actions
+                actions = actions,
             )
         },
         bottomBar = bottomBar,
-        content = content
+        content = content,
     )
 }

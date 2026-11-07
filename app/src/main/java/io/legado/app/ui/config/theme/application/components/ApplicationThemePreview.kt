@@ -32,7 +32,7 @@ import io.legado.app.ui.theme.composeActionShape
 @Composable
 fun ApplicationThemePreview(
     config: ApplicationThemeManager.Config,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val isNight = AppConfig.isNightTheme
     val theme = if (isNight) config.nightTheme else config.dayTheme
@@ -43,18 +43,18 @@ fun ApplicationThemePreview(
             .size(AppDimens.managePreviewBoxSize)
             .clip(composeActionShape())
             .background(background)
-            .border(AppDimens.manageCardBorderWidth, MaterialTheme.colorScheme.outlineVariant, composeActionShape())
+            .border(AppDimens.manageCardBorderWidth, MaterialTheme.colorScheme.outlineVariant, composeActionShape()),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(AppDimens.manageBadgePaddingHorizontal)
+                .padding(AppDimens.manageBadgePaddingHorizontal),
         ) {
             Box(
                 modifier = Modifier
                     .size(AppDimens.panelRowIconSize / 2)
                     .clip(composeActionShape())
-                    .background(primary)
+                    .background(primary),
             )
             Spacer(Modifier.height(AppDimens.manageCardTitleSpacing))
             Box(
@@ -62,7 +62,7 @@ fun ApplicationThemePreview(
                     .fillMaxWidth()
                     .height(AppDimens.manageBadgePaddingVertical + AppDimens.manageCardTitleSpacing)
                     .clip(composeActionShape())
-                    .background(primary.copy(alpha = 0.7f))
+                    .background(primary.copy(alpha = 0.7f)),
             )
             Spacer(Modifier.height(AppDimens.manageBadgePaddingVertical + AppDimens.manageBadgePaddingVertical))
             Box(
@@ -70,7 +70,7 @@ fun ApplicationThemePreview(
                     .fillMaxWidth(0.6f)
                     .height(AppDimens.manageBadgePaddingVertical + AppDimens.manageCardTitleSpacing)
                     .clip(composeActionShape())
-                    .background(primary.copy(alpha = 0.5f))
+                    .background(primary.copy(alpha = 0.5f)),
             )
         }
     }

@@ -58,7 +58,7 @@ data class BubbleManageActions(
     val onPickZip: () -> Unit = {},
     val onPickColor: (target: Int, current: String) -> Unit = { _, _ -> },
     val onEditSvg: (String) -> Unit = {},
-    val onHelp: () -> Unit = {}
+    val onHelp: () -> Unit = {},
 )
 
 /**
@@ -71,7 +71,7 @@ data class BubbleManageActions(
 fun BubbleManageScreen(
     viewModel: BubbleManageViewModel,
     actions: BubbleManageActions,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val state = rememberConfigManageState()
     val items by viewModel.items.collectAsState()
@@ -109,7 +109,7 @@ fun BubbleManageScreen(
             if (state.isMultiSelectMode) {
                 SelectAllAction(
                     isAllSelected = state.isAllSelected(visibleKeys),
-                    onSelectAll = { state.selectAllVisible(visibleKeys) }
+                    onSelectAll = { state.selectAllVisible(visibleKeys) },
                 )
             } else {
                 ConfigActionIconMenu(
@@ -118,17 +118,17 @@ fun BubbleManageScreen(
                     items = listOf(
                         ConfigMenuItem(
                             text = stringResource(R.string.bubble_import_zip),
-                            onClick = actions.onPickZip
+                            onClick = actions.onPickZip,
                         ),
                         ConfigMenuItem(
                             text = stringResource(R.string.import_on_line),
-                            onClick = { showUrlDialog = true }
+                            onClick = { showUrlDialog = true },
                         ),
                         ConfigMenuItem(
                             text = stringResource(R.string.help),
-                            onClick = actions.onHelp
-                        )
-                    )
+                            onClick = actions.onHelp,
+                        ),
+                    ),
                 )
             }
         },
@@ -144,7 +144,7 @@ fun BubbleManageScreen(
                             onClick = {
                                 viewModel.toTopEntries(selected)
                                 state.exitMultiSelect()
-                            }
+                            },
                         ),
                         MultiSelectAction(
                             icon = Icons.Default.Share,
@@ -152,23 +152,23 @@ fun BubbleManageScreen(
                             onClick = {
                                 viewModel.exportZip(selected)
                                 state.exitMultiSelect()
-                            }
+                            },
                         ),
                         MultiSelectAction(
                             icon = Icons.Default.Delete,
                             contentDescription = stringResource(R.string.delete),
                             tint = MaterialTheme.colorScheme.error,
-                            onClick = { pendingDelete = selected }
-                        )
-                    )
+                            onClick = { pendingDelete = selected },
+                        ),
+                    ),
                 )
             } else {
                 ConfigAddBottomBar(
                     text = stringResource(R.string.bubble_create_manual),
-                    onClick = viewModel::startCreate
+                    onClick = viewModel::startCreate,
                 )
             }
-        }
+        },
     ) { contentPadding ->
         BubbleList(
             items = items,
@@ -184,7 +184,7 @@ fun BubbleManageScreen(
             onExport = { viewModel.exportZip(listOf(it)) },
             onShare = viewModel::shareJson,
             onLongClick = { state.enterMultiSelect(it.dirName) },
-            onToggleSelect = { state.toggleSelection(it.dirName) }
+            onToggleSelect = { state.toggleSelection(it.dirName) },
         )
     }
 
@@ -197,8 +197,8 @@ fun BubbleManageScreen(
                 onRequestColor = actions.onPickColor,
                 onEditSvg = { actions.onEditSvg(config.svgTemplate) },
                 onSave = viewModel::saveDraft,
-                onDismiss = viewModel::clearDraft
-            )
+                onDismiss = viewModel::clearDraft,
+            ),
         )
     }
 
@@ -210,7 +210,7 @@ fun BubbleManageScreen(
                 showUrlDialog = false
                 viewModel.importFromUrl(url)
             },
-            onDismissRequest = { showUrlDialog = false }
+            onDismissRequest = { showUrlDialog = false },
         )
     }
 
@@ -225,7 +225,7 @@ fun BubbleManageScreen(
                 pendingDelete = emptyList()
                 state.exitMultiSelect()
             },
-            onDismissRequest = { pendingDelete = emptyList() }
+            onDismissRequest = { pendingDelete = emptyList() },
         )
     }
 }
@@ -243,7 +243,7 @@ private fun BubbleList(
     onExport: (BubblePackageManager.Entry) -> Unit,
     onShare: (BubblePackageManager.Entry) -> Unit,
     onLongClick: (BubblePackageManager.Entry) -> Unit,
-    onToggleSelect: (BubblePackageManager.Entry) -> Unit
+    onToggleSelect: (BubblePackageManager.Entry) -> Unit,
 ) {
     val listState = rememberLazyListState()
     Box(modifier = modifier) {
@@ -251,7 +251,7 @@ private fun BubbleList(
             items = items,
             listState = listState,
             itemKey = { it.dirName },
-            emptyText = stringResource(R.string.empty)
+            emptyText = stringResource(R.string.empty),
         ) { item ->
             BubbleCard(
                 entry = item,
@@ -264,12 +264,12 @@ private fun BubbleList(
                 onExport = { onExport(item) },
                 onShare = { onShare(item) },
                 onLongClick = { onLongClick(item) },
-                onToggleSelect = { onToggleSelect(item) }
+                onToggleSelect = { onToggleSelect(item) },
             )
         }
         VerticalScrollbar(
             state = listState,
-            modifier = Modifier.align(Alignment.CenterEnd)
+            modifier = Modifier.align(Alignment.CenterEnd),
         )
     }
 }
@@ -286,7 +286,7 @@ private fun BubbleCard(
     onExport: () -> Unit,
     onShare: () -> Unit,
     onLongClick: () -> Unit,
-    onToggleSelect: () -> Unit
+    onToggleSelect: () -> Unit,
 ) {
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
     val isBuiltin = entry.source == BubblePackageManager.Source.BUILTIN
@@ -310,12 +310,12 @@ private fun BubbleCard(
             ConfigActionButton(
                 text = stringResource(R.string.apply),
                 onClick = onApply,
-                highlighted = isCurrent
+                highlighted = isCurrent,
             )
             if (!isBuiltin) {
                 ConfigActionButton(
                     text = stringResource(R.string.edit),
-                    onClick = onEdit
+                    onClick = onEdit,
                 )
             }
             ConfigItemMoreButton(
@@ -332,8 +332,8 @@ private fun BubbleCard(
                     if (!isBuiltin && !isCurrent) {
                         add(ConfigMenuItem(stringResource(R.string.delete), onDelete))
                     }
-                }
+                },
             )
-        }
+        },
     )
 }

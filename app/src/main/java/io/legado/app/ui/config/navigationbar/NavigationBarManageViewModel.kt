@@ -46,12 +46,12 @@ class NavigationBarManageViewModel(application: Application) : BaseViewModel(app
         get() = if (isNight) {
             appCtx.getPrefInt(
                 PreferKey.cNBBackground,
-                appCtx.getCompatColor(R.color.default_night_bottom_background)
+                appCtx.getCompatColor(R.color.default_night_bottom_background),
             )
         } else {
             appCtx.getPrefInt(
                 PreferKey.cBBackground,
-                appCtx.getCompatColor(R.color.default_bottom_background)
+                appCtx.getCompatColor(R.color.default_bottom_background),
             )
         }
 
@@ -82,7 +82,7 @@ class NavigationBarManageViewModel(application: Application) : BaseViewModel(app
             layoutMode = NavigationBarConfig.LAYOUT_FLOATING,
             effectMode = NavigationBarConfig.EFFECT_GLASS,
             opacity = 100,
-            borderColor = Color.TRANSPARENT
+            borderColor = Color.TRANSPARENT,
         )
     }
 
@@ -150,9 +150,11 @@ class NavigationBarManageViewModel(application: Application) : BaseViewModel(app
             NavigationBarConfig.setActiveId(appCtx, config.isNight, config.id)
             NavigationBarConfig.applyConfig(appCtx, config)
             _activeId.value = config.id
-            _events.trySend(NavigationBarEvent.ToastMsg(
-                appCtx.getString(R.string.applied_nav_bar_config, config.name)
-            ))
+            _events.trySend(
+                NavigationBarEvent.ToastMsg(
+                    appCtx.getString(R.string.applied_nav_bar_config, config.name),
+                ),
+            )
         }
     }
 

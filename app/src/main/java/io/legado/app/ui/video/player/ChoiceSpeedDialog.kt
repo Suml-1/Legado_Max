@@ -12,9 +12,11 @@ import android.widget.ArrayAdapter
 import android.widget.ListView
 import io.legado.app.R
 
-class ChoiceSpeedDialog(private val mContext: Context) : Dialog(
-    mContext, R.style.dialog_style
-) {
+class ChoiceSpeedDialog(private val mContext: Context) :
+    Dialog(
+        mContext,
+        R.style.dialog_style,
+    ) {
     private var listView: ListView? = null
 
     private var adapter: ArrayAdapter<Float>? = null
@@ -40,7 +42,7 @@ class ChoiceSpeedDialog(private val mContext: Context) : Dialog(
     @SuppressLint("SetTextI18n")
     fun initList(
         data: List<Float>,
-        onItemClickListener: OnListItemClickListener
+        onItemClickListener: OnListItemClickListener,
     ) {
         this.onItemClickListener = onItemClickListener
         this.data = data
@@ -65,7 +67,7 @@ class ChoiceSpeedDialog(private val mContext: Context) : Dialog(
             adapterView: AdapterView<*>?,
             view: View?,
             position: Int,
-            id: Long
+            id: Long,
         ) {
             dismiss()
             onItemClickListener!!.onItemClick(data?.get(position) ?: 1.0f)

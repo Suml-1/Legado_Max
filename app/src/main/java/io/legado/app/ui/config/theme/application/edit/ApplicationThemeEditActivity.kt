@@ -24,7 +24,7 @@ class ApplicationThemeEditActivity : BaseComposeActivity() {
             viewModel = viewModel,
             onBackClick = { finish() },
             onToast = { toastOnUi(it) },
-            onFinished = { finish() }
+            onFinished = { finish() },
         )
     }
 

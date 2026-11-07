@@ -42,7 +42,7 @@ class ApplicationThemeEditViewModel(application: Application) : BaseViewModel(ap
             isNew = existing == null
             _draft.value = existing?.copy() ?: ApplicationThemeManager.captureCurrent(
                 appCtx,
-                appCtx.getString(R.string.application_theme_manage)
+                appCtx.getString(R.string.application_theme_manage),
             ).copy(id = UUID.randomUUID().toString())
             _candidates.value = loadCandidates()
         }
@@ -90,7 +90,7 @@ class ApplicationThemeEditViewModel(application: Application) : BaseViewModel(ap
             nightTopBars = nightTopBars,
             dayBottomBars = bottomBars.filter { !it.isNight },
             nightBottomBars = bottomBars.filter { it.isNight },
-            covers = covers
+            covers = covers,
         )
     }
 }
@@ -103,7 +103,7 @@ data class EditCandidates(
     val nightTopBars: List<TopBarConfig.Entry> = emptyList(),
     val dayBottomBars: List<NavigationBarConfig> = emptyList(),
     val nightBottomBars: List<NavigationBarConfig> = emptyList(),
-    val covers: List<Pair<Long, String>> = emptyList()
+    val covers: List<Pair<Long, String>> = emptyList(),
 )
 
 sealed interface ApplicationThemeEditEvent {

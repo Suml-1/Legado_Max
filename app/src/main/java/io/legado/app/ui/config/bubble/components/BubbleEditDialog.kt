@@ -25,7 +25,7 @@ data class BubbleEditCallbacks(
     val onRequestColor: (target: Int, current: String) -> Unit = { _, _ -> },
     val onEditSvg: () -> Unit = {},
     val onSave: () -> Unit = {},
-    val onDismiss: () -> Unit = {}
+    val onDismiss: () -> Unit = {},
 )
 
 /** 颜色选择目标：与 Activity 里 ColorPickerDialog 的 dialogId 对应 */
@@ -50,7 +50,7 @@ object BubbleColorTarget {
 fun BubbleEditDialog(
     config: BubblePackageManager.Config,
     isEdit: Boolean,
-    callbacks: BubbleEditCallbacks
+    callbacks: BubbleEditCallbacks,
 ) {
     var picker by remember { mutableStateOf(BubblePicker.None) }
 
@@ -58,47 +58,47 @@ fun BubbleEditDialog(
         title = stringResource(if (isEdit) R.string.edit else R.string.add),
         onDismissRequest = callbacks.onDismiss,
         onConfirm = callbacks.onSave,
-        confirmEnabled = config.name.isNotBlank()
+        confirmEnabled = config.name.isNotBlank(),
     ) {
         OutlinedTextField(
             value = config.name,
             onValueChange = { value -> callbacks.onDraftChange { it.copy(name = value) } },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            placeholder = { Text(stringResource(R.string.bubble_name)) }
+            placeholder = { Text(stringResource(R.string.bubble_name)) },
         )
 
         ConfigDialogRow(
             title = stringResource(R.string.bubble_size_scale),
             value = String.format(Locale.ROOT, "%.1f", config.sizeScale),
-            onClick = { picker = BubblePicker.SizeScale }
+            onClick = { picker = BubblePicker.SizeScale },
         )
 
         ColorRow(
             title = stringResource(R.string.bubble_day_normal),
             value = colorOr(config.dayNormalColor, BubblePackageManager.DEFAULT_NORMAL_COLOR),
-            onClick = { picker = BubblePicker.DayNormal }
+            onClick = { picker = BubblePicker.DayNormal },
         )
         ColorRow(
             title = stringResource(R.string.bubble_day_emphasis),
             value = colorOr(config.dayEmphasisColor, BubblePackageManager.DEFAULT_EMPHASIS_COLOR),
-            onClick = { picker = BubblePicker.DayEmphasis }
+            onClick = { picker = BubblePicker.DayEmphasis },
         )
         ColorRow(
             title = stringResource(R.string.bubble_night_normal),
             value = colorOr(config.nightNormalColor, BubblePackageManager.DEFAULT_NORMAL_COLOR),
-            onClick = { picker = BubblePicker.NightNormal }
+            onClick = { picker = BubblePicker.NightNormal },
         )
         ColorRow(
             title = stringResource(R.string.bubble_night_emphasis),
             value = colorOr(config.nightEmphasisColor, BubblePackageManager.DEFAULT_EMPHASIS_COLOR),
-            onClick = { picker = BubblePicker.NightEmphasis }
+            onClick = { picker = BubblePicker.NightEmphasis },
         )
 
         ConfigDialogRow(
             title = stringResource(R.string.bubble_svg_edit_title),
             value = stringResource(R.string.bubble_svg_edit_hint),
-            onClick = callbacks.onEditSvg
+            onClick = callbacks.onEditSvg,
         )
     }
 
@@ -109,53 +109,57 @@ fun BubbleEditDialog(
             title = stringResource(R.string.bubble_size_scale),
             value = (config.sizeScale * 10).toInt().coerceIn(
                 (BubblePackageManager.MIN_SIZE_SCALE * 10).toInt(),
-                (BubblePackageManager.MAX_SIZE_SCALE * 10).toInt()
-            ),
-            range = (BubblePackageManager.MIN_SIZE_SCALE * 10).toInt()..
                 (BubblePackageManager.MAX_SIZE_SCALE * 10).toInt(),
+            ),
+            range = (BubblePackageManager.MIN_SIZE_SCALE * 10).toInt()..(BubblePackageManager.MAX_SIZE_SCALE * 10).toInt(),
             valueText = { String.format(Locale.ROOT, "%.1f", it / 10f) },
             onConfirm = { value ->
                 callbacks.onDraftChange { it.copy(sizeScale = value / 10f) }
                 picker = BubblePicker.None
             },
-            onDismissRequest = { picker = BubblePicker.None }
+            onDismissRequest = { picker = BubblePicker.None },
         )
 
         BubblePicker.DayNormal -> requestColor(
             BubbleColorTarget.DAY_NORMAL,
             colorOr(config.dayNormalColor, BubblePackageManager.DEFAULT_NORMAL_COLOR),
-            callbacks
+            callbacks,
         ) { picker = BubblePicker.None }
 
         BubblePicker.DayEmphasis -> requestColor(
             BubbleColorTarget.DAY_EMPHASIS,
             colorOr(config.dayEmphasisColor, BubblePackageManager.DEFAULT_EMPHASIS_COLOR),
-            callbacks
+            callbacks,
         ) { picker = BubblePicker.None }
 
         BubblePicker.NightNormal -> requestColor(
             BubbleColorTarget.NIGHT_NORMAL,
             colorOr(config.nightNormalColor, BubblePackageManager.DEFAULT_NORMAL_COLOR),
-            callbacks
+            callbacks,
         ) { picker = BubblePicker.None }
 
         BubblePicker.NightEmphasis -> requestColor(
             BubbleColorTarget.NIGHT_EMPHASIS,
             colorOr(config.nightEmphasisColor, BubblePackageManager.DEFAULT_EMPHASIS_COLOR),
-            callbacks
+            callbacks,
         ) { picker = BubblePicker.None }
     }
 }
 
 private enum class BubblePicker {
-    None, SizeScale, DayNormal, DayEmphasis, NightNormal, NightEmphasis
+    None,
+    SizeScale,
+    DayNormal,
+    DayEmphasis,
+    NightNormal,
+    NightEmphasis,
 }
 
 private fun requestColor(
     target: Int,
     current: String,
     callbacks: BubbleEditCallbacks,
-    onDone: () -> Unit
+    onDone: () -> Unit,
 ) {
     onDone()
     callbacks.onRequestColor(target, current)
@@ -167,7 +171,7 @@ private fun ColorRow(title: String, value: String, onClick: () -> Unit) {
         title = title,
         value = value.uppercase(Locale.ROOT),
         colorPreview = Color(runCatching { value.toColorInt() }.getOrDefault(0xFF808080.toInt())),
-        onClick = onClick
+        onClick = onClick,
     )
 }
 

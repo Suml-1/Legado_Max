@@ -133,15 +133,13 @@ class EditDialogState {
  */
 enum class ConfigTab(val isNight: Boolean) {
     DAY(false),
-    NIGHT(true)
+    NIGHT(true),
 }
 
 // ── Composable 入口 ─────────────────────────────────────────
 
 @Composable
-fun rememberConfigManageState(initialTab: ConfigTab = ConfigTab.DAY): ConfigManageState {
-    return remember { ConfigManageState(initialTab) }
-}
+fun rememberConfigManageState(initialTab: ConfigTab = ConfigTab.DAY): ConfigManageState = remember { ConfigManageState(initialTab) }
 
 /**
  * 创建「日/夜 Tab 状态三页共用」的 [ConfigManageState]。

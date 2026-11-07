@@ -32,7 +32,7 @@ import io.legado.app.ui.theme.composeActionShape
 fun ConfigAddBottomBar(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Surface(
         modifier = modifier
@@ -41,15 +41,15 @@ fun ConfigAddBottomBar(
             .padding(
                 start = AppDimens.screenPadding,
                 end = AppDimens.screenPadding,
-                bottom = AppDimens.screenPadding
+                bottom = AppDimens.screenPadding,
             )
             .clickable(onClick = onClick),
         shape = composeActionShape(),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         border = BorderStroke(
             width = AppDimens.dividerThickness,
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
+            color = MaterialTheme.colorScheme.outlineVariant,
+        ),
     ) {
         Text(
             text = text,
@@ -58,7 +58,7 @@ fun ConfigAddBottomBar(
                 .padding(vertical = AppDimens.panelRowVerticalPadding),
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.labelLarge
+            style = MaterialTheme.typography.labelLarge,
         )
     }
 }
@@ -69,7 +69,7 @@ private fun ConfigAddBottomBarPreview() {
     MaterialTheme {
         ConfigAddBottomBar(
             text = stringResource(R.string.add_theme),
-            onClick = {}
+            onClick = {},
         )
     }
 }

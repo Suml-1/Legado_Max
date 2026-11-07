@@ -42,7 +42,7 @@ data class NavigationBarEditCallbacks(
     val onRequestColor: (target: Int, current: Int) -> Unit = { _, _ -> },
     val onRequestIcon: (itemKey: String, state: String, title: String) -> Unit = { _, _, _ -> },
     val onSave: () -> Unit = {},
-    val onDismiss: () -> Unit = {}
+    val onDismiss: () -> Unit = {},
 )
 
 /** 颜色选择目标：与 Activity 里 ColorPickerDialog 的 dialogId 对应 */
@@ -67,7 +67,7 @@ fun NavigationBarEditDialog(
     config: NavigationBarConfig,
     isEdit: Boolean,
     defaultBottomColor: Int,
-    callbacks: NavigationBarEditCallbacks
+    callbacks: NavigationBarEditCallbacks,
 ) {
     val context = LocalContext.current
     val accent = context.accentColor
@@ -77,7 +77,7 @@ fun NavigationBarEditDialog(
         title = stringResource(if (isEdit) R.string.edit else R.string.add),
         onDismissRequest = callbacks.onDismiss,
         onConfirm = callbacks.onSave,
-        confirmEnabled = config.name.isNotBlank()
+        confirmEnabled = config.name.isNotBlank(),
     ) {
         OutlinedTextField(
             value = config.name,
@@ -86,20 +86,20 @@ fun NavigationBarEditDialog(
             },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            placeholder = { Text(stringResource(R.string.navigation_bar_name)) }
+            placeholder = { Text(stringResource(R.string.navigation_bar_name)) },
         )
 
         ConfigDialogRow(
             title = stringResource(R.string.bottom_bar_layout_mode),
             value = config.getLayoutModeText(context),
-            onClick = { picker = NavigationBarPicker.LayoutMode }
+            onClick = { picker = NavigationBarPicker.LayoutMode },
         )
 
         if (config.layoutMode == NavigationBarConfig.LAYOUT_FLOATING) {
             ConfigDialogRow(
                 title = stringResource(R.string.bottom_bar_effect_mode),
                 value = config.getEffectModeText(context),
-                onClick = { picker = NavigationBarPicker.EffectMode }
+                onClick = { picker = NavigationBarPicker.EffectMode },
             )
         }
 
@@ -107,26 +107,26 @@ fun NavigationBarEditDialog(
             title = stringResource(R.string.bottom_background_color),
             value = backgroundColorText(config, accent),
             colorPreview = Color(config.backgroundColor ?: defaultBottomColor),
-            onClick = { picker = NavigationBarPicker.BackgroundSource }
+            onClick = { picker = NavigationBarPicker.BackgroundSource },
         )
 
         if (config.layoutMode != NavigationBarConfig.LAYOUT_SIDEBAR) {
             ConfigDialogRow(
                 title = stringResource(R.string.opacity),
                 value = "${config.opacity}%",
-                onClick = { picker = NavigationBarPicker.Opacity }
+                onClick = { picker = NavigationBarPicker.Opacity },
             )
             ConfigDialogRow(
                 title = stringResource(R.string.bottom_bar_border_color),
                 value = borderColorText(config, accent),
                 colorPreview = Color(config.borderColor ?: Color.Transparent.toArgb()),
-                onClick = { picker = NavigationBarPicker.BorderSource }
+                onClick = { picker = NavigationBarPicker.BorderSource },
             )
             if (config.borderColor?.let(::hasAlpha) == true) {
                 ConfigDialogRow(
                     title = stringResource(R.string.bottom_bar_border_alpha),
                     value = "${config.borderAlpha}%",
-                    onClick = { picker = NavigationBarPicker.BorderAlpha }
+                    onClick = { picker = NavigationBarPicker.BorderAlpha },
                 )
             }
         }
@@ -134,26 +134,26 @@ fun NavigationBarEditDialog(
         NavigationBarConfig.items.forEach { item ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(item.titleRes),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 NavBarIconButton(
                     config = config,
                     item = item,
                     selected = false,
-                    callbacks = callbacks
+                    callbacks = callbacks,
                 )
                 Spacer(Modifier.size(AppDimens.panelRowTitleSpacing))
                 NavBarIconButton(
                     config = config,
                     item = item,
                     selected = true,
-                    callbacks = callbacks
+                    callbacks = callbacks,
                 )
             }
         }
@@ -167,7 +167,7 @@ fun NavigationBarEditDialog(
             options = listOf(
                 stringResource(R.string.nav_bar_layout_floating),
                 stringResource(R.string.nav_bar_layout_standard),
-                stringResource(R.string.nav_bar_layout_sidebar)
+                stringResource(R.string.nav_bar_layout_sidebar),
             ),
             selectedIndex = layoutModeValues.indexOf(config.layoutMode),
             onSelect = { index ->
@@ -183,7 +183,7 @@ fun NavigationBarEditDialog(
                 }
                 picker = NavigationBarPicker.None
             },
-            onDismissRequest = { picker = NavigationBarPicker.None }
+            onDismissRequest = { picker = NavigationBarPicker.None },
         )
 
         NavigationBarPicker.EffectMode -> AppRadioChoiceDialog(
@@ -191,7 +191,7 @@ fun NavigationBarEditDialog(
             options = listOf(
                 stringResource(R.string.nav_bar_effect_solid),
                 stringResource(R.string.nav_bar_effect_glass),
-                stringResource(R.string.nav_bar_effect_frosted)
+                stringResource(R.string.nav_bar_effect_frosted),
             ),
             selectedIndex = effectModeValues.indexOf(config.effectMode),
             onSelect = { index ->
@@ -199,7 +199,7 @@ fun NavigationBarEditDialog(
                 callbacks.onDraftChange { it.copySelf().apply { effectMode = mode } }
                 picker = NavigationBarPicker.None
             },
-            onDismissRequest = { picker = NavigationBarPicker.None }
+            onDismissRequest = { picker = NavigationBarPicker.None },
         )
 
         NavigationBarPicker.BackgroundSource -> AppRadioChoiceDialog(
@@ -207,7 +207,7 @@ fun NavigationBarEditDialog(
             options = listOf(
                 stringResource(R.string.bottom_bar_follow_theme),
                 stringResource(R.string.accent_color),
-                stringResource(R.string.custom)
+                stringResource(R.string.custom),
             ),
             selectedIndex = when (config.backgroundColor) {
                 null -> 0
@@ -221,11 +221,11 @@ fun NavigationBarEditDialog(
                     1 -> callbacks.onDraftChange { it.copySelf().apply { backgroundColor = accent } }
                     else -> callbacks.onRequestColor(
                         NavigationBarColorTarget.BACKGROUND,
-                        config.backgroundColor ?: defaultBottomColor
+                        config.backgroundColor ?: defaultBottomColor,
                     )
                 }
             },
-            onDismissRequest = { picker = NavigationBarPicker.None }
+            onDismissRequest = { picker = NavigationBarPicker.None },
         )
 
         NavigationBarPicker.BorderSource -> AppRadioChoiceDialog(
@@ -233,7 +233,7 @@ fun NavigationBarEditDialog(
             options = listOf(
                 stringResource(R.string.transparent),
                 stringResource(R.string.accent_color),
-                stringResource(R.string.custom)
+                stringResource(R.string.custom),
             ),
             selectedIndex = when {
                 config.borderColor?.let(::hasAlpha) != true -> 0
@@ -254,11 +254,11 @@ fun NavigationBarEditDialog(
                     }
                     else -> callbacks.onRequestColor(
                         NavigationBarColorTarget.BORDER,
-                        config.borderColor ?: accent
+                        config.borderColor ?: accent,
                     )
                 }
             },
-            onDismissRequest = { picker = NavigationBarPicker.None }
+            onDismissRequest = { picker = NavigationBarPicker.None },
         )
 
         NavigationBarPicker.Opacity -> ConfigSliderDialog(
@@ -268,7 +268,7 @@ fun NavigationBarEditDialog(
                 callbacks.onDraftChange { it.copySelf().apply { opacity = value } }
                 picker = NavigationBarPicker.None
             },
-            onDismissRequest = { picker = NavigationBarPicker.None }
+            onDismissRequest = { picker = NavigationBarPicker.None },
         )
 
         NavigationBarPicker.BorderAlpha -> ConfigSliderDialog(
@@ -278,36 +278,40 @@ fun NavigationBarEditDialog(
                 callbacks.onDraftChange { it.copySelf().apply { borderAlpha = value } }
                 picker = NavigationBarPicker.None
             },
-            onDismissRequest = { picker = NavigationBarPicker.None }
+            onDismissRequest = { picker = NavigationBarPicker.None },
         )
     }
 }
 
 private enum class NavigationBarPicker {
-    None, LayoutMode, EffectMode, BackgroundSource, BorderSource, Opacity, BorderAlpha
+    None,
+    LayoutMode,
+    EffectMode,
+    BackgroundSource,
+    BorderSource,
+    Opacity,
+    BorderAlpha,
 }
 
 private val layoutModeValues = listOf(
     NavigationBarConfig.LAYOUT_FLOATING,
     NavigationBarConfig.LAYOUT_STANDARD,
-    NavigationBarConfig.LAYOUT_SIDEBAR
+    NavigationBarConfig.LAYOUT_SIDEBAR,
 )
 
 private val effectModeValues = listOf(
     NavigationBarConfig.EFFECT_SOLID,
     NavigationBarConfig.EFFECT_GLASS,
-    NavigationBarConfig.EFFECT_FROSTED
+    NavigationBarConfig.EFFECT_FROSTED,
 )
 
 private fun hasAlpha(color: Int): Boolean = (color ushr 24) and 0xFF > 0
 
 @Composable
-private fun backgroundColorText(config: NavigationBarConfig, accent: Int): String {
-    return when (val color = config.backgroundColor) {
-        null -> stringResource(R.string.bottom_bar_follow_theme)
-        accent -> stringResource(R.string.accent_color)
-        else -> String.format(Locale.ROOT, "#%06X", color and 0x00FFFFFF)
-    }
+private fun backgroundColorText(config: NavigationBarConfig, accent: Int): String = when (val color = config.backgroundColor) {
+    null -> stringResource(R.string.bottom_bar_follow_theme)
+    accent -> stringResource(R.string.accent_color)
+    else -> String.format(Locale.ROOT, "#%06X", color and 0x00FFFFFF)
 }
 
 @Composable
@@ -328,11 +332,11 @@ private fun NavBarIconButton(
     config: NavigationBarConfig,
     item: NavigationBarConfig.NavItem,
     selected: Boolean,
-    callbacks: NavigationBarEditCallbacks
+    callbacks: NavigationBarEditCallbacks,
 ) {
     val context = LocalContext.current
     val description = stringResource(
-        if (selected) R.string.navigation_icon_selected else R.string.navigation_icon_normal
+        if (selected) R.string.navigation_icon_selected else R.string.navigation_icon_normal,
     )
     var expanded by remember { mutableStateOf(false) }
     val state = if (selected) NavigationBarConfig.STATE_SELECTED else NavigationBarConfig.STATE_NORMAL
@@ -345,26 +349,26 @@ private fun NavBarIconButton(
             Image(
                 painter = remember(drawable) { AppDrawablePainter(drawable) },
                 contentDescription = description,
-                modifier = Modifier.size(AppDimens.panelRowIconSize)
+                modifier = Modifier.size(AppDimens.panelRowIconSize),
             )
         } else {
             Icon(
                 painter = painterResource(item.defaultIconRes),
                 contentDescription = description,
-                modifier = Modifier.size(AppDimens.panelRowIconSize)
+                modifier = Modifier.size(AppDimens.panelRowIconSize),
             )
         }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            modifier = Modifier.eInkGrayscale()
+            modifier = Modifier.eInkGrayscale(),
         ) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.select_image)) },
                 onClick = {
                     expanded = false
                     callbacks.onRequestIcon(item.key, state, description)
-                }
+                },
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.delete)) },
@@ -377,7 +381,7 @@ private fun NavBarIconButton(
                             }
                         }
                     }
-                }
+                },
             )
         }
     }

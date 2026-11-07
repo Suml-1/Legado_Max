@@ -51,7 +51,7 @@ fun ApplicationThemeEditScreen(
     viewModel: ApplicationThemeEditViewModel,
     onBackClick: () -> Unit,
     onToast: (Int) -> Unit,
-    onFinished: () -> Unit
+    onFinished: () -> Unit,
 ) {
     val draft by viewModel.draft.collectAsState()
     val candidates by viewModel.candidates.collectAsState()
@@ -77,21 +77,21 @@ fun ApplicationThemeEditScreen(
         topBar = {
             AppPageTopBar(
                 title = stringResource(
-                    if (viewModel.isNew) R.string.application_theme_create else R.string.application_theme_edit
+                    if (viewModel.isNew) R.string.application_theme_create else R.string.application_theme_edit,
                 ),
                 onBackClick = onBackClick,
                 actions = {
                     TextButton(onClick = viewModel::save) {
                         Text(stringResource(R.string.action_save))
                     }
-                }
+                },
             )
-        }
+        },
     ) { contentPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(contentPadding)
+                .padding(contentPadding),
         ) {
             val scrollState = rememberScrollState()
             Column(
@@ -99,78 +99,78 @@ fun ApplicationThemeEditScreen(
                     .fillMaxSize()
                     .verticalScroll(scrollState)
                     .padding(horizontal = AppDimens.screenPadding),
-                verticalArrangement = Arrangement.spacedBy(AppDimens.manageRowSpacing)
+                verticalArrangement = Arrangement.spacedBy(AppDimens.manageRowSpacing),
             ) {
                 OutlinedTextField(
                     value = config.name,
                     onValueChange = { value -> viewModel.updateDraft { it.copy(name = value) } },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    placeholder = { Text(stringResource(R.string.application_theme_name)) }
+                    placeholder = { Text(stringResource(R.string.application_theme_name)) },
                 )
 
                 ConfigDialogRow(
                     title = componentTitle(false, R.string.application_theme_component_theme),
                     value = config.dayTheme?.themeName ?: notSet,
-                    onClick = { picker = ThemeEditPicker.DayTheme }
+                    onClick = { picker = ThemeEditPicker.DayTheme },
                 )
                 ConfigDialogRow(
                     title = componentTitle(true, R.string.application_theme_component_theme),
                     value = config.nightTheme?.themeName ?: notSet,
-                    onClick = { picker = ThemeEditPicker.NightTheme }
+                    onClick = { picker = ThemeEditPicker.NightTheme },
                 )
                 ConfigDialogRow(
                     title = componentTitle(false, R.string.application_theme_component_top_bar),
                     value = candidates.dayTopBars
                         .firstOrNull { it.dirName == config.dayTopBarDir }?.config?.name ?: notSet,
-                    onClick = { picker = ThemeEditPicker.DayTopBar }
+                    onClick = { picker = ThemeEditPicker.DayTopBar },
                 )
                 ConfigDialogRow(
                     title = componentTitle(true, R.string.application_theme_component_top_bar),
                     value = candidates.nightTopBars
                         .firstOrNull { it.dirName == config.nightTopBarDir }?.config?.name ?: notSet,
-                    onClick = { picker = ThemeEditPicker.NightTopBar }
+                    onClick = { picker = ThemeEditPicker.NightTopBar },
                 )
                 ConfigDialogRow(
                     title = componentTitle(false, R.string.application_theme_component_bottom_bar),
                     value = candidates.dayBottomBars
                         .firstOrNull { it.id == config.dayBottomBarId }?.name ?: notSet,
-                    onClick = { picker = ThemeEditPicker.DayBottomBar }
+                    onClick = { picker = ThemeEditPicker.DayBottomBar },
                 )
                 ConfigDialogRow(
                     title = componentTitle(true, R.string.application_theme_component_bottom_bar),
                     value = candidates.nightBottomBars
                         .firstOrNull { it.id == config.nightBottomBarId }?.name ?: notSet,
-                    onClick = { picker = ThemeEditPicker.NightBottomBar }
+                    onClick = { picker = ThemeEditPicker.NightBottomBar },
                 )
                 ConfigDialogRow(
                     title = componentTitle(false, R.string.application_theme_component_cover),
                     value = candidates.covers
                         .firstOrNull { it.first == config.dayCoverGroupId }?.second ?: notSet,
-                    onClick = { picker = ThemeEditPicker.DayCover }
+                    onClick = { picker = ThemeEditPicker.DayCover },
                 )
                 ConfigDialogRow(
                     title = componentTitle(true, R.string.application_theme_component_cover),
                     value = candidates.covers
                         .firstOrNull { it.first == config.nightCoverGroupId }?.second ?: notSet,
-                    onClick = { picker = ThemeEditPicker.NightCover }
+                    onClick = { picker = ThemeEditPicker.NightCover },
                 )
 
                 if (!viewModel.isNew) {
                     TextButton(
                         onClick = { showDeleteConfirm = true },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
                             text = stringResource(R.string.delete),
-                            color = MaterialTheme.colorScheme.error
+                            color = MaterialTheme.colorScheme.error,
                         )
                     }
                 }
             }
             VerticalScrollbar(
                 state = scrollState,
-                modifier = Modifier.align(Alignment.CenterEnd)
+                modifier = Modifier.align(Alignment.CenterEnd),
             )
         }
     }
@@ -189,7 +189,7 @@ fun ApplicationThemeEditScreen(
                 viewModel.updateDraft { it.copy(dayTheme = theme) }
                 picker = ThemeEditPicker.None
             },
-            onDismissRequest = { picker = ThemeEditPicker.None }
+            onDismissRequest = { picker = ThemeEditPicker.None },
         )
 
         ThemeEditPicker.NightTheme -> AppRadioChoiceDialog(
@@ -203,7 +203,7 @@ fun ApplicationThemeEditScreen(
                 viewModel.updateDraft { it.copy(nightTheme = theme) }
                 picker = ThemeEditPicker.None
             },
-            onDismissRequest = { picker = ThemeEditPicker.None }
+            onDismissRequest = { picker = ThemeEditPicker.None },
         )
 
         ThemeEditPicker.DayTopBar -> AppRadioChoiceDialog(
@@ -217,7 +217,7 @@ fun ApplicationThemeEditScreen(
                 viewModel.updateDraft { it.copy(dayTopBarDir = dir) }
                 picker = ThemeEditPicker.None
             },
-            onDismissRequest = { picker = ThemeEditPicker.None }
+            onDismissRequest = { picker = ThemeEditPicker.None },
         )
 
         ThemeEditPicker.NightTopBar -> AppRadioChoiceDialog(
@@ -231,7 +231,7 @@ fun ApplicationThemeEditScreen(
                 viewModel.updateDraft { it.copy(nightTopBarDir = dir) }
                 picker = ThemeEditPicker.None
             },
-            onDismissRequest = { picker = ThemeEditPicker.None }
+            onDismissRequest = { picker = ThemeEditPicker.None },
         )
 
         ThemeEditPicker.DayBottomBar -> AppRadioChoiceDialog(
@@ -245,7 +245,7 @@ fun ApplicationThemeEditScreen(
                 viewModel.updateDraft { it.copy(dayBottomBarId = id) }
                 picker = ThemeEditPicker.None
             },
-            onDismissRequest = { picker = ThemeEditPicker.None }
+            onDismissRequest = { picker = ThemeEditPicker.None },
         )
 
         ThemeEditPicker.NightBottomBar -> AppRadioChoiceDialog(
@@ -259,7 +259,7 @@ fun ApplicationThemeEditScreen(
                 viewModel.updateDraft { it.copy(nightBottomBarId = id) }
                 picker = ThemeEditPicker.None
             },
-            onDismissRequest = { picker = ThemeEditPicker.None }
+            onDismissRequest = { picker = ThemeEditPicker.None },
         )
 
         ThemeEditPicker.DayCover -> AppRadioChoiceDialog(
@@ -273,7 +273,7 @@ fun ApplicationThemeEditScreen(
                 viewModel.updateDraft { it.copy(dayCoverGroupId = id) }
                 picker = ThemeEditPicker.None
             },
-            onDismissRequest = { picker = ThemeEditPicker.None }
+            onDismissRequest = { picker = ThemeEditPicker.None },
         )
 
         ThemeEditPicker.NightCover -> AppRadioChoiceDialog(
@@ -287,7 +287,7 @@ fun ApplicationThemeEditScreen(
                 viewModel.updateDraft { it.copy(nightCoverGroupId = id) }
                 picker = ThemeEditPicker.None
             },
-            onDismissRequest = { picker = ThemeEditPicker.None }
+            onDismissRequest = { picker = ThemeEditPicker.None },
         )
     }
 
@@ -301,7 +301,7 @@ fun ApplicationThemeEditScreen(
                 showDeleteConfirm = false
                 viewModel.delete()
             },
-            onDismissRequest = { showDeleteConfirm = false }
+            onDismissRequest = { showDeleteConfirm = false },
         )
     }
 }
@@ -317,6 +317,13 @@ private fun componentTitle(isNight: Boolean, componentRes: Int): String {
 }
 
 private enum class ThemeEditPicker {
-    None, DayTheme, NightTheme, DayTopBar, NightTopBar,
-    DayBottomBar, NightBottomBar, DayCover, NightCover
+    None,
+    DayTheme,
+    NightTheme,
+    DayTopBar,
+    NightTopBar,
+    DayBottomBar,
+    NightBottomBar,
+    DayCover,
+    NightCover,
 }

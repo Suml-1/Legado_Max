@@ -40,7 +40,7 @@ fun ConfigUrlImportDialog(
     title: String,
     history: List<String>,
     onConfirm: (String) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
 ) {
     var url by rememberSaveable { mutableStateOf(history.firstOrNull().orEmpty()) }
     var showError by rememberSaveable { mutableStateOf(false) }
@@ -59,20 +59,20 @@ fun ConfigUrlImportDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     isError = showError,
-                    placeholder = { Text(stringResource(R.string.please_input_url)) }
+                    placeholder = { Text(stringResource(R.string.please_input_url)) },
                 )
                 if (showError) {
                     Text(
                         text = stringResource(R.string.url_format_error),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
                 if (history.isNotEmpty()) {
                     Column(
                         modifier = Modifier
                             .heightIn(max = AppDimens.dialogOptionsMaxHeight)
-                            .verticalScroll(rememberScrollState())
+                            .verticalScroll(rememberScrollState()),
                     ) {
                         history.forEach { item ->
                             Text(
@@ -84,7 +84,7 @@ fun ConfigUrlImportDialog(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { url = item }
-                                    .padding(vertical = AppDimens.manageCardTitleSpacing)
+                                    .padding(vertical = AppDimens.manageCardTitleSpacing),
                             )
                         }
                     }
@@ -107,6 +107,6 @@ fun ConfigUrlImportDialog(
             TextButton(onClick = onDismissRequest) {
                 Text(stringResource(R.string.cancel))
             }
-        }
+        },
     )
 }

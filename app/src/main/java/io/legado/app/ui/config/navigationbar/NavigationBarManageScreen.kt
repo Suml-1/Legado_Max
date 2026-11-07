@@ -55,7 +55,7 @@ data class NavigationBarManageActions(
     val onToastMsg: (String) -> Unit = {},
     val onShareJson: (String) -> Unit = {},
     val onPickColor: (target: Int, current: Int) -> Unit = { _, _ -> },
-    val onPickIcon: (itemKey: String, state: String, title: String) -> Unit = { _, _, _ -> }
+    val onPickIcon: (itemKey: String, state: String, title: String) -> Unit = { _, _, _ -> },
 )
 
 /**
@@ -68,7 +68,7 @@ data class NavigationBarManageActions(
 fun NavigationBarManageScreen(
     viewModel: NavigationBarManageViewModel,
     actions: NavigationBarManageActions,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val state = rememberSharedConfigManageState()
     val items by viewModel.items.collectAsState()
@@ -106,7 +106,7 @@ fun NavigationBarManageScreen(
             if (state.isMultiSelectMode) {
                 SelectAllAction(
                     isAllSelected = state.isAllSelected(visibleKeys),
-                    onSelectAll = { state.selectAllVisible(visibleKeys) }
+                    onSelectAll = { state.selectAllVisible(visibleKeys) },
                 )
             } else {
                 ImportFromClipboardAction(onImport = viewModel::importFromClipboard)
@@ -124,7 +124,7 @@ fun NavigationBarManageScreen(
                             onClick = {
                                 viewModel.toTopConfigs(selected)
                                 state.exitMultiSelect()
-                            }
+                            },
                         ),
                         MultiSelectAction(
                             icon = Icons.Default.Share,
@@ -132,28 +132,28 @@ fun NavigationBarManageScreen(
                             onClick = {
                                 viewModel.exportConfigs(selected)
                                 state.exitMultiSelect()
-                            }
+                            },
                         ),
                         MultiSelectAction(
                             icon = Icons.Default.Delete,
                             contentDescription = stringResource(R.string.delete),
                             tint = MaterialTheme.colorScheme.error,
-                            onClick = { pendingDelete = selected }
-                        )
-                    )
+                            onClick = { pendingDelete = selected },
+                        ),
+                    ),
                 )
             } else {
                 ConfigAddBottomBar(
                     text = stringResource(R.string.add_nav_bar_config),
-                    onClick = viewModel::startCreate
+                    onClick = viewModel::startCreate,
                 )
             }
-        }
+        },
     ) { contentPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(contentPadding)
+                .padding(contentPadding),
         ) {
             DayNightPager(
                 state = state,
@@ -167,7 +167,7 @@ fun NavigationBarManageScreen(
                         activeId = activeId,
                         emptyText = stringResource(
                             R.string.nav_bar_summary_empty,
-                            stringResource(R.string.day_theme)
+                            stringResource(R.string.day_theme),
                         ),
                         onApply = viewModel::applyConfig,
                         onEdit = viewModel::startEdit,
@@ -175,7 +175,7 @@ fun NavigationBarManageScreen(
                         onToTop = viewModel::toTop,
                         onExport = viewModel::exportConfig,
                         onLongClick = { state.enterMultiSelect(it.id) },
-                        onToggleSelect = { state.toggleSelection(it.id) }
+                        onToggleSelect = { state.toggleSelection(it.id) },
                     )
                 },
                 nightContent = {
@@ -185,7 +185,7 @@ fun NavigationBarManageScreen(
                         activeId = activeId,
                         emptyText = stringResource(
                             R.string.nav_bar_summary_empty,
-                            stringResource(R.string.night_theme)
+                            stringResource(R.string.night_theme),
                         ),
                         onApply = viewModel::applyConfig,
                         onEdit = viewModel::startEdit,
@@ -193,9 +193,9 @@ fun NavigationBarManageScreen(
                         onToTop = viewModel::toTop,
                         onExport = viewModel::exportConfig,
                         onLongClick = { state.enterMultiSelect(it.id) },
-                        onToggleSelect = { state.toggleSelection(it.id) }
+                        onToggleSelect = { state.toggleSelection(it.id) },
                     )
-                }
+                },
             )
         }
     }
@@ -210,8 +210,8 @@ fun NavigationBarManageScreen(
                 onRequestColor = actions.onPickColor,
                 onRequestIcon = actions.onPickIcon,
                 onSave = viewModel::saveDraft,
-                onDismiss = viewModel::clearDraft
-            )
+                onDismiss = viewModel::clearDraft,
+            ),
         )
     }
 
@@ -226,7 +226,7 @@ fun NavigationBarManageScreen(
                 pendingDelete = emptyList()
                 state.exitMultiSelect()
             },
-            onDismissRequest = { pendingDelete = emptyList() }
+            onDismissRequest = { pendingDelete = emptyList() },
         )
     }
 }
@@ -243,7 +243,7 @@ private fun NavigationBarList(
     onToTop: (NavigationBarConfig) -> Unit,
     onExport: (NavigationBarConfig) -> Unit,
     onLongClick: (NavigationBarConfig) -> Unit,
-    onToggleSelect: (NavigationBarConfig) -> Unit
+    onToggleSelect: (NavigationBarConfig) -> Unit,
 ) {
     val listState = rememberLazyListState()
     Box(modifier = Modifier.fillMaxSize()) {
@@ -251,7 +251,7 @@ private fun NavigationBarList(
             items = items,
             listState = listState,
             itemKey = { it.id },
-            emptyText = emptyText
+            emptyText = emptyText,
         ) { item ->
             NavigationBarCard(
                 item = item,
@@ -263,12 +263,12 @@ private fun NavigationBarList(
                 onToTop = { onToTop(item) },
                 onExport = { onExport(item) },
                 onLongClick = { onLongClick(item) },
-                onToggleSelect = { onToggleSelect(item) }
+                onToggleSelect = { onToggleSelect(item) },
             )
         }
         VerticalScrollbar(
             state = listState,
-            modifier = Modifier.align(Alignment.CenterEnd)
+            modifier = Modifier.align(Alignment.CenterEnd),
         )
     }
 }
@@ -284,7 +284,7 @@ private fun NavigationBarCard(
     onToTop: () -> Unit,
     onExport: () -> Unit,
     onLongClick: () -> Unit,
-    onToggleSelect: () -> Unit
+    onToggleSelect: () -> Unit,
 ) {
     val context = LocalContext.current
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
@@ -317,12 +317,12 @@ private fun NavigationBarCard(
             ConfigActionButton(
                 text = stringResource(R.string.apply),
                 onClick = onApply,
-                highlighted = isCurrent
+                highlighted = isCurrent,
             )
             if (!item.isBuiltin) {
                 ConfigActionButton(
                     text = stringResource(R.string.edit),
-                    onClick = onEdit
+                    onClick = onEdit,
                 )
             }
             ConfigItemMoreButton(
@@ -338,8 +338,8 @@ private fun NavigationBarCard(
                     if (!item.isBuiltin && !isCurrent) {
                         add(ConfigMenuItem(stringResource(R.string.delete), onDelete))
                     }
-                }
+                },
             )
-        }
+        },
     )
 }

@@ -11,7 +11,7 @@ import io.legado.app.R
 class SwitchVideoAdapter<T>(
     context: Context,
     private val dataList: List<T>,
-    private val titleProvider: (T) -> String = { it.toString() }
+    private val titleProvider: (T) -> String = { it.toString() },
 ) : ArrayAdapter<T>(context, 0, dataList) {
 
     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {

@@ -3,7 +3,6 @@ package io.legado.app.ui.config.navigationbar
 import android.net.Uri
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
-import androidx.core.graphics.toColorInt
 import androidx.lifecycle.lifecycleScope
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
 import com.jaredrummler.android.colorpicker.ColorPickerDialogListener
@@ -18,7 +17,6 @@ import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 import java.io.FileOutputStream
 
 /**
@@ -83,8 +81,8 @@ class NavigationBarManageActivity :
                         mode = HandleFileContract.FILE
                         title = getString(R.string.select_image)
                     }
-                }
-            )
+                },
+            ),
         )
     }
 

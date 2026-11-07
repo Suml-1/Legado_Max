@@ -33,7 +33,7 @@ fun ConfigNameDialog(
     initialName: String,
     hint: String,
     onConfirm: (String) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
 ) {
     var name by rememberSaveable(initialName) { mutableStateOf(initialName) }
     val trimmed = name.trim()
@@ -48,13 +48,13 @@ fun ConfigNameDialog(
                 onValueChange = { name = it },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                placeholder = { Text(hint) }
+                placeholder = { Text(hint) },
             )
         },
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(trimmed) },
-                enabled = trimmed.isNotEmpty()
+                enabled = trimmed.isNotEmpty(),
             ) {
                 Text(stringResource(R.string.ok))
             }
@@ -64,6 +64,6 @@ fun ConfigNameDialog(
                 Text(stringResource(R.string.cancel))
             }
         },
-        textContentColor = MaterialTheme.colorScheme.onSurface
+        textContentColor = MaterialTheme.colorScheme.onSurface,
     )
 }

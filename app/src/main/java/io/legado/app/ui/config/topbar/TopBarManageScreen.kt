@@ -20,7 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -58,7 +57,7 @@ data class TopBarManageActions(
     val onExportZip: (java.io.File) -> Unit = {},
     val onPickColor: (target: Int, current: Int) -> Unit = { _, _ -> },
     val onPickWallpaper: () -> Unit = {},
-    val onPickImportZip: () -> Unit = {}
+    val onPickImportZip: () -> Unit = {},
 )
 
 /**
@@ -71,7 +70,7 @@ data class TopBarManageActions(
 fun TopBarManageScreen(
     viewModel: TopBarManageViewModel,
     actions: TopBarManageActions,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val state = rememberSharedConfigManageState()
     val items by viewModel.items.collectAsState()
@@ -110,7 +109,7 @@ fun TopBarManageScreen(
             if (state.isMultiSelectMode) {
                 SelectAllAction(
                     isAllSelected = state.isAllSelected(visibleKeys),
-                    onSelectAll = { state.selectAllVisible(visibleKeys) }
+                    onSelectAll = { state.selectAllVisible(visibleKeys) },
                 )
             } else {
                 ConfigActionIconMenu(
@@ -119,13 +118,13 @@ fun TopBarManageScreen(
                     items = listOf(
                         ConfigMenuItem(
                             text = stringResource(R.string.top_bar_import_zip),
-                            onClick = actions.onPickImportZip
+                            onClick = actions.onPickImportZip,
                         ),
                         ConfigMenuItem(
                             text = stringResource(R.string.top_bar_import_clipboard),
-                            onClick = viewModel::importFromClipboard
-                        )
-                    )
+                            onClick = viewModel::importFromClipboard,
+                        ),
+                    ),
                 )
             }
         },
@@ -141,7 +140,7 @@ fun TopBarManageScreen(
                             onClick = {
                                 viewModel.toTopEntries(selected)
                                 state.exitMultiSelect()
-                            }
+                            },
                         ),
                         MultiSelectAction(
                             icon = Icons.Default.Share,
@@ -149,35 +148,35 @@ fun TopBarManageScreen(
                             onClick = {
                                 viewModel.exportJson(selected, single = false)
                                 state.exitMultiSelect()
-                            }
+                            },
                         ),
                         MultiSelectAction(
                             icon = Icons.Default.Delete,
                             contentDescription = stringResource(R.string.delete),
                             tint = MaterialTheme.colorScheme.error,
-                            onClick = { pendingDelete = selected }
-                        )
-                    )
+                            onClick = { pendingDelete = selected },
+                        ),
+                    ),
                 )
             } else {
                 ConfigAddBottomBar(
                     text = stringResource(R.string.add_top_bar_config),
-                    onClick = viewModel::startCreate
+                    onClick = viewModel::startCreate,
                 )
             }
-        }
+        },
     ) { contentPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(contentPadding)
+                .padding(contentPadding),
         ) {
             DayNightPager(
                 state = state,
                 onTabChange = state::switchTab,
                 summaryText = stringResource(
                     R.string.top_bar_summary,
-                    stringResource(if (isNight) R.string.night else R.string.day)
+                    stringResource(if (isNight) R.string.night else R.string.day),
                 ),
                 scrollEnabled = !state.isMultiSelectMode,
                 dayContent = {
@@ -193,7 +192,7 @@ fun TopBarManageScreen(
                         onShareJson = { viewModel.exportJson(listOf(it), single = true) },
                         onImportClipboard = viewModel::importFromClipboard,
                         onLongClick = { state.enterMultiSelect(it.dirName) },
-                        onToggleSelect = { state.toggleSelection(it.dirName) }
+                        onToggleSelect = { state.toggleSelection(it.dirName) },
                     )
                 },
                 nightContent = {
@@ -209,9 +208,9 @@ fun TopBarManageScreen(
                         onShareJson = { viewModel.exportJson(listOf(it), single = true) },
                         onImportClipboard = viewModel::importFromClipboard,
                         onLongClick = { state.enterMultiSelect(it.dirName) },
-                        onToggleSelect = { state.toggleSelection(it.dirName) }
+                        onToggleSelect = { state.toggleSelection(it.dirName) },
                     )
-                }
+                },
             )
         }
     }
@@ -225,8 +224,8 @@ fun TopBarManageScreen(
                 onRequestColor = actions.onPickColor,
                 onRequestWallpaper = actions.onPickWallpaper,
                 onSave = viewModel::saveDraft,
-                onDismiss = viewModel::clearDraft
-            )
+                onDismiss = viewModel::clearDraft,
+            ),
         )
     }
 
@@ -241,7 +240,7 @@ fun TopBarManageScreen(
                 pendingDelete = emptyList()
                 state.exitMultiSelect()
             },
-            onDismissRequest = { pendingDelete = emptyList() }
+            onDismissRequest = { pendingDelete = emptyList() },
         )
     }
 }
@@ -259,7 +258,7 @@ private fun TopBarList(
     onShareJson: (TopBarConfig.Entry) -> Unit,
     onImportClipboard: () -> Unit,
     onLongClick: (TopBarConfig.Entry) -> Unit,
-    onToggleSelect: (TopBarConfig.Entry) -> Unit
+    onToggleSelect: (TopBarConfig.Entry) -> Unit,
 ) {
     val listState = rememberLazyListState()
     Box(modifier = Modifier.fillMaxSize()) {
@@ -267,7 +266,7 @@ private fun TopBarList(
             items = items,
             listState = listState,
             itemKey = { it.dirName },
-            emptyText = stringResource(R.string.empty)
+            emptyText = stringResource(R.string.empty),
         ) { item ->
             TopBarCard(
                 entry = item,
@@ -281,12 +280,12 @@ private fun TopBarList(
                 onShareJson = { onShareJson(item) },
                 onImportClipboard = onImportClipboard,
                 onLongClick = { onLongClick(item) },
-                onToggleSelect = { onToggleSelect(item) }
+                onToggleSelect = { onToggleSelect(item) },
             )
         }
         VerticalScrollbar(
             state = listState,
-            modifier = Modifier.align(Alignment.CenterEnd)
+            modifier = Modifier.align(Alignment.CenterEnd),
         )
     }
 }
@@ -304,7 +303,7 @@ private fun TopBarCard(
     onShareJson: () -> Unit,
     onImportClipboard: () -> Unit,
     onLongClick: () -> Unit,
-    onToggleSelect: () -> Unit
+    onToggleSelect: () -> Unit,
 ) {
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
     val isBuiltin = entry.dirName == TopBarConfig.DEFAULT_DIR_NAME
@@ -315,8 +314,8 @@ private fun TopBarCard(
                     R.string.regular_top_bar
                 } else {
                     R.string.default_top_bar
-                }
-            )
+                },
+            ),
         )
         if (entry.config.style == TopBarConfig.STYLE_REGULAR) {
             append(" · ")
@@ -342,12 +341,12 @@ private fun TopBarCard(
             ConfigActionButton(
                 text = stringResource(R.string.apply),
                 onClick = onApply,
-                highlighted = isCurrent
+                highlighted = isCurrent,
             )
             if (!isBuiltin) {
                 ConfigActionButton(
                     text = stringResource(R.string.edit),
-                    onClick = onEdit
+                    onClick = onEdit,
                 )
             }
             ConfigItemMoreButton(
@@ -366,8 +365,8 @@ private fun TopBarCard(
                     if (!isBuiltin && !isCurrent) {
                         add(ConfigMenuItem(stringResource(R.string.delete), onDelete))
                     }
-                }
+                },
             )
-        }
+        },
     )
 }

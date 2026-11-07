@@ -83,7 +83,7 @@ class ApplicationThemeActivity : BaseComposeActivity() {
                 onOpenEditor = { id ->
                     openEditor.launch(
                         Intent(this, ApplicationThemeEditActivity::class.java)
-                            .putExtra(ApplicationThemeEditActivity.EXTRA_ID, id)
+                            .putExtra(ApplicationThemeEditActivity.EXTRA_ID, id),
                     )
                 },
                 onPickImportFile = {
@@ -93,8 +93,8 @@ class ApplicationThemeActivity : BaseComposeActivity() {
                         allowExtensions = arrayOf("zip", "json", "red")
                     }
                 },
-                onRestart = { recreate() }
-            )
+                onRestart = { recreate() },
+            ),
         )
     }
 

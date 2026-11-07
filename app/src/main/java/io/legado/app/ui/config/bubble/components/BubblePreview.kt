@@ -34,14 +34,14 @@ import java.io.ByteArrayInputStream
 @Composable
 fun BubblePreview(
     config: BubblePackageManager.Config,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val bitmap by produceState<ImageBitmap?>(
         initialValue = null,
         config.dirName,
         config.updatedAt,
         config.svgTemplate,
-        config.dayEmphasisColor
+        config.dayEmphasisColor,
     ) {
         value = withContext(Dispatchers.IO) { renderPreview(config)?.asImageBitmap() }
     }
@@ -50,7 +50,7 @@ fun BubblePreview(
             .size(AppDimens.managePreviewBoxSize)
             .clip(composeActionShape())
             .background(MaterialTheme.colorScheme.surface),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         bitmap?.let {
             Image(
@@ -59,7 +59,7 @@ fun BubblePreview(
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .size(AppDimens.managePreviewBoxSize)
-                    .padding(AppDimens.manageCardTitleSpacing)
+                    .padding(AppDimens.manageCardTitleSpacing),
             )
         }
     }

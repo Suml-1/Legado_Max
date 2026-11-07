@@ -48,7 +48,7 @@ class ApplicationThemeViewModel(application: Application) : BaseViewModel(applic
                 }
                 .onFailure {
                     _events.trySend(
-                        ApplicationThemeEvent.ToastMsg(it.localizedMessage ?: appCtx.getString(R.string.error))
+                        ApplicationThemeEvent.ToastMsg(it.localizedMessage ?: appCtx.getString(R.string.error)),
                     )
                 }
         }
@@ -72,7 +72,7 @@ class ApplicationThemeViewModel(application: Application) : BaseViewModel(applic
                 _events.trySend(ApplicationThemeEvent.Toast(R.string.success))
             }.onFailure {
                 _events.trySend(
-                    ApplicationThemeEvent.ToastMsg(it.localizedMessage ?: appCtx.getString(R.string.error))
+                    ApplicationThemeEvent.ToastMsg(it.localizedMessage ?: appCtx.getString(R.string.error)),
                 )
             }
         }
@@ -84,14 +84,14 @@ class ApplicationThemeViewModel(application: Application) : BaseViewModel(applic
 
     fun export(
         config: ApplicationThemeManager.Config,
-        format: ApplicationThemeManager.ExportFormat
+        format: ApplicationThemeManager.ExportFormat,
     ) {
         execute {
             runCatching { ApplicationThemeManager.exportConfig(appCtx, config, format) }
                 .onSuccess { _events.trySend(ApplicationThemeEvent.ExportFile(it)) }
                 .onFailure {
                     _events.trySend(
-                        ApplicationThemeEvent.ToastMsg(it.localizedMessage ?: appCtx.getString(R.string.error))
+                        ApplicationThemeEvent.ToastMsg(it.localizedMessage ?: appCtx.getString(R.string.error)),
                     )
                 }
         }
@@ -103,7 +103,7 @@ class ApplicationThemeViewModel(application: Application) : BaseViewModel(applic
             runCatching {
                 ApplicationThemeManager.importFile(
                     file,
-                    ApplicationThemeManager.getImportOptions(appCtx).toSelection().toImportOptions()
+                    ApplicationThemeManager.getImportOptions(appCtx).toSelection().toImportOptions(),
                 )
             }
                 .onSuccess {
@@ -112,7 +112,7 @@ class ApplicationThemeViewModel(application: Application) : BaseViewModel(applic
                 }
                 .onFailure {
                     _events.trySend(
-                        ApplicationThemeEvent.ToastMsg(it.localizedMessage ?: appCtx.getString(R.string.import_failed))
+                        ApplicationThemeEvent.ToastMsg(it.localizedMessage ?: appCtx.getString(R.string.import_failed)),
                     )
                 }
         }
@@ -127,7 +127,7 @@ class ApplicationThemeViewModel(application: Application) : BaseViewModel(applic
                 }
                 .onFailure {
                     _events.trySend(
-                        ApplicationThemeEvent.ToastMsg(it.localizedMessage ?: appCtx.getString(R.string.error))
+                        ApplicationThemeEvent.ToastMsg(it.localizedMessage ?: appCtx.getString(R.string.error)),
                     )
                 }
         }
@@ -160,11 +160,9 @@ class ApplicationThemeViewModel(application: Application) : BaseViewModel(applic
         ApplicationThemeManager.saveDeleteOptions(appCtx, selection.toDeleteOptions())
     }
 
-    fun importSelection(): ThemeComponentSelection =
-        ApplicationThemeManager.getImportOptions(appCtx).toSelection()
+    fun importSelection(): ThemeComponentSelection = ApplicationThemeManager.getImportOptions(appCtx).toSelection()
 
-    fun deleteSelection(): ThemeComponentSelection =
-        ApplicationThemeManager.getDeleteOptions(appCtx).toSelection()
+    fun deleteSelection(): ThemeComponentSelection = ApplicationThemeManager.getDeleteOptions(appCtx).toSelection()
 
     /** 多选导出：把若干主题序列化为一个 JSON 数组写入剪贴板 */
     fun copyJsonList(configs: List<ApplicationThemeManager.Config>) {
@@ -199,7 +197,7 @@ private fun ThemeComponentSelection.toImportOptions() = ApplicationThemeManager.
     importDayBottomBar = dayBottomBar,
     importNightBottomBar = nightBottomBar,
     importDayCover = dayCover,
-    importNightCover = nightCover
+    importNightCover = nightCover,
 )
 
 private fun ThemeComponentSelection.toDeleteOptions() = ApplicationThemeManager.DeleteOptions(
@@ -210,7 +208,7 @@ private fun ThemeComponentSelection.toDeleteOptions() = ApplicationThemeManager.
     deleteDayBottomBar = dayBottomBar,
     deleteNightBottomBar = nightBottomBar,
     deleteDayCover = dayCover,
-    deleteNightCover = nightCover
+    deleteNightCover = nightCover,
 )
 
 private fun ApplicationThemeManager.ImportOptions.toSelection() = ThemeComponentSelection(
@@ -221,7 +219,7 @@ private fun ApplicationThemeManager.ImportOptions.toSelection() = ThemeComponent
     dayBottomBar = importDayBottomBar,
     nightBottomBar = importNightBottomBar,
     dayCover = importDayCover,
-    nightCover = importNightCover
+    nightCover = importNightCover,
 )
 
 private fun ApplicationThemeManager.DeleteOptions.toSelection() = ThemeComponentSelection(
@@ -232,5 +230,5 @@ private fun ApplicationThemeManager.DeleteOptions.toSelection() = ThemeComponent
     dayBottomBar = deleteDayBottomBar,
     nightBottomBar = deleteNightBottomBar,
     dayCover = deleteDayCover,
-    nightCover = deleteNightCover
+    nightCover = deleteNightCover,
 )

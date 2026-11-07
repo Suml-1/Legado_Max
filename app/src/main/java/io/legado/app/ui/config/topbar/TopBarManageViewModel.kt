@@ -118,7 +118,7 @@ class TopBarManageViewModel(application: Application) : BaseViewModel(applicatio
             postEvent(EventBus.TOP_BAR_CHANGED, entry.config.isNightMode)
             _activeDirName.value = entry.dirName
             _events.trySend(
-                TopBarEvent.ToastMsg(appCtx.getString(R.string.applied_top_bar_config, entry.config.name))
+                TopBarEvent.ToastMsg(appCtx.getString(R.string.applied_top_bar_config, entry.config.name)),
             )
         }
     }

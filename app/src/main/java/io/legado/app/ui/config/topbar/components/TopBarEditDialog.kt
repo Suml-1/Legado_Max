@@ -29,7 +29,7 @@ data class TopBarEditCallbacks(
     val onRequestColor: (target: Int, current: Int) -> Unit = { _, _ -> },
     val onRequestWallpaper: () -> Unit = {},
     val onSave: () -> Unit = {},
-    val onDismiss: () -> Unit = {}
+    val onDismiss: () -> Unit = {},
 )
 
 /** 颜色选择目标：与 Activity 里 ColorPickerDialog 的 dialogId 对应 */
@@ -54,7 +54,7 @@ object TopBarColorTarget {
 fun TopBarEditDialog(
     config: TopBarConfig.Config,
     isEdit: Boolean,
-    callbacks: TopBarEditCallbacks
+    callbacks: TopBarEditCallbacks,
 ) {
     val context = LocalContext.current
     val accent = context.accentColor
@@ -66,7 +66,7 @@ fun TopBarEditDialog(
         title = stringResource(if (isEdit) R.string.edit else R.string.add),
         onDismissRequest = callbacks.onDismiss,
         onConfirm = callbacks.onSave,
-        confirmEnabled = config.name.isNotBlank()
+        confirmEnabled = config.name.isNotBlank(),
     ) {
         OutlinedTextField(
             value = config.name,
@@ -75,7 +75,7 @@ fun TopBarEditDialog(
             },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            placeholder = { Text(stringResource(R.string.top_bar_name)) }
+            placeholder = { Text(stringResource(R.string.top_bar_name)) },
         )
 
         ConfigDialogRow(
@@ -85,24 +85,24 @@ fun TopBarEditDialog(
                     R.string.regular_top_bar
                 } else {
                     R.string.default_top_bar
-                }
+                },
             ),
-            onClick = { picker = TopBarPicker.Style }
+            onClick = { picker = TopBarPicker.Style },
         )
 
         if (config.style == TopBarConfig.STYLE_REGULAR) {
             ConfigDialogRow(
                 title = stringResource(R.string.corner_scale),
                 value = String.format(Locale.ROOT, "%.1f", (config.cornerScale ?: 1f).coerceIn(0f, 3f)),
-                onClick = { picker = TopBarPicker.CornerScale }
+                onClick = { picker = TopBarPicker.CornerScale },
             )
             ConfigDialogRow(
                 title = stringResource(R.string.top_bar_background_color),
                 value = colorLabel(config.backgroundColor, accent, primary),
                 colorPreview = Color(
-                    config.backgroundColor ?: TopBarConfig.defaultBackgroundColor(config.isNightMode)
+                    config.backgroundColor ?: TopBarConfig.defaultBackgroundColor(config.isNightMode),
                 ),
-                onClick = { picker = TopBarPicker.BackgroundSource }
+                onClick = { picker = TopBarPicker.BackgroundSource },
             )
             ConfigDialogRow(
                 title = stringResource(R.string.wallpaper),
@@ -111,14 +111,14 @@ fun TopBarEditDialog(
                         R.string.top_bar_wallpaper_unselected
                     } else {
                         R.string.top_bar_wallpaper_selected
-                    }
+                    },
                 ),
-                onClick = { picker = TopBarPicker.Wallpaper }
+                onClick = { picker = TopBarPicker.Wallpaper },
             )
             ConfigDialogRow(
                 title = stringResource(R.string.top_bar_wallpaper_alpha),
                 value = "${config.wallpaperAlpha}%",
-                onClick = { picker = TopBarPicker.WallpaperAlpha }
+                onClick = { picker = TopBarPicker.WallpaperAlpha },
             )
             ConfigDialogRow(
                 title = stringResource(R.string.top_bar_filter_default),
@@ -127,9 +127,9 @@ fun TopBarEditDialog(
                         R.string.top_bar_filter_default_expanded
                     } else {
                         R.string.top_bar_filter_default_collapsed
-                    }
+                    },
                 ),
-                onClick = { picker = TopBarPicker.FilterDefault }
+                onClick = { picker = TopBarPicker.FilterDefault },
             )
         }
 
@@ -137,23 +137,23 @@ fun TopBarEditDialog(
             title = stringResource(R.string.top_bar_tag_bar_color),
             value = colorLabel(config.tagBarColor, accent, primary),
             colorPreview = Color(config.tagBarColor ?: defaultTagBar),
-            onClick = { picker = TopBarPicker.TagBarSource }
+            onClick = { picker = TopBarPicker.TagBarSource },
         )
         ConfigDialogRow(
             title = stringResource(R.string.tag_bar_opacity),
             value = "${config.tagBarAlpha}%",
-            onClick = { picker = TopBarPicker.TagBarAlpha }
+            onClick = { picker = TopBarPicker.TagBarAlpha },
         )
         ConfigDialogRow(
             title = stringResource(R.string.top_bar_tag_selected_color),
             value = colorLabel(config.tagSelectedColor, accent, primary),
             colorPreview = Color(config.tagSelectedColor ?: primary),
-            onClick = { picker = TopBarPicker.TagSelectedSource }
+            onClick = { picker = TopBarPicker.TagSelectedSource },
         )
         ConfigDialogRow(
             title = stringResource(R.string.tag_selected_opacity),
             value = "${config.tagSelectedAlpha}%",
-            onClick = { picker = TopBarPicker.TagSelectedAlpha }
+            onClick = { picker = TopBarPicker.TagSelectedAlpha },
         )
     }
 
@@ -164,7 +164,7 @@ fun TopBarEditDialog(
             title = stringResource(R.string.top_bar_style),
             options = listOf(
                 stringResource(R.string.default_top_bar),
-                stringResource(R.string.regular_top_bar)
+                stringResource(R.string.regular_top_bar),
             ),
             selectedIndex = if (config.style == TopBarConfig.STYLE_REGULAR) 1 else 0,
             onSelect = { index ->
@@ -178,12 +178,12 @@ fun TopBarEditDialog(
                                 ?: TopBarConfig.defaultBackgroundColor(draft.isNightMode)
                         } else {
                             draft.backgroundColor
-                        }
+                        },
                     )
                 }
                 picker = TopBarPicker.None
             },
-            onDismissRequest = { picker = TopBarPicker.None }
+            onDismissRequest = { picker = TopBarPicker.None },
         )
 
         TopBarPicker.CornerScale -> ConfigSliderDialog(
@@ -195,7 +195,7 @@ fun TopBarEditDialog(
                 callbacks.onDraftChange { it.copy(cornerScale = value / 10f) }
                 picker = TopBarPicker.None
             },
-            onDismissRequest = { picker = TopBarPicker.None }
+            onDismissRequest = { picker = TopBarPicker.None },
         )
 
         TopBarPicker.BackgroundSource -> ColorSourceDialog(
@@ -211,10 +211,10 @@ fun TopBarEditDialog(
                 picker = TopBarPicker.None
                 callbacks.onRequestColor(
                     TopBarColorTarget.BACKGROUND,
-                    config.backgroundColor ?: TopBarConfig.defaultBackgroundColor(config.isNightMode)
+                    config.backgroundColor ?: TopBarConfig.defaultBackgroundColor(config.isNightMode),
                 )
             },
-            onDismissRequest = { picker = TopBarPicker.None }
+            onDismissRequest = { picker = TopBarPicker.None },
         )
 
         TopBarPicker.TagBarSource -> ColorSourceDialog(
@@ -230,7 +230,7 @@ fun TopBarEditDialog(
                 picker = TopBarPicker.None
                 callbacks.onRequestColor(TopBarColorTarget.TAG_BAR, config.tagBarColor ?: defaultTagBar)
             },
-            onDismissRequest = { picker = TopBarPicker.None }
+            onDismissRequest = { picker = TopBarPicker.None },
         )
 
         TopBarPicker.TagSelectedSource -> ColorSourceDialog(
@@ -246,7 +246,7 @@ fun TopBarEditDialog(
                 picker = TopBarPicker.None
                 callbacks.onRequestColor(TopBarColorTarget.TAG_SELECTED, config.tagSelectedColor ?: primary)
             },
-            onDismissRequest = { picker = TopBarPicker.None }
+            onDismissRequest = { picker = TopBarPicker.None },
         )
 
         TopBarPicker.Wallpaper -> AppRadioChoiceDialog(
@@ -264,7 +264,7 @@ fun TopBarEditDialog(
                     callbacks.onDraftChange { it.copy(wallpaperPath = null) }
                 }
             },
-            onDismissRequest = { picker = TopBarPicker.None }
+            onDismissRequest = { picker = TopBarPicker.None },
         )
 
         TopBarPicker.WallpaperAlpha -> ConfigSliderDialog(
@@ -274,21 +274,21 @@ fun TopBarEditDialog(
                 callbacks.onDraftChange { it.copy(wallpaperAlpha = value) }
                 picker = TopBarPicker.None
             },
-            onDismissRequest = { picker = TopBarPicker.None }
+            onDismissRequest = { picker = TopBarPicker.None },
         )
 
         TopBarPicker.FilterDefault -> AppRadioChoiceDialog(
             title = stringResource(R.string.top_bar_filter_default),
             options = listOf(
                 stringResource(R.string.top_bar_filter_default_collapsed),
-                stringResource(R.string.top_bar_filter_default_expanded)
+                stringResource(R.string.top_bar_filter_default_expanded),
             ),
             selectedIndex = if (config.expandFiltersByDefault) 1 else 0,
             onSelect = { index ->
                 callbacks.onDraftChange { it.copy(expandFiltersByDefault = index == 1) }
                 picker = TopBarPicker.None
             },
-            onDismissRequest = { picker = TopBarPicker.None }
+            onDismissRequest = { picker = TopBarPicker.None },
         )
 
         TopBarPicker.TagBarAlpha -> ConfigSliderDialog(
@@ -298,7 +298,7 @@ fun TopBarEditDialog(
                 callbacks.onDraftChange { it.copy(tagBarAlpha = value) }
                 picker = TopBarPicker.None
             },
-            onDismissRequest = { picker = TopBarPicker.None }
+            onDismissRequest = { picker = TopBarPicker.None },
         )
 
         TopBarPicker.TagSelectedAlpha -> ConfigSliderDialog(
@@ -308,14 +308,23 @@ fun TopBarEditDialog(
                 callbacks.onDraftChange { it.copy(tagSelectedAlpha = value) }
                 picker = TopBarPicker.None
             },
-            onDismissRequest = { picker = TopBarPicker.None }
+            onDismissRequest = { picker = TopBarPicker.None },
         )
     }
 }
 
 private enum class TopBarPicker {
-    None, Style, CornerScale, BackgroundSource, TagBarSource, TagSelectedSource,
-    Wallpaper, WallpaperAlpha, FilterDefault, TagBarAlpha, TagSelectedAlpha
+    None,
+    Style,
+    CornerScale,
+    BackgroundSource,
+    TagBarSource,
+    TagSelectedSource,
+    Wallpaper,
+    WallpaperAlpha,
+    FilterDefault,
+    TagBarAlpha,
+    TagSelectedAlpha,
 }
 
 @Composable
@@ -326,7 +335,7 @@ private fun ColorSourceDialog(
     primary: Int,
     onSelect: (Int?) -> Unit,
     onCustom: () -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
 ) {
     AppRadioChoiceDialog(
         title = title,
@@ -334,7 +343,7 @@ private fun ColorSourceDialog(
             stringResource(R.string.top_bar_follow_theme),
             stringResource(R.string.top_bar_primary_color),
             stringResource(R.string.accent_color),
-            stringResource(R.string.custom)
+            stringResource(R.string.custom),
         ),
         selectedIndex = when (current) {
             null -> 0
@@ -350,16 +359,14 @@ private fun ColorSourceDialog(
                 else -> onCustom()
             }
         },
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
     )
 }
 
 @Composable
-private fun colorLabel(color: Int?, accent: Int, primary: Int): String {
-    return when {
-        color == null -> stringResource(R.string.top_bar_follow_theme)
-        color == accent -> stringResource(R.string.accent_color)
-        color == primary -> stringResource(R.string.top_bar_primary_color)
-        else -> String.format(Locale.ROOT, "#%06X", color and 0x00FFFFFF)
-    }
+private fun colorLabel(color: Int?, accent: Int, primary: Int): String = when {
+    color == null -> stringResource(R.string.top_bar_follow_theme)
+    color == accent -> stringResource(R.string.accent_color)
+    color == primary -> stringResource(R.string.top_bar_primary_color)
+    else -> String.format(Locale.ROOT, "#%06X", color and 0x00FFFFFF)
 }

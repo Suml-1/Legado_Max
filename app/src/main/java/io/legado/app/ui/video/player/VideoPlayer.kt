@@ -37,8 +37,8 @@ import master.flame.danmaku.ui.widget.DanmakuView
 import java.io.File
 import java.io.FileInputStream
 
-class VideoPlayer: StandardGSYVideoPlayer {
-    constructor(context: Context?, fullFlag: Boolean?) : super(context, fullFlag) //必须的,全屏时依靠这个构建知道获取全屏布局
+class VideoPlayer : StandardGSYVideoPlayer {
+    constructor(context: Context?, fullFlag: Boolean?) : super(context, fullFlag) // 必须的,全屏时依靠这个构建知道获取全屏布局
     constructor(context: Context?) : super(context)
     constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs)
 
@@ -51,20 +51,19 @@ class VideoPlayer: StandardGSYVideoPlayer {
     private var isChanging = false
     private var isLongPressSpeed = false
 
-    private var mParser: BaseDanmakuParser? = null //解析器对象
-    private var mDanmakuView: DanmakuView? = null //弹幕view
+    private var mParser: BaseDanmakuParser? = null // 解析器对象
+    private var mDanmakuView: DanmakuView? = null // 弹幕view
     private var mDanmakuContext: DanmakuContext? = null
-    var mToggleDanmaku: TextView? = null //弹幕开关
+    var mToggleDanmaku: TextView? = null // 弹幕开关
     private var mDanmakuStartSeekPosition: Long = -1
 
     // 音量调节相关
     private val mAudioManager: AudioManager by lazy { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
 
-
-    override fun getLayoutId(): Int {
-        return if (mIfCurrentIsFullscreen)
-            R.layout.video_layout_controller_full
-        else R.layout.video_layout_controller
+    override fun getLayoutId(): Int = if (mIfCurrentIsFullscreen) {
+        R.layout.video_layout_controller_full
+    } else {
+        R.layout.video_layout_controller
     }
 
     override fun getFullWindowPlayer(): VideoPlayer? {
@@ -119,7 +118,7 @@ class VideoPlayer: StandardGSYVideoPlayer {
                             val screenWidth = width.toFloat()
                             val currentPosition = getCurrentPositionWhenPlaying()
                             val seekSeconds = VideoPlay.doubleTapSeekSeconds
-                            
+
                             if (e.x < screenWidth / 2) {
                                 // 左侧双击，快退
                                 val newPosition = (currentPosition - seekSeconds * 1000).coerceAtLeast(0)
@@ -155,14 +154,14 @@ class VideoPlayer: StandardGSYVideoPlayer {
                         }
                         super.onLongPress(e)
                     }
-                }
+                },
             )
             mLockClickListener = LockClickListener { view, lock ->
                 VideoPlay.lockCurScreen = lock
             }
         }
     }
-    override fun touchSurfaceUp(){
+    override fun touchSurfaceUp() {
         if (isLongPressSpeed) {
             isLongPressSpeed = false
             setVideoSpeed(playSpeed)
@@ -207,7 +206,7 @@ class VideoPlayer: StandardGSYVideoPlayer {
 
                 if (mFirstTouch) {
                     val isLeftSide = mDownX < curWidth * 0.5f
-                    
+
                     if (isLeftSide) {
                         // 左侧滑动：仅当leftSlideBrightnessEnabled=true时调节亮度
                         if (VideoPlay.leftSlideBrightnessEnabled && noEnd) {
@@ -236,10 +235,10 @@ class VideoPlayer: StandardGSYVideoPlayer {
         // 显示亮度/音量调节提示
         if (mBrightness) {
             val brightnessPercent = getBrightnessPercent(deltaY)
-            showOverlayTip("亮度 ${brightnessPercent}%")
+            showOverlayTip("亮度 $brightnessPercent%")
         } else if (mChangeVolume) {
             val volumePercent = getVolumePercent(deltaY)
-            showOverlayTip("音量 ${volumePercent}%")
+            showOverlayTip("音量 $volumePercent%")
         }
     }
 
@@ -269,7 +268,7 @@ class VideoPlayer: StandardGSYVideoPlayer {
 
     private fun setVideoSpeed(speed: Float) {
         setSpeed(speed, true)
-        if (mDanmakuView != null&& !mDanmakuView!!.isPaused) {
+        if (mDanmakuView != null && !mDanmakuView!!.isPaused) {
             mDanmakuContext!!.setScrollSpeedFactor(VideoPlay.danmakuSpeed - (speed - 1f) / 6f)
             mDanmakuView!!.invalidate()
         }
@@ -286,8 +285,9 @@ class VideoPlayer: StandardGSYVideoPlayer {
         // 重置跳过片尾标志
         skipOutroTriggered = false
         // 跳过片头：仅在非续播（seekOnStart 为 0）且开启跳过片头时生效
-        if (VideoPlay.skipIntroOutroEnabled && VideoPlay.skipIntroSeconds > 0
-            && seekOnStart <= 0
+        if (VideoPlay.skipIntroOutroEnabled &&
+            VideoPlay.skipIntroSeconds > 0 &&
+            seekOnStart <= 0
         ) {
             val skipMs = VideoPlay.skipIntroSeconds * 1000L
             val duration = getDuration()
@@ -302,7 +302,7 @@ class VideoPlayer: StandardGSYVideoPlayer {
         val view = gsyVideoPlayer.mDanmakuView
         val par = gsyVideoPlayer.mParser
         val con = gsyVideoPlayer.mDanmakuContext
-        if ( view != null && !view.isPrepared && par != null) {
+        if (view != null && !view.isPrepared && par != null) {
             view.prepare(par, con)
         }
     }
@@ -341,13 +341,15 @@ class VideoPlayer: StandardGSYVideoPlayer {
         secondProgress: Long,
         currentTime: Long,
         totalTime: Long,
-        forceChange: Boolean
+        forceChange: Boolean,
     ) {
         super.setProgressAndTime(progress, secondProgress, currentTime, totalTime, forceChange)
         // 跳过片尾：当剩余时间小于设定秒数时，自动跳到下一集
         // setProgressAndTime 由进度定时器每秒调用，是检测播放位置的可靠回调
-        if (VideoPlay.skipIntroOutroEnabled && VideoPlay.skipOutroSeconds > 0
-            && totalTime > 0 && !skipOutroTriggered
+        if (VideoPlay.skipIntroOutroEnabled &&
+            VideoPlay.skipOutroSeconds > 0 &&
+            totalTime > 0 &&
+            !skipOutroTriggered
         ) {
             val remainingMs = totalTime - currentTime
             val skipMs = VideoPlay.skipOutroSeconds * 1000L
@@ -358,7 +360,7 @@ class VideoPlayer: StandardGSYVideoPlayer {
         }
     }
 
-    override fun onAutoCompletion() { //播放完成
+    override fun onAutoCompletion() { // 播放完成
         super.onAutoCompletion()
         VideoPlay.upDurIndex(1, this)
     }
@@ -371,19 +373,17 @@ class VideoPlayer: StandardGSYVideoPlayer {
         gsyVideoPlayer.mDanmakuView?.release()
     }
 
-
     override fun onSeekComplete() {
         super.onSeekComplete()
         val time = mProgressBar.progress * getDuration() / 100
-        //如果已经初始化过的，直接seek到对于位置
+        // 如果已经初始化过的，直接seek到对于位置
         if (mHadPlay && mDanmakuView != null && mDanmakuView!!.isPrepared) {
             resolveDanmakuSeek(time)
         } else if (mHadPlay && mDanmakuView != null && !mDanmakuView!!.isPrepared) {
-            //如果没有初始化过的，记录位置等待
+            // 如果没有初始化过的，记录位置等待
             mDanmakuStartSeekPosition = time
         }
     }
-
 
     fun showOverlayTip(message: String? = null, delay: Long = 0) {
         tipView?.apply {
@@ -404,7 +404,7 @@ class VideoPlayer: StandardGSYVideoPlayer {
     }
 
     private fun initView() {
-        isNeedLockFull = true //使用锁定按钮
+        isNeedLockFull = true // 使用锁定按钮
         playbackSpeed = findViewById(R.id.playback_speed)
         playbackSpeed?.setOnClickListener {
             if (mHadPlay && !isChanging) {
@@ -419,9 +419,9 @@ class VideoPlayer: StandardGSYVideoPlayer {
         if (mIfCurrentIsFullscreen && !VideoPlay.fullBottomProgressBar) {
             mBottomProgressBar = null
         }
-        //初始化全屏快捷跳转按钮
+        // 初始化全屏快捷跳转按钮
         initQuickJumpButtons()
-        //切换选集
+        // 切换选集
         episodeList = findViewById(R.id.episode_list)
         btnNext = findViewById(R.id.next)
         if (VideoPlay.episodes == null) {
@@ -435,7 +435,7 @@ class VideoPlayer: StandardGSYVideoPlayer {
             }
         }
         btnNext?.setOnClickListener {
-            VideoPlay.upDurIndex(1,this)
+            VideoPlay.upDurIndex(1, this)
         }
     }
 
@@ -451,21 +451,21 @@ class VideoPlayer: StandardGSYVideoPlayer {
      */
     private fun initQuickJumpButtons() {
         if (!mIfCurrentIsFullscreen) return
-        
+
         val quickJumpContainer = findViewById<LinearLayout>(R.id.quick_jump_container)
         val quickJumpBackA = findViewById<TextView>(R.id.quick_jump_back_a)
         val quickJumpBackB = findViewById<TextView>(R.id.quick_jump_back_b)
         val quickJumpForwardB = findViewById<TextView>(R.id.quick_jump_forward_b)
         val quickJumpForwardA = findViewById<TextView>(R.id.quick_jump_forward_a)
-        
+
         if (!VideoPlay.quickJumpButtonsEnabled) {
             quickJumpContainer?.visibility = GONE
             return
         }
-        
+
         val minutesA = VideoPlay.quickJumpMinutesA
         val minutesB = VideoPlay.quickJumpMinutesB
-        
+
         quickJumpContainer?.visibility = VISIBLE
         quickJumpBackA?.apply {
             text = "-${minutesA}分"
@@ -498,7 +498,6 @@ class VideoPlayer: StandardGSYVideoPlayer {
         showOverlayTip("${if (minutes > 0) "+" else ""}${minutes}分", 1000)
     }
 
-
     override fun setUp(url: String?, cacheWithPlay: Boolean, cachePath: File?, title: String?): Boolean {
         initDanmaku()
         val result = super.setUp(url, cacheWithPlay, cachePath, title)
@@ -517,10 +516,11 @@ class VideoPlayer: StandardGSYVideoPlayer {
         mDanmakuView = findViewById<DanmakuView>(R.id.danmaku_view)?.also {
             it.visibility = VISIBLE
         }
-        //弹幕开关
+        // 弹幕开关
         mToggleDanmaku = findViewById<TextView>(R.id.toggle_danmaku)?.also {
             it.visibility = VISIBLE
-            it.setOnClickListener { //按钮事件
+            it.setOnClickListener {
+                // 按钮事件
                 VideoPlay.danmakuShow = !VideoPlay.danmakuShow
                 resolveDanmakuShow()
             }
@@ -534,15 +534,15 @@ class VideoPlayer: StandardGSYVideoPlayer {
             overlappingEnablePair[BaseDanmaku.TYPE_SCROLL_RL] = true
             overlappingEnablePair[BaseDanmaku.TYPE_FIX_TOP] = true
             val danmakuAdapter = DanmakuAdapter(mDanmakuView)
-            mDanmakuContext = DanmakuContext.create() //初始化上下文
-            mDanmakuContext!!.setDanmakuStyle(IDisplayer.DANMAKU_STYLE_STROKEN, 3f) //设置弹幕类型
-                .setDuplicateMergingEnabled(false) //设置是否合并重复弹幕
-                .setScrollSpeedFactor(VideoPlay.danmakuSpeed) //设置弹幕滚动速度
-                .setScaleTextSize(1.0f) //设置弹幕字体大小
-                .setCacheStuffer(SpannedCacheStuffer(), danmakuAdapter) //设置缓存绘制填充器 图文混排使用SpannedCacheStuffer
-                .setMaximumLines(maxLinesPair) //设置最大行数
-                .preventOverlapping(overlappingEnablePair) //设置是否禁止重叠
-            mParser = createParser(danmakuFile, danmakuStr) //加载弹幕资源文件
+            mDanmakuContext = DanmakuContext.create() // 初始化上下文
+            mDanmakuContext!!.setDanmakuStyle(IDisplayer.DANMAKU_STYLE_STROKEN, 3f) // 设置弹幕类型
+                .setDuplicateMergingEnabled(false) // 设置是否合并重复弹幕
+                .setScrollSpeedFactor(VideoPlay.danmakuSpeed) // 设置弹幕滚动速度
+                .setScaleTextSize(1.0f) // 设置弹幕字体大小
+                .setCacheStuffer(SpannedCacheStuffer(), danmakuAdapter) // 设置缓存绘制填充器 图文混排使用SpannedCacheStuffer
+                .setMaximumLines(maxLinesPair) // 设置最大行数
+                .preventOverlapping(overlappingEnablePair) // 设置是否禁止重叠
+            mParser = createParser(danmakuFile, danmakuStr) // 加载弹幕资源文件
             mDanmakuView!!.setCallback(object : DrawHandler.Callback {
                 override fun updateTimer(timer: DanmakuTimer?) {}
                 override fun drawingFinished() {}
@@ -577,7 +577,6 @@ class VideoPlayer: StandardGSYVideoPlayer {
         }
     }
 
-
     private fun resolveDanmakuShow() {
         post {
             if (VideoPlay.danmakuShow) {
@@ -602,7 +601,7 @@ class VideoPlayer: StandardGSYVideoPlayer {
             if (danmakuFile != null) {
                 loader.load(FileInputStream(danmakuFile))
             } else if (danmakuStr != null) {
-                if (danmakuStr.startsWith("http",true)) {
+                if (danmakuStr.startsWith("http", true)) {
                     loader.load(danmakuStr)
                 } else {
                     loader.load(danmakuStr.byteInputStream())
@@ -623,18 +622,22 @@ class VideoPlayer: StandardGSYVideoPlayer {
         }
         isChanging = true
         val choiceEpisodeDialog = ChoiceEpisodeDialog(mContext)
-        choiceEpisodeDialog.initList(VideoPlay.episodes!!, object :
-            ChoiceEpisodeDialog.OnListItemClickListener {
-            override fun onItemClick(position: Int) {
-                VideoPlay.chapterInVolumeIndex = position
-                VideoPlay.saveRead(0)
-                VideoPlay.startPlay(this@VideoPlayer)
-            }
+        choiceEpisodeDialog.initList(
+            VideoPlay.episodes!!,
+            object :
+                ChoiceEpisodeDialog.OnListItemClickListener {
+                override fun onItemClick(position: Int) {
+                    VideoPlay.chapterInVolumeIndex = position
+                    VideoPlay.saveRead(0)
+                    VideoPlay.startPlay(this@VideoPlayer)
+                }
 
-            override fun finishDialog() {
-                isChanging = false
-            }
-        }, VideoPlay.chapterInVolumeIndex)
+                override fun finishDialog() {
+                    isChanging = false
+                }
+            },
+            VideoPlay.chapterInVolumeIndex,
+        )
         choiceEpisodeDialog.show()
     }
 
@@ -651,24 +654,27 @@ class VideoPlayer: StandardGSYVideoPlayer {
         }
         isChanging = true
         val choiceSpeedDialog = ChoiceSpeedDialog(mContext)
-        choiceSpeedDialog.initList(listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 2.5f, 3.0f).reversed(), object :
-            ChoiceSpeedDialog.OnListItemClickListener {
-            @SuppressLint("SetTextI18n")
-            override fun onItemClick(value: Float) {
-                playSpeed = value
-                setSpeed(playSpeed, true)
-                if (playSpeed != 1.0f) {
-                    playbackSpeed?.text = "${playSpeed}X"
-                    showOverlayTip("${playSpeed}倍播放中", 2000)
-                } else {
-                    playbackSpeed?.text = "倍速"
+        choiceSpeedDialog.initList(
+            listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 2.5f, 3.0f).reversed(),
+            object :
+                ChoiceSpeedDialog.OnListItemClickListener {
+                @SuppressLint("SetTextI18n")
+                override fun onItemClick(value: Float) {
+                    playSpeed = value
+                    setSpeed(playSpeed, true)
+                    if (playSpeed != 1.0f) {
+                        playbackSpeed?.text = "${playSpeed}X"
+                        showOverlayTip("${playSpeed}倍播放中", 2000)
+                    } else {
+                        playbackSpeed?.text = "倍速"
+                    }
                 }
-            }
 
-            override fun finishDialog() {
-                isChanging = false
-            }
-        })
+                override fun finishDialog() {
+                    isChanging = false
+                }
+            },
+        )
         choiceSpeedDialog.show()
     }
 
@@ -699,7 +705,6 @@ class VideoPlayer: StandardGSYVideoPlayer {
         mSeekOnStart = VideoPlay.durChapterPos.toLong()
     }
 
-
     /**
      * 处理播放器在全屏切换时，弹幕显示的逻辑
      * 需要格外注意的是，因为全屏和小屏，是切换了播放器，所以需要同步之间的弹幕状态
@@ -707,12 +712,12 @@ class VideoPlayer: StandardGSYVideoPlayer {
     override fun startWindowFullscreen(
         context: Context?,
         actionBar: Boolean,
-        statusBar: Boolean
+        statusBar: Boolean,
     ): VideoPlayer? {
         val gsyBaseVideoPlayer = super.startWindowFullscreen(context, actionBar, statusBar)
         if (gsyBaseVideoPlayer != null) {
             val gsyVideoPlayer = gsyBaseVideoPlayer as VideoPlayer
-            //对弹幕设置偏移记录
+            // 对弹幕设置偏移记录
 //            gsyVideoPlayer.mDanmakuView = this.mDanmakuView
             gsyVideoPlayer.mDanmakuStartSeekPosition = this.getCurrentPositionWhenPlaying()
             onPrepareDanmaku(gsyVideoPlayer)
@@ -729,7 +734,7 @@ class VideoPlayer: StandardGSYVideoPlayer {
     override fun resolveNormalVideoShow(
         oldF: View?,
         vp: ViewGroup?,
-        gsyVideoPlayer: GSYVideoPlayer?
+        gsyVideoPlayer: GSYVideoPlayer?,
     ) {
         super.resolveNormalVideoShow(oldF, vp, gsyVideoPlayer)
         if (gsyVideoPlayer != null) {
@@ -748,23 +753,15 @@ class VideoPlayer: StandardGSYVideoPlayer {
     }
 
     /**********以下重载GSYVideoPlayer的GSYVideoViewBridge相关实现***********/
-    override fun getGSYVideoManager(): ExoVideoManager {
-        return VideoPlay.videoManager.apply { initContext(context.applicationContext) }
-    }
-    public override fun backFromFull(context: Context?): Boolean {
-        return VideoPlay.backFromWindowFull(context)
-    }
+    override fun getGSYVideoManager(): ExoVideoManager = VideoPlay.videoManager.apply { initContext(context.applicationContext) }
+    public override fun backFromFull(context: Context?): Boolean = VideoPlay.backFromWindowFull(context)
     override fun releaseVideos() {
         VideoPlay.releaseAllVideos()
     }
 
-    override fun getFullId(): Int {
-        return ExoVideoManager.FULLSCREEN_ID
-    }
+    override fun getFullId(): Int = ExoVideoManager.FULLSCREEN_ID
 
-    override fun getSmallId(): Int {
-        return ExoVideoManager.SMALL_ID
-    }
+    override fun getSmallId(): Int = ExoVideoManager.SMALL_ID
     override fun setDisplay(surface: Surface?) {
         if (surface != null && mTextureView.getShowView() is SurfaceView) {
             val surfaceView = (mTextureView.getShowView() as SurfaceView?)
@@ -775,10 +772,11 @@ class VideoPlayer: StandardGSYVideoPlayer {
             gsyVideoManager.setDisplayNew(null)
         }
     }
-    fun nextUI() { resetProgressAndTime() }
+    fun nextUI() {
+        resetProgressAndTime()
+    }
 
-
-    //播放器转移
+    // 播放器转移
     fun setSurfaceToPlay() {
         addTextureView()
         gsyVideoManager.setListener(this)
@@ -796,9 +794,7 @@ class VideoPlayer: StandardGSYVideoPlayer {
         }
     }
 
-    fun saveState(): VideoPlayer {
-        return this
-    }
+    fun saveState(): VideoPlayer = this
 
     fun cloneState(switchVideo: StandardGSYVideoPlayer) {
         cloneParams(switchVideo, this)

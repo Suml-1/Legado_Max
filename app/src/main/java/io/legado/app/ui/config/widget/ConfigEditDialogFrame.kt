@@ -49,16 +49,16 @@ fun ConfigEditDialogFrame(
     onConfirm: () -> Unit,
     modifier: Modifier = Modifier,
     confirmEnabled: Boolean = true,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     BasicAlertDialog(
         onDismissRequest = onDismissRequest,
         // 弹层是独立窗口，页面那层灰阶罩不到，这里再贴一次
-        modifier = modifier.eInkGrayscale()
+        modifier = modifier.eInkGrayscale(),
     ) {
         Surface(
             shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
@@ -72,8 +72,8 @@ fun ConfigEditDialogFrame(
                         start = AppDimens.panelRowHorizontalPadding,
                         top = AppDimens.panelRowHorizontalPadding,
                         end = AppDimens.panelRowHorizontalPadding,
-                        bottom = AppDimens.panelTitleBottomPadding
-                    )
+                        bottom = AppDimens.panelTitleBottomPadding,
+                    ),
                 )
                 Box {
                     val scrollState = rememberScrollState()
@@ -84,14 +84,14 @@ fun ConfigEditDialogFrame(
                             .padding(
                                 start = AppDimens.panelRowHorizontalPadding,
                                 end = AppDimens.panelRowHorizontalPadding,
-                                bottom = AppDimens.panelRowTitleSpacing
+                                bottom = AppDimens.panelRowTitleSpacing,
                             ),
                         verticalArrangement = Arrangement.spacedBy(AppDimens.manageRowSpacing),
-                        content = content
+                        content = content,
                     )
                     VerticalScrollbar(
                         state = scrollState,
-                        modifier = Modifier.align(Alignment.CenterEnd)
+                        modifier = Modifier.align(Alignment.CenterEnd),
                     )
                 }
                 Row(
@@ -99,9 +99,9 @@ fun ConfigEditDialogFrame(
                         .fillMaxWidth()
                         .padding(
                             end = AppDimens.panelRowTitleSpacing,
-                            bottom = AppDimens.panelRowTitleSpacing
+                            bottom = AppDimens.panelRowTitleSpacing,
                         ),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.End,
                 ) {
                     TextButton(onClick = onDismissRequest) {
                         Text(stringResource(R.string.cancel))

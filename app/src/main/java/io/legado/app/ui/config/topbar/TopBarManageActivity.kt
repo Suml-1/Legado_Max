@@ -103,8 +103,8 @@ class TopBarManageActivity :
                         title = getString(R.string.top_bar_import_zip)
                         allowExtensions = arrayOf("zip")
                     }
-                }
-            )
+                },
+            ),
         )
     }
 

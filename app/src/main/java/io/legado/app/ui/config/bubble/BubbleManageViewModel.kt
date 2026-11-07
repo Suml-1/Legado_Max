@@ -66,7 +66,7 @@ class BubbleManageViewModel(application: Application) : BaseViewModel(applicatio
         _draft.value = BubblePackageManager.builtinConfig().copy(
             name = appCtx.getString(R.string.bubble_custom_name),
             dirName = "",
-            updatedAt = System.currentTimeMillis()
+            updatedAt = System.currentTimeMillis(),
         )
         editingEntry = null
         isEditingExisting = false
@@ -101,7 +101,7 @@ class BubbleManageViewModel(application: Application) : BaseViewModel(applicatio
                 requireValidSvg(config)
                 BubblePackageManager.addOrUpdate(
                     config.copy(name = name, dirName = oldEntry?.dirName.orEmpty()),
-                    oldEntry
+                    oldEntry,
                 )
             }.onSuccess { entry ->
                 if (oldEntry?.dirName == BubblePackageManager.activeDirName()) {
@@ -177,11 +177,11 @@ class BubbleManageViewModel(application: Application) : BaseViewModel(applicatio
                     _events.trySend(
                         if (entries.size > 1) {
                             BubbleEvent.ToastMsg(
-                                appCtx.getString(R.string.bubble_import_count_success, entries.size)
+                                appCtx.getString(R.string.bubble_import_count_success, entries.size),
                             )
                         } else {
                             BubbleEvent.Toast(R.string.import_success)
-                        }
+                        },
                     )
                 }
                 .onFailure { _events.trySend(BubbleEvent.ToastMsg(it.localizedMessage.orEmpty())) }
@@ -203,11 +203,11 @@ class BubbleManageViewModel(application: Application) : BaseViewModel(applicatio
                 _events.trySend(
                     if (entries.size > 1) {
                         BubbleEvent.ToastMsg(
-                            appCtx.getString(R.string.bubble_import_count_success, entries.size)
+                            appCtx.getString(R.string.bubble_import_count_success, entries.size),
                         )
                     } else {
                         BubbleEvent.Toast(R.string.import_success)
-                    }
+                    },
                 )
             }.onFailure { _events.trySend(BubbleEvent.ToastMsg(it.localizedMessage.orEmpty())) }
         }
@@ -237,9 +237,8 @@ class BubbleManageViewModel(application: Application) : BaseViewModel(applicatio
 
     private fun cacheKey() = "bubbleImportUrls"
 
-    private fun loadCachedUrls(): List<String> =
-        ACache.get(cacheDir = false).getAsString(cacheKey())?.splitNotBlank(",")?.toList()
-            ?: emptyList()
+    private fun loadCachedUrls(): List<String> = ACache.get(cacheDir = false).getAsString(cacheKey())?.splitNotBlank(",")?.toList()
+        ?: emptyList()
 
     private fun rememberUrl(url: String) {
         val next = (listOf(url) + loadCachedUrls().filterNot { it == url }).take(MAX_CACHED_URLS)

@@ -41,8 +41,7 @@ import io.legado.app.ui.config.theme.manage.ThemeItem
 import io.legado.app.ui.config.widget.ConfigBadge
 
 /** 颜色 hex 解析容错，避免非法色值导致崩溃 */
-private fun parseColorOrDefault(hex: String, default: Int): Int =
-    runCatching { hex.toColorInt() }.getOrDefault(default)
+private fun parseColorOrDefault(hex: String, default: Int): Int = runCatching { hex.toColorInt() }.getOrDefault(default)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -57,7 +56,7 @@ fun ThemeCard(
     onDelete: () -> Unit,
     onCopy: () -> Unit,
     onLongClick: () -> Unit,
-    onToggleSelect: () -> Unit
+    onToggleSelect: () -> Unit,
 ) {
     val config = item.config
     val primaryColor = remember(config.primaryColor) {
@@ -83,17 +82,17 @@ fun ThemeCard(
             .border(0.5.dp, borderColor, RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp),
         color = cardColor,
-        shadowElevation = 0.dp
+        shadowElevation = 0.dp,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(
                     onClick = { if (isMultiSelectMode) onToggleSelect() },
-                    onLongClick = { if (!isMultiSelectMode) onLongClick() }
+                    onLongClick = { if (!isMultiSelectMode) onLongClick() },
                 )
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             ThemePreview(
                 primaryColor = Color(primaryColor),
@@ -103,7 +102,7 @@ fun ThemeCard(
                 // 「已应用」统一由标题右侧的胶囊标签表达，预览图不再重复打勾
                 isCurrent = false,
                 isMultiSelectMode = isMultiSelectMode,
-                isNightTheme = config.isNightTheme
+                isNightTheme = config.isNightTheme,
             )
 
             Spacer(Modifier.width(12.dp))
@@ -117,13 +116,13 @@ fun ThemeCard(
                         color = onColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                     if (isCurrent) {
                         Spacer(Modifier.width(8.dp))
                         ConfigBadge(
                             text = stringResource(R.string.applied),
-                            highlighted = true
+                            highlighted = true,
                         )
                     }
                 }
@@ -132,13 +131,13 @@ fun ThemeCard(
 
                 Surface(
                     shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = if (isLightBg) 0.15f else 0.12f)
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = if (isLightBg) 0.15f else 0.12f),
                 ) {
                     Text(
                         text = if (config.isNightTheme) stringResource(R.string.night) else stringResource(R.string.day),
                         style = MaterialTheme.typography.bodySmall,
                         color = onColor.copy(alpha = 0.8f),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                     )
                 }
 
@@ -150,21 +149,21 @@ fun ThemeCard(
                         Text(
                             text = stringResource(R.string.apply_theme),
                             fontSize = 13.sp,
-                            color = if (isCurrent) MaterialTheme.colorScheme.primary else buttonTextColor
+                            color = if (isCurrent) MaterialTheme.colorScheme.primary else buttonTextColor,
                         )
                     }
                     TextButton(onClick = onEdit) {
                         Text(
                             text = stringResource(R.string.edit_theme),
                             fontSize = 13.sp,
-                            color = buttonTextColor
+                            color = buttonTextColor,
                         )
                     }
                     TextButton(onClick = onCopy) {
                         Text(
                             text = stringResource(R.string.copy),
                             fontSize = 13.sp,
-                            color = buttonTextColor
+                            color = buttonTextColor,
                         )
                     }
                 }
@@ -177,7 +176,7 @@ fun ThemeCard(
                             Icons.Default.Share,
                             contentDescription = stringResource(R.string.share),
                             modifier = Modifier.size(18.dp),
-                            tint = iconTint
+                            tint = iconTint,
                         )
                     }
                     IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
@@ -185,14 +184,14 @@ fun ThemeCard(
                             Icons.Default.Delete,
                             contentDescription = stringResource(R.string.delete),
                             modifier = Modifier.size(18.dp),
-                            tint = iconTint
+                            tint = iconTint,
                         )
                     }
                 }
             } else {
                 Checkbox(
                     checked = isSelected,
-                    onCheckedChange = { onToggleSelect() }
+                    onCheckedChange = { onToggleSelect() },
                 )
             }
         }

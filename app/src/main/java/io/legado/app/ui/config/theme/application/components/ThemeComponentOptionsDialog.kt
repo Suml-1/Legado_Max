@@ -37,7 +37,7 @@ data class ThemeComponentSelection(
     val dayBottomBar: Boolean = true,
     val nightBottomBar: Boolean = true,
     val dayCover: Boolean = true,
-    val nightCover: Boolean = true
+    val nightCover: Boolean = true,
 )
 
 /**
@@ -56,7 +56,7 @@ fun ThemeComponentOptionsDialog(
     title: String,
     selection: ThemeComponentSelection,
     onConfirm: (ThemeComponentSelection) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
 ) {
     var current by remember(selection) { mutableStateOf(selection) }
     AlertDialog(
@@ -70,28 +70,28 @@ fun ThemeComponentOptionsDialog(
                     dayChecked = current.dayTheme,
                     nightChecked = current.nightTheme,
                     onDayChange = { current = current.copy(dayTheme = it) },
-                    onNightChange = { current = current.copy(nightTheme = it) }
+                    onNightChange = { current = current.copy(nightTheme = it) },
                 )
                 ComponentRow(
                     label = stringResource(R.string.application_theme_component_top_bar),
                     dayChecked = current.dayTopBar,
                     nightChecked = current.nightTopBar,
                     onDayChange = { current = current.copy(dayTopBar = it) },
-                    onNightChange = { current = current.copy(nightTopBar = it) }
+                    onNightChange = { current = current.copy(nightTopBar = it) },
                 )
                 ComponentRow(
                     label = stringResource(R.string.application_theme_component_bottom_bar),
                     dayChecked = current.dayBottomBar,
                     nightChecked = current.nightBottomBar,
                     onDayChange = { current = current.copy(dayBottomBar = it) },
-                    onNightChange = { current = current.copy(nightBottomBar = it) }
+                    onNightChange = { current = current.copy(nightBottomBar = it) },
                 )
                 ComponentRow(
                     label = stringResource(R.string.application_theme_component_cover),
                     dayChecked = current.dayCover,
                     nightChecked = current.nightCover,
                     onDayChange = { current = current.copy(dayCover = it) },
-                    onNightChange = { current = current.copy(nightCover = it) }
+                    onNightChange = { current = current.copy(nightCover = it) },
                 )
             }
         },
@@ -104,7 +104,7 @@ fun ThemeComponentOptionsDialog(
             TextButton(onClick = onDismissRequest) {
                 Text(stringResource(R.string.cancel))
             }
-        }
+        },
     )
 }
 
@@ -114,29 +114,29 @@ private fun ComponentRow(
     dayChecked: Boolean,
     nightChecked: Boolean,
     onDayChange: (Boolean) -> Unit,
-    onNightChange: (Boolean) -> Unit
+    onNightChange: (Boolean) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = AppDimens.panelRowVerticalPadding)
+            modifier = Modifier.padding(start = AppDimens.panelRowVerticalPadding),
         ) {
             Checkbox(checked = dayChecked, onCheckedChange = onDayChange)
             Text(
                 text = stringResource(R.string.day),
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(end = AppDimens.panelRowVerticalPadding)
+                modifier = Modifier.padding(end = AppDimens.panelRowVerticalPadding),
             )
             Checkbox(checked = nightChecked, onCheckedChange = onNightChange)
             Text(
                 text = stringResource(R.string.night),
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
             )
         }
     }

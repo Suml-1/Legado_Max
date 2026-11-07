@@ -39,7 +39,7 @@ fun ConfigDialogRow(
     value: String,
     modifier: Modifier = Modifier,
     colorPreview: Color? = null,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Row(
         modifier = modifier
@@ -49,22 +49,22 @@ fun ConfigDialogRow(
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .padding(
                 horizontal = AppDimens.panelRowHorizontalPadding,
-                vertical = AppDimens.panelRowVerticalPadding
+                vertical = AppDimens.panelRowVerticalPadding,
             ),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
         if (colorPreview != null) {
             Box(
                 modifier = Modifier
                     .size(AppDimens.panelRowIconSize)
                     .clip(composeActionShape())
-                    .background(colorPreview)
+                    .background(colorPreview),
             )
             Spacer(Modifier.width(AppDimens.panelRowTitleSpacing))
         }
@@ -73,7 +73,7 @@ fun ConfigDialogRow(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

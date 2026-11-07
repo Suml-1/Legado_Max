@@ -54,7 +54,6 @@ import io.legado.app.help.webView.WebJsExtensions.Companion.nameJava
 import io.legado.app.help.webView.WebJsExtensions.Companion.nameSource
 import io.legado.app.help.webView.WebJsExtensions.Companion.wrapUseWebHtml
 import io.legado.app.help.webView.WebViewPool
-import io.legado.app.help.webView.WebViewPool.fitInlineContent
 import io.legado.app.help.webView.WebViewPool.installInlineContentRefitOnTouch
 import io.legado.app.help.webView.WebViewPool.prepareForInlineContent
 import io.legado.app.help.webView.WebViewPool.scheduleInlineContentFit
@@ -67,7 +66,6 @@ import io.legado.app.service.VideoPlayService
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.association.OnLineImportActivity
-import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.login.SourceLoginActivity
@@ -96,7 +94,6 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
 import io.legado.app.help.InnerBrowserLinkResolver
 import java.lang.ref.WeakReference
-import androidx.compose.ui.platform.ComposeView
 import io.legado.app.ui.theme.LegadoTheme
 import io.noties.markwon.Markwon
 import io.noties.markwon.MarkwonConfiguration
@@ -107,8 +104,10 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlayerViewModel>(),
-    SettingsDialog.CallBack,RssFavoritesDialog.Callback {
+class VideoPlayerActivity :
+    VMBaseActivity<ActivityVideoPlayerBinding, VideoPlayerViewModel>(),
+    SettingsDialog.CallBack,
+    RssFavoritesDialog.Callback {
 
     companion object {
         @Volatile
@@ -141,14 +140,14 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
             introTextView,
             lifecycle,
             imgAvailableWidth,
-            VideoPlay.source?.getKey()
+            VideoPlay.source?.getKey(),
         )
     }
 
     private val textViewTagHandler by lazy {
         TextViewTagHandler(object : TextViewTagHandler.OnButtonClickListener {
             override fun onButtonClick(name: String, click: String) {
-                viewModel.onButtonClick(this@VideoPlayerActivity, "info button $name" , click)
+                viewModel.onButtonClick(this@VideoPlayerActivity, "info button $name", click)
             }
         })
     }
@@ -157,6 +156,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
     private var isFullScreen = false
     private var orientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     private var menuCustomBtn: MenuItem? = null
+
     // 标记当前实例正被新实例替换，跳过 finish 弹窗和 onDestroy 中的 saveRead
     private var isFinishingDueToReplacement = false
     private val bookSourceEditResult =
@@ -301,12 +301,12 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
                     onBackA = { performQuickJump(-VideoPlay.quickJumpMinutesA) },
                     onBackB = { performQuickJump(-VideoPlay.quickJumpMinutesB) },
                     onForwardB = { performQuickJump(VideoPlay.quickJumpMinutesB) },
-                    onForwardA = { performQuickJump(VideoPlay.quickJumpMinutesA) }
+                    onForwardA = { performQuickJump(VideoPlay.quickJumpMinutesA) },
                 )
             }
         }
     }
-    
+
     private fun updateQuickJumpButtonsState() {
         // 非全屏模式：根据开关状态更新 ComposeView 可见性和内容
         if (VideoPlay.quickJumpButtonsEnabled && !isFullScreen && VideoPlay.book != null) {
@@ -320,7 +320,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
                         onBackA = { performQuickJump(-VideoPlay.quickJumpMinutesA) },
                         onBackB = { performQuickJump(-VideoPlay.quickJumpMinutesB) },
                         onForwardB = { performQuickJump(VideoPlay.quickJumpMinutesB) },
-                        onForwardA = { performQuickJump(VideoPlay.quickJumpMinutesA) }
+                        onForwardA = { performQuickJump(VideoPlay.quickJumpMinutesA) },
                     )
                 }
             }
@@ -352,12 +352,12 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
     }
 
     inner class CustomWebViewClient(
-        private val source: io.legado.app.data.entities.BaseSource?
+        private val source: io.legado.app.data.entities.BaseSource?,
     ) : WebViewClient() {
         private val jsStr = buildUseWebInjection(source)
         override fun shouldOverrideUrlLoading(
             view: WebView?,
-            request: WebResourceRequest?
+            request: WebResourceRequest?,
         ): Boolean {
             request?.let {
                 val uri = it.url
@@ -436,8 +436,8 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
                     showDialogFragment(PhotoDialog(it, VideoPlay.source?.getKey()))
                 },
                 imgOnClickListener = {
-                    viewModel.onButtonClick(this@VideoPlayerActivity, "info image" , it)
-                }
+                    viewModel.onButtonClick(this@VideoPlayerActivity, "info image", it)
+                },
             )
         } else if (intro.startsWith("<md>")) {
             val lastIndex = intro.lastIndexOf("<")
@@ -465,9 +465,9 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
                                     .applyDefaultRequestOptions(
                                         RequestOptions()
                                             .override(imgAvailableWidth)
-                                            .encodeQuality(88)
-                                    )
-                            )
+                                            .encodeQuality(88),
+                                    ),
+                            ),
                         )
                         .usePlugin(HtmlPlugin.create())
                         .usePlugin(TablePlugin.create(context))
@@ -479,7 +479,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
                     markdown,
                     imgOnLongClickListener = { source ->
                         showDialogFragment(PhotoDialog(source, VideoPlay.source?.getKey()))
-                    }
+                    },
                 )
             }
         } else {
@@ -541,7 +541,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         val recyclerView = binding.chapters
         val layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         recyclerView.layoutManager = layoutManager
-        val adapter = ChapterAdapter(toc,VideoPlay.chapterInVolumeIndex, false) { chapter, index ->
+        val adapter = ChapterAdapter(toc, VideoPlay.chapterInVolumeIndex, false) { chapter, index ->
             if (index != VideoPlay.chapterInVolumeIndex) {
                 VideoPlay.chapterInVolumeIndex = index
                 VideoPlay.saveRead(0)
@@ -557,7 +557,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         val recyclerView = binding.volumes
         val layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         recyclerView.layoutManager = layoutManager
-        val adapter = ChapterAdapter(volumes,VideoPlay.durVolumeIndex, true) { chapter, index ->
+        val adapter = ChapterAdapter(volumes, VideoPlay.durVolumeIndex, true) { chapter, index ->
             if (index != VideoPlay.durVolumeIndex) {
                 VideoPlay.durVolumeIndex = index
                 VideoPlay.chapterInVolumeIndex = 0
@@ -618,9 +618,9 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         if (isFullScreen) {
             orientation = requestedOrientation
             requestedOrientation = if (VideoPlay.isPortraitVideo) {
-                ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT //竖屏
+                ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT // 竖屏
             } else {
-                ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE //横屏
+                ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE // 横屏
             }
             supportActionBar?.hide()
             binding.chaptersContainer.gone()
@@ -643,7 +643,6 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
             upView()
         }
     }
-
 
     @Suppress("DEPRECATION")
     @SuppressLint("SwitchIntDef")
@@ -678,11 +677,11 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         layoutParams.width = screenWidth
         val videoWidth = playerView.currentVideoWidth
         val videoHeight = playerView.currentVideoHeight
-        val height = if (videoWidth > 0 && videoHeight > 0) (screenWidth * videoHeight / videoWidth) else (screenWidth * 9 / 16) //默认16:9
-        //高度不超过一半屏幕
+        val height = if (videoWidth > 0 && videoHeight > 0) (screenWidth * videoHeight / videoWidth) else (screenWidth * 9 / 16) // 默认16:9
+        // 高度不超过一半屏幕
         layoutParams.height = if (height < screenHeight / 2) height else screenHeight / 2
         playerView.layoutParams = layoutParams
-        playerView.isNeedOrientationUtils = false //关闭自带的屏幕方向控制
+        playerView.isNeedOrientationUtils = false // 关闭自带的屏幕方向控制
         playerView.fullscreenButton.setOnClickListener { toggleFullScreen() }
         playerView.setBackFromFullScreenListener { toggleFullScreen() }
         playerView.setVideoAllCallBack(object : GSYSampleCallBack() {
@@ -691,10 +690,10 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
                 super.onPrepared(url, *objects)
                 playerView.post {
                     val player = playerView.getCurrentPlayer()
-                    if (VideoPlay.lockCurScreen &&  !player.getLockCurScreen()) {
+                    if (VideoPlay.lockCurScreen && !player.getLockCurScreen()) {
                         player.lockTouchLogic()
                     }
-                    //根据实际视频比例再次调整
+                    // 根据实际视频比例再次调整
                     val videoWidth = playerView.currentVideoWidth
                     val videoHeight = playerView.currentVideoHeight
                     if (videoWidth > 0 && videoHeight > 0) {
@@ -704,7 +703,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
                         val isPortraitVideo = if (aspectRatio > 1.2) true else false
                         VideoPlay.isPortraitVideo = isPortraitVideo
                         if (isFullScreen && isPortraitVideo) {
-                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT //提前进入了全屏，并且默认横屏了，纠正回来
+                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT // 提前进入了全屏，并且默认横屏了，纠正回来
                             return@post
                         }
                         if (VideoPlay.startFull && VideoPlay.autoPlay && !isFullScreen) {
@@ -714,7 +713,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
                         val height = (parentWidth * aspectRatio).toInt()
                         val displayMetrics = resources.displayMetrics
                         val screenHeight = displayMetrics.heightPixels
-                        //高度不超过一半屏幕
+                        // 高度不超过一半屏幕
                         layoutParams.height = if (height < screenHeight / 2) height else screenHeight / 2
                         playerView.layoutParams = layoutParams
                     }
@@ -734,7 +733,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         }
         starMenuItem = menu.findItem(R.id.menu_rss_star)
         upStarMenu()
-        //订阅源/直链视频没有章节可缓存，直接隐藏；书籍视频才给缓存入口
+        // 订阅源/直链视频没有章节可缓存，直接隐藏；书籍视频才给缓存入口
         menu.findItem(R.id.menu_video_cache)?.apply {
             isVisible = VideoPlay.book != null
             icon?.setTintMutate(primaryTextColor)
@@ -748,7 +747,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
             starMenuItem?.setIcon(R.drawable.ic_star)
             starMenuItem?.setTitle(R.string.in_favorites)
             starMenuItem?.icon?.setTintMutate(primaryTextColor)
-        } else if(VideoPlay.rssRecord != null) {
+        } else if (VideoPlay.rssRecord != null) {
             starMenuItem?.isVisible = true
             starMenuItem?.setIcon(R.drawable.ic_star_border)
             starMenuItem?.setTitle(R.string.out_favorites)
@@ -766,7 +765,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.menu_custom_btn -> {
-                (VideoPlay.source as? BookSource)?.let {source ->
+                (VideoPlay.source as? BookSource)?.let { source ->
                     VideoPlay.book?.let { book ->
                         SourceCallBack.callBackBtn(
                             this,
@@ -774,7 +773,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
                             source,
                             book,
                             VideoPlay.chapter,
-                            BookType.video
+                            BookType.video,
                         )
                     }
                 }
@@ -785,8 +784,8 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
             R.id.menu_float_window -> startFloatingWindow()
             R.id.menu_video_cache -> showVideoCacheRangeDialog()
             R.id.menu_config_settings -> showDialogFragment(SettingsDialog(this))
-            R.id.menu_login -> VideoPlay.source?.let {s ->
-               when (s) {
+            R.id.menu_login -> VideoPlay.source?.let { s ->
+                when (s) {
                     is BookSource -> {
                         startActivity<SourceLoginActivity> {
                             putExtra("bookType", BookType.video)
@@ -803,7 +802,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
 
             R.id.menu_copy_video_url -> {
                 val url = VideoPlay.videoUrl
-                if (url.isNullOrBlank()){
+                if (url.isNullOrBlank()) {
                     this.toastOnUi("暂无播放地址")
                     return true
                 }
@@ -815,7 +814,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
                         it,
                         VideoPlay.chapter,
                         BookType.video,
-                        url
+                        url,
                     ) {
                         sendToClip(url)
                     }
@@ -823,7 +822,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
             }
             R.id.menu_open_other_video_player -> {
                 val url = VideoPlay.videoUrl
-                if (url.isNullOrBlank()){
+                if (url.isNullOrBlank()) {
                     this.toastOnUi("暂无播放地址")
                     return true
                 }
@@ -832,7 +831,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
                 }
                 startActivity(intent)
             }
-            R.id.menu_edit_source -> VideoPlay.source?.let {s  ->
+            R.id.menu_edit_source -> VideoPlay.source?.let { s ->
                 when (s) {
                     is BookSource -> bookSourceEditResult.launch {
                         putExtra("sourceUrl", s.getKey())
@@ -854,18 +853,20 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
      */
     private fun showVideoCacheRangeDialog() {
         val book = VideoPlay.book ?: return
-        showDialogFragment(VideoCacheRangeDialog { start, end ->
-            //CacheBook 按 bookUrl 取书，书还没入库（例如没放入书架）时缓存不成立，先查一次目录避免静默失败
-            lifecycleScope.launch(IO) {
-                val chapters = appDb.bookChapterDao.getChapterList(book.bookUrl, start - 1, end - 1)
-                if (chapters.isEmpty()) {
-                    toastOnUi(R.string.chapter_list_empty)
-                } else {
-                    CacheBook.start(this@VideoPlayerActivity, book, start - 1, end - 1)
-                    toastOnUi(R.string.download_start)
+        showDialogFragment(
+            VideoCacheRangeDialog { start, end ->
+                // CacheBook 按 bookUrl 取书，书还没入库（例如没放入书架）时缓存不成立，先查一次目录避免静默失败
+                lifecycleScope.launch(IO) {
+                    val chapters = appDb.bookChapterDao.getChapterList(book.bookUrl, start - 1, end - 1)
+                    if (chapters.isEmpty()) {
+                        toastOnUi(R.string.chapter_list_empty)
+                    } else {
+                        CacheBook.start(this@VideoPlayerActivity, book, start - 1, end - 1)
+                        toastOnUi(R.string.download_start)
+                    }
                 }
-            }
-        })
+            },
+        )
     }
 
     private fun startFloatingWindow() {
@@ -876,11 +877,10 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         }
         ContextCompat.startForegroundService(this, intent)
         playerView.needDestroy = false
-        finish() //如果在播放器复刻前活动被销毁，会导致状态继承异常（这里服务创建很快，没发现异常）
+        finish() // 如果在播放器复刻前活动被销毁，会导致状态继承异常（这里服务创建很快，没发现异常）
     }
 
     override fun observeLiveBus() {
-
         observeEventSticky<String>(EventBus.VIDEO_SUB_TITLE) {
             binding.titleBar.title = it
         }
@@ -898,7 +898,6 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
             // 更新播放器静音状态
             playerView.setMute(VideoPlay.mutePlay)
         }
-
     }
 
     override fun finish() {

@@ -13,7 +13,6 @@ import io.legado.app.R
 import io.legado.app.model.VideoPlay
 import java.io.File
 
-
 class FloatingPlayer : StandardGSYVideoPlayer {
     constructor(context: Context, fullFlag: Boolean) : super(context, fullFlag)
     constructor(context: Context) : super(context)
@@ -40,9 +39,7 @@ class FloatingPlayer : StandardGSYVideoPlayer {
         fullscreenB = findViewById(R.id.fullscreenB)
     }
 
-    override fun getLayoutId(): Int {
-        return R.layout.video_layout_floating
-    }
+    override fun getLayoutId(): Int = R.layout.video_layout_floating
 
     override fun setUp(url: String?, cacheWithPlay: Boolean, cachePath: File?, title: String?): Boolean {
         val result = super.setUp(url, cacheWithPlay, cachePath, title)
@@ -51,8 +48,7 @@ class FloatingPlayer : StandardGSYVideoPlayer {
         return result
     }
 
-
-    override fun onAutoCompletion() { //自动播放完成
+    override fun onAutoCompletion() { // 自动播放完成
         setStateAndUi(CURRENT_STATE_AUTO_COMPLETE)
         mSaveChangeViewTIme = 0
         if (mTextureViewContainer.isNotEmpty()) {
@@ -80,13 +76,9 @@ class FloatingPlayer : StandardGSYVideoPlayer {
         releaseNetWorkState()
     }
 
-    override fun getActivityContext(): Context? {
-        return context
-    }
+    override fun getActivityContext(): Context? = context
 
-    override fun isShowNetConfirm(): Boolean {
-        return false
-    }
+    override fun isShowNetConfirm(): Boolean = false
 
     override fun performClick(): Boolean {
         super.performClick()
@@ -94,7 +86,11 @@ class FloatingPlayer : StandardGSYVideoPlayer {
     }
 
     override fun setProgressAndTime(
-        progress: Long, secProgress: Long, currentTime: Long, totalTime: Long, forceChange: Boolean
+        progress: Long,
+        secProgress: Long,
+        currentTime: Long,
+        totalTime: Long,
+        forceChange: Boolean,
     ) {
         if (mHadSeekTouch) {
             return
@@ -120,24 +116,16 @@ class FloatingPlayer : StandardGSYVideoPlayer {
         VideoPlay.saveRead()
         mSeekOnStart = VideoPlay.durChapterPos.toLong()
     }
-    override fun getCurrentPlayer(): FloatingPlayer {
-        return this
-    }
+    override fun getCurrentPlayer(): FloatingPlayer = this
 
     /**********以下重载GSYVideoPlayer的GSYVideoViewBridge相关实现***********/
-    override fun getGSYVideoManager(): ExoVideoManager {
-        return VideoPlay.videoManager.apply { initContext(context.applicationContext) }
-    }
+    override fun getGSYVideoManager(): ExoVideoManager = VideoPlay.videoManager.apply { initContext(context.applicationContext) }
     override fun releaseVideos() {
         VideoPlay.releaseAllVideos()
     }
-    override fun getFullId(): Int {
-        return ExoVideoManager.FULLSCREEN_ID
-    }
+    override fun getFullId(): Int = ExoVideoManager.FULLSCREEN_ID
 
-    override fun getSmallId(): Int {
-        return ExoVideoManager.SMALL_ID
-    }
+    override fun getSmallId(): Int = ExoVideoManager.SMALL_ID
     override fun setDisplay(surface: Surface?) {
         if (surface != null && mTextureView.getShowView() is SurfaceView) {
             val surfaceView = (mTextureView.getShowView() as SurfaceView?)
@@ -148,9 +136,11 @@ class FloatingPlayer : StandardGSYVideoPlayer {
             gsyVideoManager.setDisplayNew(null)
         }
     }
-    fun nextUI() { resetProgressAndTime() }
+    fun nextUI() {
+        resetProgressAndTime()
+    }
 
-    //播放器转移
+    // 播放器转移
     fun setSurfaceToPlay() {
         addTextureView()
         gsyVideoManager.setListener(this)
@@ -169,9 +159,7 @@ class FloatingPlayer : StandardGSYVideoPlayer {
         }
     }
 
-    fun saveState(): FloatingPlayer {
-        return this
-    }
+    fun saveState(): FloatingPlayer = this
 
     fun cloneState(switchVideo: StandardGSYVideoPlayer) {
         cloneParams(switchVideo, this)
