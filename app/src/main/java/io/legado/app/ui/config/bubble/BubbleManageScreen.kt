@@ -290,20 +290,11 @@ private fun BubbleCard(
 ) {
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
     val isBuiltin = entry.source == BubblePackageManager.Source.BUILTIN
-    val summary = buildString {
-        append(
-            stringResource(
-                if (isBuiltin) R.string.bubble_source_builtin else R.string.bubble_source_local
-            )
-        )
-        append(" · ")
-        append(
-            if (entry.config.updatedAt > 0L) {
-                dateFormat.format(Date(entry.config.updatedAt))
-            } else {
-                stringResource(R.string.bubble_source_builtin)
-            }
-        )
+    // 内置包已由卡片上的「内置」标签表达来源，摘要只保留日期，避免出现「内置 · 内置」
+    val summary = if (isBuiltin || entry.config.updatedAt <= 0L) {
+        ""
+    } else {
+        stringResource(R.string.bubble_source_local) + " · " + dateFormat.format(Date(entry.config.updatedAt))
     }
     ConfigManageCard(
         title = entry.config.name,

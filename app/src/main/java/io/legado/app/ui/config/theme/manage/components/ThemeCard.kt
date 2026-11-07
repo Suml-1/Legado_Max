@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import io.legado.app.R
 import io.legado.app.ui.config.theme.manage.ThemeItem
+import io.legado.app.ui.config.widget.ConfigBadge
 
 /** 颜色 hex 解析容错，避免非法色值导致崩溃 */
 private fun parseColorOrDefault(hex: String, default: Int): Int =
@@ -99,7 +100,8 @@ fun ThemeCard(
                 accentColor = Color(accentColor),
                 backgroundColor = Color(backgroundColor),
                 backgroundImgPath = config.backgroundImgPath,
-                isCurrent = isCurrent,
+                // 「已应用」统一由标题右侧的胶囊标签表达，预览图不再重复打勾
+                isCurrent = false,
                 isMultiSelectMode = isMultiSelectMode,
                 isNightTheme = config.isNightTheme
             )
@@ -107,14 +109,24 @@ fun ThemeCard(
             Spacer(Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = config.themeName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = onColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = config.themeName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = onColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (isCurrent) {
+                        Spacer(Modifier.width(8.dp))
+                        ConfigBadge(
+                            text = stringResource(R.string.applied),
+                            highlighted = true
+                        )
+                    }
+                }
 
                 Spacer(Modifier.height(4.dp))
 
@@ -136,10 +148,9 @@ fun ThemeCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = onApply) {
                         Text(
-                            text = if (isCurrent) stringResource(R.string.applied)
-                                   else stringResource(R.string.apply_theme),
+                            text = stringResource(R.string.apply_theme),
                             fontSize = 13.sp,
-                            color = buttonTextColor
+                            color = if (isCurrent) MaterialTheme.colorScheme.primary else buttonTextColor
                         )
                     }
                     TextButton(onClick = onEdit) {

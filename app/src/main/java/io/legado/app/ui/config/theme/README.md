@@ -6,33 +6,49 @@
 
 | 子目录 | 用途 |
 |--------|------|
-| `manage/` | **新版主题管理**（Jetpack Compose 实现）。主题列表的增删改查、多选、导入导出等核心交互。 |
-| `manage/components/` | 新版主题管理专用的 Compose UI 组件（主题卡片、编辑弹窗、Tab 行、多选底栏）。 |
-| `legacy/` | **旧版主题代码**（View 体系实现）。包括 PreferenceFragment 配置入口和旧版主题列表 Dialog。保留为兼容入口，后续将逐步移除。 |
-| `legacy/appTheme/` | 旧版应用主题管理（打包日/夜主题 + 顶栏/底栏/封面图集为整体方案），基于 View + RecyclerView。 |
+| `manage/` | **主题列表**（Jetpack Compose 实现）。单套主题的增删改查、多选、导入导出。 |
+| `manage/components/` | 主题列表专用的 Compose UI 组件（主题卡片与预览、编辑弹窗）。 |
+| `application/` | **应用主题**（Compose 实现）。把日/夜主题 + 顶栏 + 底栏 + 封面图集打包成一套方案。 |
+| `application/edit/` | 应用主题的编辑页（Compose 表单：名称 + 八个组件选择）。 |
+| `legacy/` | 旧版入口，仅剩 `ThemeConfigFragment`（PreferenceFragment，主题设置总入口）。 |
 
 ## 架构概览
 
 ```
 theme/
-├── manage/              # Compose 版（主开发目标）
-│   ├── ThemeManageActivity.kt       # 入口 Activity
-│   ├── ThemeManageScreen.kt         # Compose 主屏幕
-│   ├── ThemeManageViewModel.kt      # 状态驱动
-│   ├── ThemeManageUiState.kt        # UiState / 事件 / 数据类
-│   └── components/                  # Compose 组件
-│       ├── ThemeCard.kt             # 主题卡片 + 预览
-│       ├── ThemeEditDialog.kt       # 编辑弹窗
-│       ├── ThemeTabRow.kt          # 日/夜 Tab
-│       └── MultiSelectBottomBar.kt # 多选操作栏
+├── manage/              # 主题列表（Compose）
+│   ├── ThemeManageActivity.kt
+│   ├── ThemeManageScreen.kt
+│   ├── ThemeManageViewModel.kt
+│   ├── ThemeManageUiState.kt
+│   └── components/
+│       ├── ThemeCard.kt              # 主题卡片 + 预览
+│       ├── ThemePreview.kt           # 主题配色预览块
+│       ├── ThemeBackgroundImage.kt   # 背景图处理
+│       └── ThemeEditDialog.kt        # 编辑弹窗
 │
-└── legacy/              # 旧版（兼容保留）
-    ├── ThemeConfigFragment.kt       # PreferenceFragment 配置入口
-    ├── ThemeListDialog.kt           # 旧版主题列表 Dialog
-    └── appTheme/
-        ├── ApplicationThemeActivity.kt       # 应用主题方案列表
-        └── ApplicationThemeEditActivity.kt   # 应用主题方案编辑
+├── application/         # 应用主题（Compose）
+│   ├── ApplicationThemeActivity.kt
+│   ├── ApplicationThemeScreen.kt
+│   ├── ApplicationThemeViewModel.kt
+│   ├── edit/                         # 编辑页
+│   │   ├── ApplicationThemeEditActivity.kt
+│   │   ├── ApplicationThemeEditScreen.kt
+│   │   └── ApplicationThemeEditViewModel.kt
+│   └── components/
+│       ├── ApplicationThemePreview.kt        # 列表配色预览
+│       └── ThemeComponentOptionsDialog.kt    # 导入/删除的组件勾选
+│
+└── legacy/
+    └── ThemeConfigFragment.kt        # PreferenceFragment 配置入口
 ```
+
+## 共用组件
+
+主题列表与应用主题共用 `ui/config/widget/` 下的管理页积木：
+`ConfigManageScaffold`、`ConfigManageCard`、`ConfigAddBottomBar`、`ConfigMultiSelectBar`、
+`ConfigItemMoreButton`、`ConfigNameDialog`、`ConfigEditDialogFrame`、`ConfigSliderDialog`、
+`ConfigDialogRow`、`DayNightPager`。
 
 ## 外部依赖
 

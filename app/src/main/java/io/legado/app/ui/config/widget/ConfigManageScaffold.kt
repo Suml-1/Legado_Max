@@ -1,5 +1,6 @@
 package io.legado.app.ui.config.widget
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,6 +35,10 @@ fun ConfigManageScaffold(
     bottomBar: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
+    // 多选模式下系统返回键先退出多选，而不是直接退出页面（与旧版气泡页行为一致）
+    BackHandler(enabled = isMultiSelectMode) {
+        onExitMultiSelect()
+    }
     AppScaffold(
         modifier = modifier,
         topBar = {
