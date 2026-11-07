@@ -941,15 +941,10 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         get() = appCtx.getPrefBoolean(PreferKey.autoAddShelfEnabled, false)
         set(value) = appCtx.putPrefBoolean(PreferKey.autoAddShelfEnabled, value)
 
-    /** 自动加入书架的阅读时长下限（分钟）。 */
+    /** 读到该时长（分钟）后自动加入书架，未设置时按 3 分钟，至少 1 分钟。 */
     var autoAddShelfMinMinutes
-        get() = appCtx.getPrefInt(PreferKey.autoAddShelfMinMinutes, 3)
+        get() = appCtx.getPrefInt(PreferKey.autoAddShelfMinMinutes, 3).coerceAtLeast(1)
         set(value) = appCtx.putPrefInt(PreferKey.autoAddShelfMinMinutes, value)
-
-    /** 自动加入书架的阅读时长上限（分钟）。 */
-    var autoAddShelfMaxMinutes
-        get() = appCtx.getPrefInt(PreferKey.autoAddShelfMaxMinutes, 10)
-        set(value) = appCtx.putPrefInt(PreferKey.autoAddShelfMaxMinutes, value)
 
     val ignoreAudioFocus get() = appCtx.getPrefBoolean(PreferKey.ignoreAudioFocus, false)
 

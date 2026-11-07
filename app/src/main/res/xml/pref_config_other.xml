@@ -289,12 +289,6 @@
             android:summary="@string/auto_add_shelf_min_summary"
             android:title="@string/auto_add_shelf_min_title" />
 
-        <io.legado.app.lib.prefs.EditTextPreference
-            android:key="autoAddShelfMaxMinutes"
-            android:inputType="number"
-            android:summary="@string/auto_add_shelf_max_summary"
-            android:title="@string/auto_add_shelf_max_title" />
-
         <io.legado.app.lib.prefs.NameListPreference
             android:defaultValue="default_version"
             android:key="updateToVariant"

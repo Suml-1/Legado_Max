@@ -211,7 +211,6 @@ object PreferKey {
     const val showAddToShelfAlert = "showAddToShelfAlert"
     const val autoAddShelfEnabled = "autoAddShelfEnabled"
     const val autoAddShelfMinMinutes = "autoAddShelfMinMinutes"
-    const val autoAddShelfMaxMinutes = "autoAddShelfMaxMinutes"
     const val ignoreAudioFocus = "ignoreAudioFocus"
     const val parallelExportBook = "parallelExportBook"
     const val progressBarBehavior = "progressBarBehavior"

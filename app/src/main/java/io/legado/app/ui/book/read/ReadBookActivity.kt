@@ -461,7 +461,7 @@ class ReadBookActivity :
     }
 
     /**
-     * 启动“阅读时长达到区间后自动加入书架”计时
+     * 启动“阅读时长达到设定值后自动加入书架”计时
      */
     private fun startAutoShelfTimer() {
         stopAutoShelfTimer()
@@ -490,12 +490,9 @@ class ReadBookActivity :
             stopAutoShelfTimer(accumulate = false)
             return
         }
-        val minMs = AppConfig.autoAddShelfMinMinutes * 60000L
-        val maxMs = AppConfig.autoAddShelfMaxMinutes * 60000L
-        val effectiveMax = if (maxMs >= minMs) maxMs else minMs
+        val targetMs = AppConfig.autoAddShelfMinMinutes * 60000L
         val elapsed = autoShelfAccumMs + (SystemClock.elapsedRealtime() - autoShelfLastResume)
-        // 达到下限即在区间内，执行自动加入书架
-        if (elapsed >= minMs && elapsed <= effectiveMax) {
+        if (elapsed >= targetMs) {
             autoAddToShelf(book)
         }
     }
