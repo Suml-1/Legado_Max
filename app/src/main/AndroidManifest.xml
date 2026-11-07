@@ -248,24 +248,24 @@
             android:configChanges="uiMode"
             android:launchMode="standard" />
         <activity
-            android:name=".ui.config.NavigationBarManageActivity"
+            android:name=".ui.config.navigationbar.NavigationBarManageActivity"
             android:launchMode="standard" />
         <activity
             android:name=".ui.config.theme.manage.ThemeManageActivity"
             android:configChanges="uiMode"
             android:launchMode="standard" />
         <activity
-            android:name=".ui.config.theme.legacy.appTheme.ApplicationThemeActivity"
+            android:name=".ui.config.theme.application.ApplicationThemeActivity"
             android:launchMode="standard" />
         <activity
-            android:name=".ui.config.theme.legacy.appTheme.ApplicationThemeEditActivity"
+            android:name=".ui.config.theme.application.edit.ApplicationThemeEditActivity"
             android:launchMode="standard" />
         <activity
-            android:name=".ui.config.TopBarManageActivity"
+            android:name=".ui.config.topbar.TopBarManageActivity"
             android:launchMode="standard" />
         <!-- 搜索界面 -->
         <activity
-            android:name=".ui.config.BubbleManageActivity"
+            android:name=".ui.config.bubble.BubbleManageActivity"
             android:launchMode="standard" />
         <activity
             android:name=".ui.config.ShareNoteTemplateManageActivity"
