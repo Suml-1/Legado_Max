@@ -39,7 +39,8 @@ fun ConfigSliderDialog(
     value: Int,
     onConfirm: (Int) -> Unit,
     onDismissRequest: () -> Unit,
-    range: IntRange = 0..100
+    range: IntRange = 0..100,
+    valueText: (Int) -> String = { "$it%" }
 ) {
     var current by rememberSaveable(value, range) {
         mutableIntStateOf(value.coerceIn(range.first, range.last))
@@ -51,7 +52,7 @@ fun ConfigSliderDialog(
         text = {
             Column {
                 Text(
-                    text = "$current%",
+                    text = valueText(current),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center,

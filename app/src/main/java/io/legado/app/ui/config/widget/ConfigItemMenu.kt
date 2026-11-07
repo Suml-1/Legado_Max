@@ -3,6 +3,8 @@ package io.legado.app.ui.config.widget
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -60,6 +62,42 @@ fun ConfigActionButton(
                 else -> MaterialTheme.colorScheme.onSurface
             }
         )
+    }
+}
+
+/**
+ * 页面顶部栏的图标按钮 + 下拉菜单（如「导入」的多来源选择）。
+ *
+ * @param icon 图标
+ * @param contentDescription 无障碍描述，必须已资源化
+ * @param items 菜单项，顺序即展示顺序
+ * @param modifier Modifier
+ */
+@Composable
+fun ConfigActionIconMenu(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    items: List<ConfigMenuItem>,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    IconButton(onClick = { expanded = true }, modifier = modifier) {
+        Icon(imageVector = icon, contentDescription = contentDescription)
+    }
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = { expanded = false },
+        modifier = Modifier.eInkGrayscale()
+    ) {
+        items.forEach { item ->
+            DropdownMenuItem(
+                text = { Text(item.text) },
+                onClick = {
+                    expanded = false
+                    item.onClick()
+                }
+            )
+        }
     }
 }
 
