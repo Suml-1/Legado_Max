@@ -243,6 +243,7 @@
     <string name="replace_rule_invalid">Pattern rule is empty or does not conform the regex specification.</string>
     <string name="select_action">Selection action</string>
     <string name="select_all">Select all</string>
+    <string name="multi_select_count">Selected %1$d</string>
     <string name="selected">Selected %1$d</string>
     <string name="select_all_count">Select all(%1$d/%2$d)</string>
     <string name="select_cancel_count">Cancel select all(%1$d/%2$d)</string>

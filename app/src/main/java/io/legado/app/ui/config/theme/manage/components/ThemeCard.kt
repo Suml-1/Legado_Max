@@ -22,7 +22,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -34,10 +33,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import io.legado.app.R
 import io.legado.app.ui.config.theme.manage.ThemeItem
+import io.legado.app.ui.config.widget.ConfigActionButton
 import io.legado.app.ui.config.widget.ConfigBadge
 
 /** 颜色 hex 解析容错，避免非法色值导致崩溃 */
@@ -143,29 +142,22 @@ fun ThemeCard(
 
                 Spacer(Modifier.height(8.dp))
 
-                val buttonTextColor = if (isLightBg) Color.Black else Color.White
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = onApply) {
-                        Text(
-                            text = stringResource(R.string.apply_theme),
-                            fontSize = 13.sp,
-                            color = if (isCurrent) MaterialTheme.colorScheme.primary else buttonTextColor,
-                        )
-                    }
-                    TextButton(onClick = onEdit) {
-                        Text(
-                            text = stringResource(R.string.edit_theme),
-                            fontSize = 13.sp,
-                            color = buttonTextColor,
-                        )
-                    }
-                    TextButton(onClick = onCopy) {
-                        Text(
-                            text = stringResource(R.string.copy),
-                            fontSize = 13.sp,
-                            color = buttonTextColor,
-                        )
-                    }
+                    // 与其它管理页共用操作按钮：TextButton 的 58dp 最小宽度会让「复制」
+                    // 在多选模式（右侧多出勾选框）下被挤成竖排两行
+                    ConfigActionButton(
+                        text = stringResource(R.string.apply_theme),
+                        onClick = onApply,
+                        highlighted = isCurrent,
+                    )
+                    ConfigActionButton(
+                        text = stringResource(R.string.edit_theme),
+                        onClick = onEdit,
+                    )
+                    ConfigActionButton(
+                        text = stringResource(R.string.copy),
+                        onClick = onCopy,
+                    )
                 }
             }
 

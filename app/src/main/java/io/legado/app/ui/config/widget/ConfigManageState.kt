@@ -85,6 +85,23 @@ class ConfigManageState(initialTab: ConfigTab) {
         visibleKeys.forEach { multiSelect.add(it) }
     }
 
+    /**
+     * 「全选」文字操作的旧版语义：已全选时再点一次即取消全选。
+     *
+     * 与 View 版管理页的 `selectAllOrClear()` 一致——取消到没有选中项时就退出多选模式，
+     * 否则会停在一个「已选择 0 项」的空多选态里。
+     */
+    fun toggleSelectAllVisible(visibleKeys: List<String>) {
+        if (isAllSelected(visibleKeys)) {
+            visibleKeys.forEach { multiSelect.remove(it) }
+            if (multiSelect.selectedKeys.isEmpty()) {
+                isMultiSelectMode = false
+            }
+        } else {
+            visibleKeys.forEach { multiSelect.add(it) }
+        }
+    }
+
     // ── 编辑弹窗操作 ────────────────────────────────────────
 
     fun openEditDialog(isNew: Boolean, editingKey: String = "") {

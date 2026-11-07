@@ -7,12 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,12 +27,10 @@ import io.legado.app.ui.config.theme.manage.components.ThemeEditDialog
 import io.legado.app.ui.config.widget.ConfigAddBottomBar
 import io.legado.app.ui.config.widget.ConfigList
 import io.legado.app.ui.config.widget.ConfigManageScaffold
-import io.legado.app.ui.config.widget.ConfigMultiSelectBar
+import io.legado.app.ui.config.widget.ConfigMultiSelectTextAction
 import io.legado.app.ui.config.widget.ConfigTab
 import io.legado.app.ui.config.widget.DayNightPager
 import io.legado.app.ui.config.widget.ImportFromClipboardAction
-import io.legado.app.ui.config.widget.MultiSelectAction
-import io.legado.app.ui.config.widget.SelectAllAction
 import io.legado.app.ui.config.widget.rememberSharedConfigManageState
 import io.legado.app.ui.widget.components.AppSearchBar
 import io.legado.app.ui.widget.components.VerticalScrollbar
@@ -96,58 +89,36 @@ fun ThemeManageScreen(
     ConfigManageScaffold(
         title = stringResource(R.string.theme_list),
         isMultiSelectMode = state.isMultiSelectMode,
+        selectedCount = state.selectedCount,
         onBackClick = onBackClick,
         onExitMultiSelect = state::exitMultiSelect,
         actions = {
-            if (state.isMultiSelectMode) {
-                SelectAllAction(
-                    isAllSelected = state.isAllSelected(visibleKeys),
-                    onSelectAll = { state.selectAllVisible(visibleKeys) },
-                )
-            } else {
-                ImportFromClipboardAction(viewModel::importFromClipboard)
+            ImportFromClipboardAction(viewModel::importFromClipboard)
+        },
+        multiSelectActions = {
+            ConfigMultiSelectTextAction(stringResource(R.string.select_all)) {
+                state.toggleSelectAllVisible(visibleKeys)
+            }
+            ConfigMultiSelectTextAction(stringResource(R.string.to_top)) {
+                viewModel.toTopSelected(state.multiSelect.selectedKeys.toSet())
+                state.exitMultiSelect()
+            }
+            ConfigMultiSelectTextAction(stringResource(R.string.export)) {
+                viewModel.exportSelected(state.multiSelect.selectedKeys.toSet())
+                state.exitMultiSelect()
+            }
+            ConfigMultiSelectTextAction(stringResource(R.string.delete)) {
+                viewModel.requestDeleteSelected(state.multiSelect.selectedKeys.toSet())
             }
         },
         bottomBar = {
-            if (state.isMultiSelectMode) {
-                ConfigMultiSelectBar(
-                    selectedCount = state.selectedCount,
-                    actions = listOf(
-                        MultiSelectAction(
-                            icon = Icons.Default.VerticalAlignTop,
-                            contentDescription = stringResource(R.string.to_top),
-                            onClick = {
-                                viewModel.toTopSelected(state.multiSelect.selectedKeys.toSet())
-                                state.exitMultiSelect()
-                            },
-                        ),
-                        MultiSelectAction(
-                            icon = Icons.Default.Share,
-                            contentDescription = stringResource(R.string.export),
-                            onClick = {
-                                viewModel.exportSelected(state.multiSelect.selectedKeys.toSet())
-                                state.exitMultiSelect()
-                            },
-                        ),
-                        MultiSelectAction(
-                            icon = Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.delete),
-                            tint = MaterialTheme.colorScheme.error,
-                            onClick = {
-                                viewModel.requestDeleteSelected(state.multiSelect.selectedKeys.toSet())
-                            },
-                        ),
-                    ),
-                )
-            } else {
-                ConfigAddBottomBar(
-                    text = stringResource(R.string.add_theme),
-                    onClick = {
-                        val draft = viewModel.startNew(state.tab.isNight)
-                        state.openEditDialog(isNew = true, editingKey = draft.editingKey)
-                    },
-                )
-            }
+            ConfigAddBottomBar(
+                text = stringResource(R.string.add_theme),
+                onClick = {
+                    val draft = viewModel.startNew(state.tab.isNight)
+                    state.openEditDialog(isNew = true, editingKey = draft.editingKey)
+                },
+            )
         },
     ) { contentPadding ->
         Column(

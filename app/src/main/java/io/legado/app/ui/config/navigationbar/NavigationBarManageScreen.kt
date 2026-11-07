@@ -5,11 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.VerticalAlignTop
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -36,11 +31,9 @@ import io.legado.app.ui.config.widget.ConfigManageCard
 import io.legado.app.ui.config.widget.ConfigManageScaffold
 import io.legado.app.ui.config.widget.ConfigManageState
 import io.legado.app.ui.config.widget.ConfigMenuItem
-import io.legado.app.ui.config.widget.ConfigMultiSelectBar
+import io.legado.app.ui.config.widget.ConfigMultiSelectTextAction
 import io.legado.app.ui.config.widget.DayNightPager
 import io.legado.app.ui.config.widget.ImportFromClipboardAction
-import io.legado.app.ui.config.widget.MultiSelectAction
-import io.legado.app.ui.config.widget.SelectAllAction
 import io.legado.app.ui.config.widget.rememberSharedConfigManageState
 import io.legado.app.ui.widget.components.VerticalScrollbar
 import io.legado.app.ui.widget.components.dialog.AppConfirmDialog
@@ -99,55 +92,35 @@ fun NavigationBarManageScreen(
     ConfigManageScaffold(
         title = stringResource(R.string.navigation_bar_manage),
         isMultiSelectMode = state.isMultiSelectMode,
+        selectedCount = state.selectedCount,
         onBackClick = actions.onBackClick,
         onExitMultiSelect = state::exitMultiSelect,
         modifier = modifier,
         actions = {
-            if (state.isMultiSelectMode) {
-                SelectAllAction(
-                    isAllSelected = state.isAllSelected(visibleKeys),
-                    onSelectAll = { state.selectAllVisible(visibleKeys) },
-                )
-            } else {
-                ImportFromClipboardAction(onImport = viewModel::importFromClipboard)
+            ImportFromClipboardAction(onImport = viewModel::importFromClipboard)
+        },
+        multiSelectActions = {
+            val selected = items.filter { it.id in state.multiSelect.selectedKeys }
+            ConfigMultiSelectTextAction(stringResource(R.string.select_all)) {
+                state.toggleSelectAllVisible(visibleKeys)
+            }
+            ConfigMultiSelectTextAction(stringResource(R.string.to_top)) {
+                viewModel.toTopConfigs(selected)
+                state.exitMultiSelect()
+            }
+            ConfigMultiSelectTextAction(stringResource(R.string.export)) {
+                viewModel.exportConfigs(selected)
+                state.exitMultiSelect()
+            }
+            ConfigMultiSelectTextAction(stringResource(R.string.delete)) {
+                pendingDelete = selected
             }
         },
         bottomBar = {
-            if (state.isMultiSelectMode) {
-                val selected = items.filter { it.id in state.multiSelect.selectedKeys }
-                ConfigMultiSelectBar(
-                    selectedCount = state.selectedCount,
-                    actions = listOf(
-                        MultiSelectAction(
-                            icon = Icons.Default.VerticalAlignTop,
-                            contentDescription = stringResource(R.string.to_top),
-                            onClick = {
-                                viewModel.toTopConfigs(selected)
-                                state.exitMultiSelect()
-                            },
-                        ),
-                        MultiSelectAction(
-                            icon = Icons.Default.Share,
-                            contentDescription = stringResource(R.string.export),
-                            onClick = {
-                                viewModel.exportConfigs(selected)
-                                state.exitMultiSelect()
-                            },
-                        ),
-                        MultiSelectAction(
-                            icon = Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.delete),
-                            tint = MaterialTheme.colorScheme.error,
-                            onClick = { pendingDelete = selected },
-                        ),
-                    ),
-                )
-            } else {
-                ConfigAddBottomBar(
-                    text = stringResource(R.string.add_nav_bar_config),
-                    onClick = viewModel::startCreate,
-                )
-            }
+            ConfigAddBottomBar(
+                text = stringResource(R.string.add_nav_bar_config),
+                onClick = viewModel::startCreate,
+            )
         },
     ) { contentPadding ->
         Column(

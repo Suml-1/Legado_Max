@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.base.BaseComposeActivity
+import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.ui.config.theme.application.edit.ApplicationThemeEditActivity
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.utils.externalFiles
@@ -77,7 +78,15 @@ class ApplicationThemeActivity : BaseComposeActivity() {
                     exportTheme.launch {
                         mode = HandleFileContract.EXPORT
                         title = getString(R.string.export_str)
-                        fileData = HandleFileContract.FileData(file.name, file, "application/json")
+                        fileData = HandleFileContract.FileData(file.name, file, exportMimeType(file.name))
+                        // 沿用旧版应用主题导出的三个落盘位置：系统文件夹选择器 / 自带文件夹选择器 / 手动输入。
+                        // 不走 EXPORT 的默认列表，否则会多出「上传到 WebDAV」和「导出到剪贴板」两项。
+                        onlyOtherActions = true
+                        otherActions = arrayListOf(
+                            SelectItem(getString(R.string.sys_folder_picker), HandleFileContract.DIR),
+                            SelectItem(getString(R.string.app_folder_picker), 10),
+                            SelectItem(getString(R.string.manual_input), 112),
+                        )
                     }
                 },
                 onOpenEditor = { id ->
@@ -96,6 +105,13 @@ class ApplicationThemeActivity : BaseComposeActivity() {
                 onRestart = { recreate() },
             ),
         )
+    }
+
+    /** 导出文件的 MIME：`.red` 是自定义容器（带 RED 头），按二进制给，避免被当成压缩包解压 */
+    private fun exportMimeType(fileName: String): String = if (fileName.endsWith(".red", ignoreCase = true)) {
+        "application/octet-stream"
+    } else {
+        "application/zip"
     }
 
     private fun copyText(text: String) {

@@ -5,13 +5,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,11 +33,9 @@ import io.legado.app.ui.config.widget.ConfigList
 import io.legado.app.ui.config.widget.ConfigManageCard
 import io.legado.app.ui.config.widget.ConfigManageScaffold
 import io.legado.app.ui.config.widget.ConfigMenuItem
-import io.legado.app.ui.config.widget.ConfigMultiSelectBar
+import io.legado.app.ui.config.widget.ConfigMultiSelectTextAction
 import io.legado.app.ui.config.widget.ConfigNameDialog
 import io.legado.app.ui.config.widget.ConfigTab
-import io.legado.app.ui.config.widget.MultiSelectAction
-import io.legado.app.ui.config.widget.SelectAllAction
 import io.legado.app.ui.config.widget.rememberConfigManageState
 import io.legado.app.ui.widget.components.VerticalScrollbar
 import io.legado.app.ui.widget.components.dialog.AppConfirmDialog
@@ -107,63 +101,43 @@ fun ApplicationThemeScreen(
     ConfigManageScaffold(
         title = stringResource(R.string.application_theme_manage),
         isMultiSelectMode = state.isMultiSelectMode,
+        selectedCount = state.selectedCount,
         onBackClick = actions.onBackClick,
         onExitMultiSelect = state::exitMultiSelect,
         modifier = modifier,
         actions = {
-            if (state.isMultiSelectMode) {
-                SelectAllAction(
-                    isAllSelected = state.isAllSelected(visibleKeys),
-                    onSelectAll = { state.selectAllVisible(visibleKeys) },
+            IconButton(onClick = {
+                importSelection = viewModel.importSelection()
+                showImportOptions = true
+            }) {
+                Icon(
+                    imageVector = Icons.Default.FileDownload,
+                    contentDescription = stringResource(R.string.application_theme_import),
                 )
-            } else {
-                IconButton(onClick = {
-                    importSelection = viewModel.importSelection()
-                    showImportOptions = true
-                }) {
-                    Icon(
-                        imageVector = Icons.Default.FileDownload,
-                        contentDescription = stringResource(R.string.application_theme_import),
-                    )
-                }
+            }
+        },
+        multiSelectActions = {
+            val selected = items.filter { it.id in state.multiSelect.selectedKeys }
+            ConfigMultiSelectTextAction(stringResource(R.string.select_all)) {
+                state.toggleSelectAllVisible(visibleKeys)
+            }
+            ConfigMultiSelectTextAction(stringResource(R.string.to_top)) {
+                viewModel.toTop(selected)
+                state.exitMultiSelect()
+            }
+            ConfigMultiSelectTextAction(stringResource(R.string.export)) {
+                viewModel.copyJsonList(selected)
+                state.exitMultiSelect()
+            }
+            ConfigMultiSelectTextAction(stringResource(R.string.delete)) {
+                pendingDelete = selected
             }
         },
         bottomBar = {
-            if (state.isMultiSelectMode) {
-                val selected = items.filter { it.id in state.multiSelect.selectedKeys }
-                ConfigMultiSelectBar(
-                    selectedCount = state.selectedCount,
-                    actions = listOf(
-                        MultiSelectAction(
-                            icon = Icons.Default.VerticalAlignTop,
-                            contentDescription = stringResource(R.string.to_top),
-                            onClick = {
-                                viewModel.toTop(selected)
-                                state.exitMultiSelect()
-                            },
-                        ),
-                        MultiSelectAction(
-                            icon = Icons.Default.Share,
-                            contentDescription = stringResource(R.string.export),
-                            onClick = {
-                                viewModel.copyJsonList(selected)
-                                state.exitMultiSelect()
-                            },
-                        ),
-                        MultiSelectAction(
-                            icon = Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.delete),
-                            tint = MaterialTheme.colorScheme.error,
-                            onClick = { pendingDelete = selected },
-                        ),
-                    ),
-                )
-            } else {
-                ConfigAddBottomBar(
-                    text = stringResource(R.string.application_theme_create),
-                    onClick = { actions.onOpenEditor(null) },
-                )
-            }
+            ConfigAddBottomBar(
+                text = stringResource(R.string.application_theme_create),
+                onClick = { actions.onOpenEditor(null) },
+            )
         },
     ) { contentPadding ->
         val listState = rememberLazyListState()

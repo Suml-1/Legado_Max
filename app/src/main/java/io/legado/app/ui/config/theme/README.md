@@ -46,7 +46,7 @@ theme/
 ## 共用组件
 
 主题列表与应用主题共用 `ui/config/widget/` 下的管理页积木：
-`ConfigManageScaffold`、`ConfigManageCard`、`ConfigAddBottomBar`、`ConfigMultiSelectBar`、
+`ConfigManageScaffold`、`ConfigManageCard`、`ConfigAddBottomBar`、`ConfigMultiSelectTextAction`、
 `ConfigItemMoreButton`、`ConfigNameDialog`、`ConfigEditDialogFrame`、`ConfigSliderDialog`、
 `ConfigDialogRow`、`DayNightPager`。
 

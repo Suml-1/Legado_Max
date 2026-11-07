@@ -48,7 +48,7 @@ ui/
 │   │   └── ...                     # 其他子域（legacy 等）
 │   ├── widget/                     # Config 模块级通用组件（跨子域复用，不出 config 包）
 │   │   ├── ConfigManageScaffold.kt
-│   │   └── ConfigMultiSelectBar.kt
+│   │   └── ConfigMultiSelectActions.kt
 │   └── ...
 └── README.md
 ```
