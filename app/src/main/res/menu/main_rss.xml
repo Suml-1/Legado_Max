@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:tools="http://schemas.android.com/tools"
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
@@ -24,13 +23,6 @@
         <menu />
 
     </item>
-
-    <item
-        android:id="@+id/menu_rss_config"
-        android:title="@string/setting"
-        android:icon="@drawable/ic_settings"
-        app:showAsAction="always"
-        tools:ignore="AlwaysShowAction" />
 
     <!-- 三点菜单：切换新版/旧版订阅；新版模式下的分类页菜单项 -->
     <item

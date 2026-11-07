@@ -22,6 +22,12 @@ internal object MySettingsCatalog {
                     summaryRes = R.string.book_source_manage_desc
                 ),
                 MySettingsRow(
+                    key = "rssSourceManage",
+                    iconRes = R.drawable.ic_bottom_rss_feed_e,
+                    titleRes = R.string.rss_source_manage,
+                    summaryRes = R.string.rss_source_manage_desc
+                ),
+                MySettingsRow(
                     key = "txtTocRuleManage",
                     iconRes = R.drawable.ic_cfg_source,
                     titleRes = R.string.txt_toc_rule,

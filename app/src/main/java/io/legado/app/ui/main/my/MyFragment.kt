@@ -30,6 +30,7 @@ import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.main.MainFragmentInterface
 import io.legado.app.ui.replace.ReplaceRuleActivity
+import io.legado.app.ui.rss.source.manage.RssSourceActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.urlRecord.UrlRecordActivity
 import io.legado.app.utils.getPrefString
@@ -202,6 +203,7 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
     private fun openRow(key: String) {
         when (key) {
             "bookSourceManage" -> startActivity<BookSourceActivity>()
+            "rssSourceManage" -> startActivity<RssSourceActivity>()
             "replaceManage" -> startActivity<ReplaceRuleActivity>()
             "dictRuleManage" -> startActivity<DictRuleActivity>()
             "txtTocRuleManage" -> startActivity<TxtTocRuleActivity>()

@@ -62,6 +62,8 @@
     <string name="book_source">書源</string>
     <string name="book_source_manage">書源管理</string>
     <string name="book_source_manage_desc">新建/導入/編輯/管理書源</string>
+    <string name="rss_source_manage">訂閲源管理</string>
+    <string name="rss_source_manage_desc">新建/導入/編輯/管理訂閲源</string>
     <string name="setting">設定</string>
     <string name="theme_setting">主題設定</string>
     <string name="theme_setting_s">同主題/顏色相關的一些設定</string>

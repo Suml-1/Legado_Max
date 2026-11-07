@@ -52,7 +52,6 @@ import io.legado.app.ui.rss.favorites.RssFavoritesActivity
 import io.legado.app.ui.rss.read.ReadRss
 import io.legado.app.ui.rss.read.ReadRssActivity
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
-import io.legado.app.ui.rss.source.manage.RssSourceActivity
 import io.legado.app.ui.rss.source.manage.RssSourceSort
 import io.legado.app.ui.rss.subscription.RuleSubActivity
 import io.legado.app.ui.theme.LegadoTheme
@@ -251,7 +250,6 @@ class RssFragment() :
         when (item.itemId) {
             R.id.menu_more -> showRssMoreMenu(binding.titleBar)
             R.id.menu_read_record -> showDialogFragment<ReadRecordDialog>()
-            R.id.menu_rss_config -> startActivity<RssSourceActivity>()
             R.id.menu_rss_star -> startActivity<RssFavoritesActivity>()
             else -> if (item.groupId == R.id.menu_group_text) {
                 searchView.setQuery("group:${item.title}", true)
