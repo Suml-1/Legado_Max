@@ -9,6 +9,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Shader
 import android.os.Build
+import android.text.TextPaint
 import androidx.annotation.Keep
 import io.legado.app.help.PaintPool
 import io.legado.app.help.book.isImage
@@ -78,6 +79,24 @@ data class TextLine(
         }
     var textPage: TextPage = emptyTextPage
     var isLeftLine = true
+
+    /**
+     * 本行实际使用的文字画笔：宽度/高度/字体度量按它量，绘制也按它画，两者必须同源。
+     *
+     * 由 setTypeText 在创建行时写入（标题分段后的次行放缩放后的画笔）。
+     * 为 null 时按 isTitle 回退到 ChapterProvider 的首行标题/正文共享画笔，
+     * 图片行、HTML 行等不经 setTypeText 创建的行不受影响。
+     *
+     * 曾经的坑：绘制层只按 isTitle 取 ChapterProvider.titlePaint，次行量的是次行字号、
+     * 画的是首行字号，表现为「调次行缩放时字号不变、只有行距/字距在动」。
+     */
+    var lineTextPaint: TextPaint? = null
+
+    /**
+     * 是否是「分段后的标题」行：这些行之间用独立的标题行距（不跟随正文行距），
+     * 九宫格背景的上下撑开量也要按标题行距算，否则背景会按正文行距撑开、与文字行距不一致。
+     */
+    var useTitleLineSpacing: Boolean = false
 
     /**
      * 向行中添加文本列
@@ -237,11 +256,8 @@ data class TextLine(
      */
     @SuppressLint("NewApi")
     private fun fastDrawTextLine(view: ContentTextView, canvas: Canvas) {
-        val textPaint = if (isTitle) {
-            ChapterProvider.titlePaint
-        } else {
-            ChapterProvider.contentPaint
-        }
+        val textPaint = lineTextPaint
+            ?: if (isTitle) ChapterProvider.titlePaint else ChapterProvider.contentPaint
         val textColor = if (isReadAloud) {
             ReadBookConfig.textAccentColor
         } else {
@@ -733,9 +749,11 @@ data class TextLine(
 
     /**
      * 当前行正文/标题实际使用的画笔，用于把间距（em）换算成像素、以及量取邻字墨迹。
+     * 优先取本行画笔（标题分段次行是缩放后的字号），回退才按 isTitle 取共享画笔。
      */
     private val stylePaint: Paint
-        get() = if (isTitle) ChapterProvider.titlePaint else ChapterProvider.contentPaint
+        get() = lineTextPaint
+            ?: if (isTitle) ChapterProvider.titlePaint else ChapterProvider.contentPaint
 
     /** 当前行字号，用于把背景图间距（em）换算成像素 */
     private val styleTextSize: Float get() = stylePaint.textSize
@@ -790,7 +808,12 @@ data class TextLine(
      * 与相邻行的背景相接，又不会压到上下行的字形。
      */
     private fun halfLineGap(): Float {
-        val lineGap = height * (ChapterProvider.lineSpacingExtra - 1f)
+        val spacing = if (useTitleLineSpacing) {
+            ChapterProvider.titleLineSpacing
+        } else {
+            ChapterProvider.lineSpacingExtra
+        }
+        val lineGap = height * (spacing - 1f)
         return if (lineGap > 0f) lineGap / 2f else 0f
     }
 

@@ -292,4 +292,10 @@
         <item>merge</item>
         <item>replace</item>
     </string-array>
+    <string-array name="title_split_modes">
+        <item>Off</item>
+        <item>By position</item>
+        <item>By mark</item>
+        <item>By regex</item>
+    </string-array>
 </resources>

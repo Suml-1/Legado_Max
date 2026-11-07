@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 双击快进/快退/播放暂停提示面板背景：深色半透明圆角，任何视频画面下可读 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#CC000000" />
+    <corners android:radius="8dp" />
+</shape>

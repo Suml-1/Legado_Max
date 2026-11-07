@@ -1181,6 +1181,13 @@
     <string name="preview_title_format">Preview: %s</string>
     <string name="title_font_size">Font size</string>
     <string name="title_margin_top">Margin top</string>
+    <string name="title_split_mode">Title split mode</string>
+    <string name="title_split_value">Split content</string>
+    <string name="title_split_hint_position">Number, e.g. 5</string>
+    <string name="title_split_hint_mark">Characters, split at every match</string>
+    <string name="title_split_hint_regex">Regular expression</string>
+    <string name="title_sub_font_size">Sub-line font size</string>
+    <string name="title_line_spacing">Title line spacing</string>
     <string name="title_margin_bottom">Margin bottom</string>
     <string name="show">Show</string>
     <string name="hide">Hide</string>
@@ -1392,6 +1399,13 @@
     <string name="check_source_compose">Check source (New UI)</string>
     <string name="show_add_to_shelf_alert_title">Prompt to add to bookshelf when return</string>
     <string name="show_add_to_shelf_alert_summary">Prompt to add to bookshelf when return from reading books that are not on the bookshelf</string>
+    <string name="auto_add_shelf_title">Auto add to bookshelf by reading time</string>
+    <string name="auto_add_shelf_summary">Automatically add a book to the bookshelf after reading for the set time</string>
+    <string name="auto_add_shelf_min_title">Minimum reading time (minutes)</string>
+    <string name="auto_add_shelf_min_summary">Auto add to bookshelf after reading at least this many minutes</string>
+    <string name="auto_add_shelf_max_title">Maximum reading time (minutes)</string>
+    <string name="auto_add_shelf_max_summary">Auto add to bookshelf before reading exceeds this many minutes</string>
+    <string name="auto_add_shelf_toast">Added to bookshelf</string>
     <string name="review">Review</string>
     <string name="rule_avatar">Review Avatar (avatarRule)</string>
     <string name="rule_review_url">Review URL (reviewUrl)</string>
@@ -2711,4 +2725,10 @@ Night: %5$s / %6$s / %7$s / %8$s</string>
     <string name="backup_encrypt_s">AES-GCM applies to the uploaded WebDAV package only; set the backup password first</string>
     <string name="backup_keep_count_t">Keep recent backups</string>
     <string name="fvd_manifest_summary">%1$s · %2$s · %3$d items</string>
+    <!-- Video player controls (R4/R5) -->
+    <string name="video_prev_episode">Previous episode</string>
+    <string name="video_double_tap_forward">Forward %1$d s</string>
+    <string name="video_double_tap_backward">Rewind %1$d s</string>
+    <string name="video_double_tap_pause">Paused</string>
+    <string name="video_double_tap_resume">Playing</string>
 </resources>

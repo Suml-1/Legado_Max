@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 进度条滑块（覆盖 gsy 库内同名资源）：实心白点 + 半透明外圈，
+     在亮/暗画面上都有轮廓；尺寸 16dp，比库内 12dp 好按也好认。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#59000000" />
+            <size
+                android:width="16dp"
+                android:height="16dp" />
+        </shape>
+    </item>
+    <item
+        android:bottom="2dp"
+        android:left="2dp"
+        android:right="2dp"
+        android:top="2dp">
+        <shape android:shape="oval">
+            <solid android:color="#FFFFFFFF" />
+        </shape>
+    </item>
+</layer-list>

@@ -21,6 +21,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.BookContent
 import io.legado.app.help.book.BookHelp
+import io.legado.app.help.book.ChapterTitleSplitter
 import io.legado.app.help.book.getBookSource
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
@@ -110,6 +111,10 @@ class TextChapterLayout(
     private val titlePaint = ChapterProvider.titlePaint
     private val titlePaintTextHeight = ChapterProvider.titlePaintTextHeight
     private val titlePaintFontMetrics = ChapterProvider.titlePaintFontMetrics
+    // 标题分段后次行用的画笔，字号可单独设置
+    private val titleSubPaint = ChapterProvider.titleSubPaint
+    private val titleSubPaintTextHeight = ChapterProvider.titleSubPaintTextHeight
+    private val titleSubPaintFontMetrics = ChapterProvider.titleSubPaintFontMetrics
 
     private val contentPaint = ChapterProvider.contentPaint
     private val reviewCharWidth by lazy { contentPaint.measureText(srcReplaceStr) * 1.5556f }
@@ -122,6 +127,7 @@ class TextChapterLayout(
     private val titleTopSpacing = ChapterProvider.titleTopSpacing
     private val titleBottomSpacing = ChapterProvider.titleBottomSpacing
     private val lineSpacingExtra = ChapterProvider.lineSpacingExtra
+    private val titleLineSpacing = ChapterProvider.titleLineSpacing
     private val paragraphSpacing = ChapterProvider.paragraphSpacing
 
     /** 九宫格适配方式的取值（与 HighlightRule.bgImageFit / TextLine.drawNineSlice 口径一致） */
@@ -651,9 +657,23 @@ class TextChapterLayout(
         if (titleMode != 2 || bookChapter.isVolume || contents.isEmpty()) {
             var firstLine = true
             // 标题非隐藏
-            displayTitle.splitNotBlank("\n").forEach { text ->
+            // 分段只在这一处改动显示用的字符串，不写回 displayTitle：页眉页脚、书架、目录、
+            // 朗读标题仍用未分段的标题，替换规则与正文首行去重的判断对象也不会被改动
+            val showTitle = ChapterTitleSplitter.split(
+                displayTitle,
+                ReadBookConfig.titleSplitMode,
+                ReadBookConfig.titleSplitValue,
+            )
+            // 只有本次分段真正切出了多行，标题各行之间才改用独立的标题行距（不跟随正文行距段距）。
+            // 用 showTitle != displayTitle 判定而非单纯看行数：书源自带的换行标题在未开启
+            // 分段（或分段未命中）时仍按正文行距排，不受这项新设置影响
+            val titleLines = showTitle.splitNotBlank("\n")
+            val useTitleLineSpacing = titleLines.size > 1 && showTitle != displayTitle
+            titleLines.forEach { text ->
                 val srcList = LinkedList<String>()
                 val clickList = LinkedList<String?>()
+                // firstLine 下面会被置 false，先把本行是不是首行记下来，供字号与封面图判断
+                val isTitleFirstLine = firstLine
                 val titleImg = if (firstLine) {
                     firstLine = false
                     bookChapter.imgUrl
@@ -731,15 +751,16 @@ class TextChapterLayout(
                 setTypeText(
                     book,
                     if (imgText != null) text + imgText else text,
-                    titlePaint,
-                    titlePaintTextHeight,
-                    titlePaintFontMetrics,
+                    if (isTitleFirstLine) titlePaint else titleSubPaint,
+                    if (isTitleFirstLine) titlePaintTextHeight else titleSubPaintTextHeight,
+                    if (isTitleFirstLine) titlePaintFontMetrics else titleSubPaintFontMetrics,
                     imageStyle,
                     srcList = srcList,
                     clickList = clickList,
                     isTitle = true,
                     emptyContent = contents.isEmpty(),
                     isVolumeTitle = bookChapter.isVolume,
+                    useTitleLineSpacing = useTitleLineSpacing,
                 )
                 pendingTextPage.lines.last().isParagraphEnd = true
                 stringBuilder.append("\n")
@@ -1608,6 +1629,12 @@ class TextChapterLayout(
         isFirstLine: Boolean = true,
         emptyContent: Boolean = false,
         isVolumeTitle: Boolean = false,
+        /**
+         * 是否是「分段后的标题」行：只有正文标题被分段成多行时才为 true。
+         * 这些行之间用独立的标题行距，不跟随正文行距与段距（未分段时标题只有一行，
+         * 行距段距本就不生效，行为与原先完全一致）。
+         */
+        useTitleLineSpacing: Boolean = false,
         srcList: LinkedList<String>? = null,
         clickList: LinkedList<String?>?,
         bodyHighlightStyles: BodyHighlightStyles? = null,
@@ -1752,6 +1779,9 @@ class TextChapterLayout(
         }
         for (lineIndex in 0 until layout.lineCount) {
             val textLine = TextLine(isTitle = isTitle)
+            // 测量用的画笔就是本行绘制用的画笔：标题分段次行在这里落下缩放后的字号，
+            // 否则绘制层按 isTitle 回退到首行标题画笔，次行字号调了不生效
+            textLine.lineTextPaint = textPaint
             val lineStart = layout.getLineStart(lineIndex)
             val lineEnd = layout.getLineEnd(lineIndex)
             val lineText = text.substring(lineStart, lineEnd)
@@ -1874,14 +1904,20 @@ class TextChapterLayout(
             stringBuilder.append(lineText)
             // 上留白把整行下移，下留白加在行后：命中行与上下行之间留出空白，行盒本身高度不变
             textLine.upTopBottom(durY + highlightLineTop, textHeight, fontMetrics)
+            textLine.useTitleLineSpacing = useTitleLineSpacing
             val textPage = pendingTextPage
             textPage.addLine(textLine)
-            durY += highlightLineTop + textHeight * lineSpacingExtra + highlightLineBottom
+            // 分段后的标题行之间用独立的标题行距；其余行（正文、未分段的单行标题）跟随正文行距
+            val lineSpacing = if (useTitleLineSpacing) titleLineSpacing else lineSpacingExtra
+            durY += highlightLineTop + textHeight * lineSpacing + highlightLineBottom
             if (textPage.height < durY) {
                 textPage.height = durY
             }
         }
-        durY += textHeight * paragraphSpacing / 10f
+        // 分段后的标题行之间不加正文段距；其余段落照旧
+        if (!useTitleLineSpacing) {
+            durY += textHeight * paragraphSpacing / 10f
+        }
     }
 
     /** 合并两份"额外宽度"数组（九宫格外推 + 命中字距），都为 null 时返回 null */

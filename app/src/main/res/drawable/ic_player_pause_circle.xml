@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 竖屏中央暂停按钮：白色圆底 + 深色双竖条（各带 1.5 圆角）。
+     全部 fill path，无 stroke（理由同 ic_player_play_circle：避免真机渲染成碎点）。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <path
+        android:fillColor="#F2FFFFFF"
+        android:pathData="M32,3 C48.02,3 61,15.98 61,32 C61,48.02 48.02,61 32,61 C15.98,61 3,48.02 3,32 C3,15.98 15.98,3 32,3 Z" />
+    <path
+        android:fillColor="#E61A1A1A"
+        android:pathData="M25.2,21.5 L29.2,21.5 A1.5,1.5 0 0 1 30.7,23 L30.7,41 A1.5,1.5 0 0 1 29.2,42.5 L25.2,42.5 A1.5,1.5 0 0 1 23.7,41 L23.7,23 A1.5,1.5 0 0 1 25.2,21.5 Z" />
+    <path
+        android:fillColor="#E61A1A1A"
+        android:pathData="M34.8,21.5 L38.8,21.5 A1.5,1.5 0 0 1 40.3,23 L40.3,41 A1.5,1.5 0 0 1 38.8,42.5 L34.8,42.5 A1.5,1.5 0 0 1 33.3,41 L33.3,23 A1.5,1.5 0 0 1 34.8,21.5 Z" />
+</vector>

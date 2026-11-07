@@ -59,6 +59,7 @@ import kotlinx.coroutines.launch
 import splitties.init.appCtx
 import splitties.systemservices.notificationManager
 import kotlin.math.abs
+import kotlin.math.min
 
 /**
  * 视频悬浮窗服务
@@ -232,10 +233,23 @@ class VideoPlayService : BaseService() {
             VideoPlay.saveRead()
         } else {
             VideoPlay.clonePlayState(playerView)
+            // 参数已拷到本服务的播放器，立刻断开对交出方（已销毁的 Activity）的静态强引用，
+            // 否则 LeakCanary 报 VideoPlay.sMediaPlayerListener → VideoPlayer → Activity(mDestroyed)
+            VideoPlay.clearPlayState()
+        }
+        setupPlayerView()
+        if (!isNew) {
+            // 关键：这里清的是"服务自己的 FloatingPlayer"（刚才 setupPlayerView 建好、cloneParams 已把
+            // 播放器里 mBackFromFullScreenListener 拷过来的那个实例），不是 Activity 里的 playerView。
+            // 该监听器是 VideoPlayerActivity 的 lambda（捕获 this），小窗作为长命对象持有它，
+            // 就会一直吊住已销毁的 Activity —— LeakCanary 报的
+            // FloatingPlayer → mBackFromFullScreenListener → VideoPlayerActivity$$ExternalSyntheticLambda35。
+            // 必须在 setupPlayerView() 之后清：那里的 setVideoAllCallBack 是服务自己的、不能动。
+            // FloatingPlayer 的重试/退出全屏有自己的 fullscreenB 监听，不依赖这个回调。
+            playerView.setBackFromFullScreenListener(null)
             playerView.setSurfaceToPlay()
             playerView.startAfterPrepared()
         }
-        setupPlayerView()
         if (floatingView.parent == null) {
             createFloatingWindow()
         }
@@ -428,13 +442,19 @@ class VideoPlayService : BaseService() {
     @SuppressLint("ClickableViewAccessibility", "InflateParams")
     private fun createFloatingWindow() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        val screenWidth = resources.displayMetrics.widthPixels
+        //小窗尺寸必须以"设备短边"为基准，不能用 displayMetrics.widthPixels：
+        //从全屏（横屏）切小窗时 displayMetrics 已经是横屏尺寸（宽=长边），
+        //直接乘 3/4 会得到 810px 这类比竖屏 450px 大得多的窗口，
+        //窗口一大，右上角"返回播放页/关闭"按钮就被推出可视范围点不到。
+        //取长短边的较小值后，横屏进小窗与竖屏进小窗的窗口大小完全一致。
+        val dm = resources.displayMetrics
+        val shortSide = min(dm.widthPixels, dm.heightPixels)
         val videoWidth = playerView.currentVideoWidth
         val videoHeight = playerView.currentVideoHeight
         val windowWidth = if (videoHeight > videoWidth * 1.2) {
-            screenWidth / 2 //竖屏时为屏幕的1/2
+            shortSide / 2 //竖屏视频：更窄，避免占满屏
         } else {
-            screenWidth * 3 / 4 //默认为屏幕3/4宽
+            shortSide * 3 / 4 //常规视频：短边的 3/4
         }
         val windowHeight = if (videoWidth > 0 && videoHeight > 0) (windowWidth * videoHeight / videoWidth) else (windowWidth * 9 / 16) // 默认16:9比例
         // 设置窗口参数
@@ -454,7 +474,7 @@ class VideoPlayService : BaseService() {
         ).apply {
             gravity = Gravity.START or Gravity.TOP
             x = 30
-            y = screenWidth / 10
+            y = shortSide / 10
         }
         floatingView.setOnTouchListener(FloatingTouchListener())
         windowManager.addView(floatingView, params)
@@ -522,20 +542,24 @@ class VideoPlayService : BaseService() {
                 upMediaMetadata()
                 upPlayProgress()
                 upVideoPlayNotification()
-                //根据实际视频比例再次调整悬浮窗高度,来适配竖屏视频。如果是全屏切换过来的时候不会触发
+                //按实际视频比例重算小窗高度。宽度同样以设备短边为基准：
+                //从横屏全屏切过来时 displayMetrics.widthPixels 是长边，
+                //用它算会得到超宽窗口，右上角返回按钮被推出屏幕（点不到）。
                 val videoWidth = playerView.currentVideoWidth
                 val videoHeight = playerView.currentVideoHeight
-                val screenWidth = resources.displayMetrics.widthPixels
+                val dm = resources.displayMetrics
+                val shortSide = min(dm.widthPixels, dm.heightPixels)
                 if (videoWidth > 0 && videoHeight > 0) {
                     val parentWidth = if (videoHeight > videoWidth * 1.2) {
                         VideoPlay.isPortraitVideo = true
-                        screenWidth / 2 //竖屏时为屏幕的1/2
+                        shortSide / 2 //竖屏时为短边的1/2
                     } else {
                         VideoPlay.isPortraitVideo = false
-                        params.width
+                        params.width //沿用 createFloatingWindow 已按短边算好的宽度
                     }
                     val aspectRatio = videoHeight.toFloat() / videoWidth.toFloat()
                     val height = (parentWidth * aspectRatio).toInt()
+                    params.width = parentWidth
                     params.height = height
                     windowManager.updateViewLayout(floatingView, params)
                 }
@@ -599,6 +623,15 @@ class VideoPlayService : BaseService() {
             }
             application.unregisterActivityLifecycleCallbacks(activityLifecycleCallbacks)
             playerView.release()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        // 小窗播放器是通过 gsy cloneParams() 从小窗实例复制过来的，连
+        // mBackFromFullScreenListener 那个 lambda（捕获了已销毁的 VideoPlayerActivity）也一起复制了过来。
+        // 不显式清掉，LeakCanary 会持续报
+        // FloatingPlayer → mBackFromFullScreenListener → VideoPlayerActivity$$ExternalSyntheticLambda。
+        try {
+            playerView.setBackFromFullScreenListener(null)
         } catch (e: Exception) {
             e.printStackTrace()
         }

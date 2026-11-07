@@ -89,6 +89,13 @@ object ChapterProvider {
 
     @JvmStatic
     var lineSpacingExtra = 0f
+
+    /**
+     * 正文标题分段后的标题行距：与 [lineSpacingExtra] 同单位，但只作用于分段后的标题各行，
+     * 不跟随正文行距与段距（正文标题设置里单独调节）
+     */
+    @JvmStatic
+    var titleLineSpacing = 0f
         private set
 
     @JvmStatic
@@ -112,11 +119,18 @@ object ChapterProvider {
         private set
 
     @JvmStatic
+    var titleSubPaintTextHeight = 0f
+        private set
+
+    @JvmStatic
     var contentPaintTextHeight = 0f
         private set
 
     @JvmStatic
     var titlePaintFontMetrics = FontMetrics()
+
+    @JvmStatic
+    var titleSubPaintFontMetrics = FontMetrics()
 
     @JvmStatic
     var contentPaintFontMetrics = FontMetrics()
@@ -127,6 +141,15 @@ object ChapterProvider {
 
     @JvmStatic
     var titlePaint: TextPaint = TextPaint()
+
+    /**
+     * 正文标题分段后次行（第二段起）用的画笔。
+     *
+     * 字体、字重、颜色、字间距全部沿用 [titlePaint]，只换字号，因此这里不重复走
+     * applyStrokeWeight——它会写 [titleThinStrokeWidth]，重复调用会把首行的擦除宽度覆盖掉。
+     */
+    @JvmStatic
+    var titleSubPaint: TextPaint = TextPaint()
 
     @JvmStatic
     var contentPaint: TextPaint = TextPaint()
@@ -194,8 +217,14 @@ object ChapterProvider {
 //            reviewPaint.textSize = contentPaint.textSize * 0.45f
 //            reviewPaint.textAlign = Paint.Align.CENTER
         }
+        // 次行只在标题分段后出现，字号 = 首行字号 × 倍数（<1 比首行小，>1 比首行大）。
+        // 下限 1px：倍数可以拖到 0，字号为 0 会让文字测量与绘制失去意义
+        titleSubPaint = TextPaint(titlePaint).apply {
+            textSize = (titlePaint.textSize * ReadBookConfig.titleSubScale).coerceAtLeast(1f)
+        }
         //间距
         lineSpacingExtra = ReadBookConfig.lineSpacingExtra / 10f
+        titleLineSpacing = ReadBookConfig.titleLineSpacingExtra / 10f
         paragraphSpacing = ReadBookConfig.paragraphSpacing
         titleTopSpacing = ReadBookConfig.titleTopSpacing.dpToPx()
         titleBottomSpacing = ReadBookConfig.titleBottomSpacing.dpToPx()
@@ -211,8 +240,10 @@ object ChapterProvider {
         }
         titlePaintTextHeight = titlePaint.textHeight
         contentPaintTextHeight = contentPaint.textHeight
+        titleSubPaintTextHeight = titleSubPaint.textHeight
         titlePaintFontMetrics = titlePaint.fontMetrics
         contentPaintFontMetrics = contentPaint.fontMetrics
+        titleSubPaintFontMetrics = titleSubPaint.fontMetrics
         upLayout()
     }
 
@@ -348,7 +379,18 @@ object ChapterProvider {
         y: Float,
         localBg: Int? = null
     ) {
-        val thinStrokeWidth = if (isTitle) titleThinStrokeWidth else contentThinStrokeWidth
+        val thinStrokeWidth = if (isTitle) {
+            // 标题分段后的次行字号被缩放过，擦除宽度按本行画笔的实际字号同比换算，
+            // 否则次行会按首行字号擦除，表现为次行字心边缘擦多/擦少
+            val baseSize = titlePaint.textSize
+            if (paint.textSize > 0f && baseSize > 0f && paint.textSize != baseSize) {
+                titleThinStrokeWidth * (paint.textSize / baseSize)
+            } else {
+                titleThinStrokeWidth
+            }
+        } else {
+            contentThinStrokeWidth
+        }
         if (thinStrokeWidth <= 0f) return
         // 系统字体的擦除量是按汉字回退阶梯估算的，而拉丁字形本来就有真实字面（Roboto 有 100~900 六级），
         // 按汉字基准擦会在极细档把纯拉丁文本擦没，所以系统字体只对含汉字的文本生效；

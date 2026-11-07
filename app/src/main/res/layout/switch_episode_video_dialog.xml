@@ -1,31 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 选集面板：右侧贴边、全高列表。
+     容器背景 **透明** —— 目标样式里没有整块深色底板，只有文字叠在画面上，
+     因此不再画 #80121212，也去掉了"选集"标题条（底栏按钮已表达入口语义）。
+     列表左右留 12dp；条目本身也无背景（bg_video_panel_item 已改为全透明）。 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#80121212"
+    android:background="@android:color/transparent"
     android:orientation="vertical"
-    android:paddingBottom="8dp">
-
-    <TextView
-        android:id="@+id/listCount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="8dp"
-        android:gravity="center"
-        android:minEms="2"
-        android:text="选集"
-        android:textColor="#88ffffff" />
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp">
 
     <ListView
         android:id="@+id/switch_dialog_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
         android:background="@null"
         android:cacheColorHint="#00000000"
         android:divider="#00000000"
-        android:dividerHeight="4dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="16dp"
-        android:listSelector="#00000000" />
+        android:dividerHeight="0dp"
+        android:listSelector="#00000000"
+        android:scrollbars="none" />
 
 </LinearLayout>

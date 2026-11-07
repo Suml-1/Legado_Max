@@ -552,7 +552,7 @@ class MainActivity :
         if (LocalConfig.versionCode == appInfo.versionCode) {
             if (AppConfig.autoUpdateVariant) {
                 if (LocalConfig.lastCheckUpdate + 24.hours.inWholeMilliseconds < System.currentTimeMillis()) {
-                    AppUpdate.giteeUpdate.check(lifecycleScope)
+                    AppUpdate.gitHubUpdate.check(lifecycleScope)
                         .onSuccess {
                             showDialogFragment(
                                 UpdateDialog(it),

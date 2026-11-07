@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 播放器面板的列表项：纯文字，无卡片背景、无描边。
+     选中/未选中、文字颜色都由 SwitchVideoAdapter 在代码里按阅读主题色设置，
+     这里只给一个中性的默认值（读取失败时也不至于不可见）。
+     高度 46dp：面板一屏能显示更多集数，同时保持足够大的点击区域。 -->
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/text1"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:background="@drawable/card_video_background"
-    android:gravity="center_vertical"
-    android:paddingLeft="15dp"
-    android:paddingTop="10dp"
-    android:paddingRight="15dp"
-    android:paddingBottom="10dp"
+    android:layout_height="46dp"
+    android:background="@android:color/transparent"
+    android:ellipsize="end"
+    android:gravity="center_vertical|end"
+    android:maxLines="1"
+    android:paddingStart="12dp"
+    android:paddingEnd="8dp"
     android:textColor="#FFFFFF"
-    android:textSize="15sp">
-
-</TextView>
+    android:textSize="15sp" />

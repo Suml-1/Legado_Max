@@ -992,6 +992,13 @@
     <string name="use_default_cover_s">總是使用默認封面,唔顯示網路封面</string>
     <string name="title_font_size">字號</string>
     <string name="title_margin_top">上邊距</string>
+    <string name="title_split_mode">分段模式</string>
+    <string name="title_split_value">分段內容</string>
+    <string name="title_split_hint_position">填寫數字，如 5</string>
+    <string name="title_split_hint_mark">填寫字符，標題裡每個該字符處換行</string>
+    <string name="title_split_hint_regex">填寫正則表達式</string>
+    <string name="title_sub_font_size">次行字號</string>
+    <string name="title_line_spacing">標題行距</string>
     <string name="title_margin_bottom">下邊距</string>
     <string name="show">顯示</string>
     <string name="hide">隱藏</string>

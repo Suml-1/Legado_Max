@@ -185,4 +185,10 @@
         <item>merge</item>
         <item>replace</item>
     </string-array>
+    <string-array name="title_split_modes">
+        <item>关闭</item>
+        <item>按位置分段</item>
+        <item>按标记分段</item>
+        <item>按正则分段</item>
+    </string-array>
 </resources>

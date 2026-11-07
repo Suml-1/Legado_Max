@@ -1,9 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 暂停：两根圆角竖条 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24.0"
-    android:viewportHeight="24.0">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M6,19h4L10,5L6,5v14zM14,5v14h4L18,5h-4z" />
+        android:pathData="M7.5,5.5h2.4c0.6,0 1,0.4 1,1v11c0,0.6 -0.4,1 -1,1H7.5c-0.6,0 -1,-0.4 -1,-1v-11C6.5,5.9 6.9,5.5 7.5,5.5z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M14.1,5.5h2.4c0.6,0 1,0.4 1,1v11c0,0.6 -0.4,1 -1,1h-2.4c-0.6,0 -1,-0.4 -1,-1v-11C13.1,5.9 13.5,5.5 14.1,5.5z" />
 </vector>

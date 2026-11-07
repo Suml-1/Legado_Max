@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.Gravity
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -142,6 +143,7 @@ import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.core.net.toUri
@@ -282,6 +284,9 @@ class ReadBookActivity :
     private var syncDialog: AlertDialog? = null
     private var needSyncReadAloudOnResume: Boolean = false
     private var readAloudBackPressedOnce: Boolean = false // 朗读返回键计数
+    private var autoShelfAccumMs = 0L
+    private var autoShelfLastResume = 0L
+    private var autoShelfJob: Job? = null
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -393,6 +398,8 @@ class ReadBookActivity :
         }
         if (bookChanged) {
             bookChanged = false
+            autoShelfAccumMs = 0
+            autoShelfLastResume = 0
             ReadBook.callBack = this
             viewModel.initData(intent)
             justInitData = true
@@ -423,6 +430,7 @@ class ReadBookActivity :
                 ReadBook.syncProgress({ progress -> sureNewProgress(progress) })
             }
         }
+        startAutoShelfTimer()
     }
 
     override fun onPause() {
@@ -449,6 +457,57 @@ class ReadBookActivity :
         }
         justInitData = false
         networkChangedListener.unRegister()
+        stopAutoShelfTimer()
+    }
+
+    /**
+     * 启动“阅读时长达到区间后自动加入书架”计时
+     */
+    private fun startAutoShelfTimer() {
+        stopAutoShelfTimer()
+        if (!AppConfig.autoAddShelfEnabled) return
+        autoShelfLastResume = SystemClock.elapsedRealtime()
+        autoShelfJob = lifecycleScope.launch {
+            while (isActive) {
+                delay(1000)
+                checkAutoShelf()
+            }
+        }
+    }
+
+    private fun stopAutoShelfTimer(accumulate: Boolean = true) {
+        autoShelfJob?.cancel()
+        autoShelfJob = null
+        if (accumulate && autoShelfLastResume > 0) {
+            autoShelfAccumMs += SystemClock.elapsedRealtime() - autoShelfLastResume
+            autoShelfLastResume = 0
+        }
+    }
+
+    private fun checkAutoShelf() {
+        val book = ReadBook.book ?: return
+        if (ReadBook.inBookshelf || book.isLocal) {
+            stopAutoShelfTimer(accumulate = false)
+            return
+        }
+        val minMs = AppConfig.autoAddShelfMinMinutes * 60000L
+        val maxMs = AppConfig.autoAddShelfMaxMinutes * 60000L
+        val effectiveMax = if (maxMs >= minMs) maxMs else minMs
+        val elapsed = autoShelfAccumMs + (SystemClock.elapsedRealtime() - autoShelfLastResume)
+        // 达到下限即在区间内，执行自动加入书架
+        if (elapsed >= minMs && elapsed <= effectiveMax) {
+            autoAddToShelf(book)
+        }
+    }
+
+    private fun autoAddToShelf(book: Book) {
+        book.removeType(BookType.notShelf)
+        book.save()
+        SourceCallBack.callBackBook(SourceCallBack.ADD_BOOK_SHELF, ReadBook.bookSource, book)
+        ReadBook.inBookshelf = true
+        setResult(RESULT_OK)
+        stopAutoShelfTimer(accumulate = false)
+        toastOnUi(R.string.auto_add_shelf_toast)
     }
 
     private fun syncReadAloudProgress(allowChapterMismatch: Boolean = false) {
@@ -2186,6 +2245,7 @@ class ReadBookActivity :
         binding.webSearchPanel.onDestroy()
         binding.readView.onDestroy()
         ReadBook.unregister(this)
+        stopAutoShelfTimer(accumulate = false)
         handler.removeCallbacksAndMessages(null) // 清理Handler消息
         if (!ReadBook.inBookshelf && !isChangingConfigurations) {
             viewModel.removeFromBookshelf(null)

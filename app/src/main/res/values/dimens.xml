@@ -55,4 +55,21 @@
     <dimen name="bookshelf_tag_item_corner_radius_selected">14dp</dimen>
     <!-- 选中标签描边厚度 -->
     <dimen name="bookshelf_tag_item_stroke_width">1dp</dimen>
+    <!-- 视频播放器控制栏尺寸令牌（R2/R5/R6/R7/R8） -->
+    <!-- 竖屏底栏高度：比横屏略高（竖屏要给手指留更宽的横向触控带） -->
+    <dimen name="video_ctrl_bar_portrait_height">44dp</dimen>
+    <!-- 横屏底栏操作行：所有功能键同高，图标视觉 24dp（36dp 画布 - 6dp×2 内缩）。
+         行高收在 36dp，底栏整体下沉，纵向空间还给画面 -->
+    <dimen name="video_ctrl_btn_size">36dp</dimen>
+    <dimen name="video_ctrl_btn_gap">8dp</dimen>
+    <dimen name="video_ctrl_icon_padding">6dp</dimen>
+    <dimen name="video_ctrl_paddings_h">12dp</dimen>
+    <dimen name="video_ctrl_padding_top">2dp</dimen>
+    <dimen name="video_ctrl_padding_bottom">4dp</dimen>
+    <dimen name="video_ctrl_text_size">13sp</dimen>
+    <dimen name="video_play_center_size">60dp</dimen>
+    <!-- R7：横屏底栏小窗按钮（比 36dp 常规功能键小一档，与 24dp 图标视觉协调） -->
+    <dimen name="video_float_window_size">32dp</dimen>
+    <dimen name="video_float_window_padding">6dp</dimen>
+    <dimen name="video_float_window_margin_start">6dp</dimen>
 </resources>

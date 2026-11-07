@@ -363,6 +363,16 @@ object ReadBookConfig {
         }
 
     /**
+     * 正文标题分段后的标题行距：与正文 [lineSpacingExtra] 同单位同量程，但只作用于
+     * 分段后的标题各行之间，不跟随正文行距与段距；未开启分段时该项无实际效果
+     */
+    var titleLineSpacingExtra: Int
+        get() = config.titleLineSpacingExtra ?: 12
+        set(value) {
+            config.titleLineSpacingExtra = value
+        }
+
+    /**
      * 标题位置 0:居左 1:居中 2:隐藏 3:靠右
      */
     var titleMode: Int
@@ -396,6 +406,43 @@ object ReadBookConfig {
         get() = config.titleBottomSpacing
         set(value) {
             config.titleBottomSpacing = value
+        }
+
+    /**
+     * 正文标题分段模式 0:关闭 1:按位置 2:按标记 3:按正则
+     *
+     * 只影响正文标题的显示换行，页眉页脚、书架、目录、朗读标题与替换规则仍用未分段的标题
+     */
+    var titleSplitMode: Int
+        get() = config.titleSplitMode
+        set(value) {
+            config.titleSplitMode = value
+        }
+
+    /**
+     * 正文标题分段依据：按位置填数字、按标记填单个字符串（按字面使用）、按正则填表达式
+     *
+     * 用 orEmpty 兜底：GSON 反序列化旧版本配置时会绕过构造器的默认值，
+     * 老用户升级后这个新增字段会是 null，直接读会把 null 当非空 String 用出去
+     */
+    var titleSplitValue: String
+        get() = config.titleSplitValue.orEmpty()
+        set(value) {
+            config.titleSplitValue = value
+        }
+
+    /**
+     * 正文标题次行字号倍数：分段后除第一段外的行用它，相对首行标题字号的倍数（0~2），
+     * 小于 1 次行比首行小，大于 1 比首行大。
+     *
+     * 底层字段用可空类型：GSON 反序列化会绕过构造器默认值，旧配置里没有这个字段时
+     * 非空 Float 会落成 0f（次行字变成 1px 看不见），可空字段才会是 null，从而与
+     * 「用户主动设为 0」区分开，读取时回落默认 1 倍
+     */
+    var titleSubScale: Float
+        get() = config.titleSubScale ?: 1f
+        set(value) {
+            config.titleSubScale = value
         }
 
     var paragraphIndent: String
@@ -513,6 +560,10 @@ object ReadBookConfig {
             exportConfig.titleSize = shareConfig.titleSize
             exportConfig.titleTopSpacing = shareConfig.titleTopSpacing
             exportConfig.titleBottomSpacing = shareConfig.titleBottomSpacing
+            exportConfig.titleSplitMode = shareConfig.titleSplitMode
+            exportConfig.titleSplitValue = shareConfig.titleSplitValue
+            exportConfig.titleSubScale = shareConfig.titleSubScale
+            exportConfig.titleLineSpacingExtra = shareConfig.titleLineSpacingExtra
             exportConfig.paddingBottom = shareConfig.paddingBottom
             exportConfig.paddingLeft = shareConfig.paddingLeft
             exportConfig.paddingRight = shareConfig.paddingRight
@@ -647,6 +698,10 @@ object ReadBookConfig {
         var titleSize: Int = 0,
         var titleTopSpacing: Int = 0,
         var titleBottomSpacing: Int = 0,
+        var titleSplitMode: Int = 0, // 正文标题分段模式 0:关闭 1:按位置 2:按标记 3:按正则
+        var titleSplitValue: String = "", // 正文标题分段依据：位置数字 / 标记 / 正则
+        var titleSubScale: Float? = 1f, // 正文标题次行字号相对首行的倍数，0~2；可空用于识别旧配置缺失
+        var titleLineSpacingExtra: Int? = 12, // 正文标题分段后的标题行距，与正文行距同单位同量程；可空用于识别旧配置缺失
         var paragraphIndent: String = "　　", // 段落缩进
         var underlineMode: Int = 0, // 下划线
         var underlineWidth: Float = 0.5f, // 下划线粗细(dp)
@@ -980,6 +1035,10 @@ object ReadBookConfig {
             "titleSize" to titleSize,
             "titleTopSpacing" to titleTopSpacing,
             "titleBottomSpacing" to titleBottomSpacing,
+            "titleSplitMode" to titleSplitMode,
+            "titleSplitValue" to titleSplitValue,
+            "titleSubScale" to (titleSubScale ?: 1f),
+            "titleLineSpacingExtra" to (titleLineSpacingExtra ?: 12),
             "paragraphIndent" to paragraphIndent,
             "underlineMode" to underlineMode,
             "underlineWidth" to underlineWidth,

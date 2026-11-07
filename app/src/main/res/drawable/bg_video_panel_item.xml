@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 播放器右侧面板（选集 / 倍速）的列表项背景：完全透明。
+     目标样式是"只有文字浮在画面上"，没有卡片底色和描边；
+     此前的「深色半透明 + 白描边圆角」会把它渲染成一排按钮，与目标不符。
+     选中态不靠背景表达（背景一律透明），改用主题色文字 + 左侧主题色短竖条，
+     见 SwitchVideoAdapter。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#00000000" />
+</shape>

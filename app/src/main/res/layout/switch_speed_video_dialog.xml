@@ -1,27 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 倍速面板：与选集面板完全一致的结构与外观（透明容器 + 全高列表、贴屏幕右缘）。
+     目标样式里没有深色底板、没有标题条，只有一列文字；当前档位用主题色文字标识。
+     不套 ScrollView、不做垂直居中：那样会在列表上下留出等分空白。 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#80121212"
+    android:background="@android:color/transparent"
     android:orientation="vertical"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp">
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp">
 
     <ListView
         android:id="@+id/switch_dialog_list"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
-        android:layout_marginEnd="16dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
         android:background="@null"
         android:cacheColorHint="#00000000"
         android:divider="#00000000"
-        android:dividerHeight="4dp"
-        android:listSelector="#00000000" />
+        android:dividerHeight="0dp"
+        android:listSelector="#00000000"
+        android:scrollbars="none" />
 
 </LinearLayout>

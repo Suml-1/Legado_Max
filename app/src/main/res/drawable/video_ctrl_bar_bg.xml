@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 底部控制栏背景：与顶部栏 video_title_bg 同一套渐变，方向相反。
+     video_title_bg = angle 90（起点在下）：底透明 → 顶 #99000000，用于压住画面顶部；
+     这里是底部栏，需要"顶透明 → 底 #99000000"，所以把起止色对调。
+     纯色 #66000000 会把控制栏切成一条生硬的横带，渐变才能和画面自然衔接。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="90"
+        android:endColor="#00000000"
+        android:startColor="#99000000" />
+</shape>

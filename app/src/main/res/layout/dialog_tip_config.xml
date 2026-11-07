@@ -76,6 +76,84 @@
             app:max="100"
             app:title="@string/title_margin_bottom" />
 
+        <LinearLayout
+            android:id="@+id/ll_title_split_mode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="3dp"
+            tools:ignore="RtlHardcoded,RtlSymmetry">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/title_split_mode"
+                android:textColor="@color/primaryText" />
+
+            <TextView
+                android:id="@+id/tv_title_split_mode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:maxWidth="200dp"
+                android:textColor="@color/primaryText"
+                tools:text="@string/title_split_mode" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/ll_title_split_value"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="3dp"
+            android:visibility="gone"
+            tools:ignore="RtlHardcoded,RtlSymmetry"
+            tools:visibility="visible">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/title_split_value"
+                android:textColor="@color/primaryText" />
+
+            <TextView
+                android:id="@+id/tv_title_split_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:maxWidth="200dp"
+                android:textColor="@color/primaryText"
+                tools:text="@string/title_split_value" />
+
+        </LinearLayout>
+
+        <io.legado.app.ui.widget.DetailSeekBar
+            android:id="@+id/dsb_title_sub_scale"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="3dp"
+            android:visibility="gone"
+            app:max="40"
+            app:title="@string/title_sub_font_size"
+            tools:visibility="visible" />
+
+        <io.legado.app.ui.widget.DetailSeekBar
+            android:id="@+id/dsb_title_line_spacing"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="3dp"
+            android:visibility="gone"
+            app:max="20"
+            app:title="@string/title_line_spacing"
+            tools:visibility="visible" />
+
         <io.legado.app.ui.widget.text.AccentTextView
             android:id="@+id/tv_header_padding"
             android:layout_width="wrap_content"

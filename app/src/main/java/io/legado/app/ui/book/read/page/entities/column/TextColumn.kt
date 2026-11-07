@@ -71,11 +71,14 @@ data class TextColumn(
         }
 
     override fun draw(view: ContentTextView, canvas: Canvas) {
-        val srcPaint = if (textLine.isTitle) {
-            ChapterProvider.titlePaint
-        } else {
-            ChapterProvider.contentPaint
-        }
+        // 优先取本行画笔：标题分段后的次行用缩放后的字号绘制，
+        // 不能再按 isTitle 一律取首行标题画笔（测量与绘制必须同源）
+        val srcPaint = textLine.lineTextPaint
+            ?: if (textLine.isTitle) {
+                ChapterProvider.titlePaint
+            } else {
+                ChapterProvider.contentPaint
+            }
         val drawColor = if (textLine.isReadAloud || isSearchResult) {
             ReadBookConfig.textAccentColor
         } else {

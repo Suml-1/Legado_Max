@@ -1179,6 +1179,13 @@
     <string name="use_default_cover_s">总是显示默认封面（不显示网络封面）</string>
     <string name="title_font_size">字号</string>
     <string name="title_margin_top">上边距</string>
+    <string name="title_split_mode">分段模式</string>
+    <string name="title_split_value">分段内容</string>
+    <string name="title_split_hint_position">填写数字，如 5</string>
+    <string name="title_split_hint_mark">填写字符，标题里每个该字符处换行</string>
+    <string name="title_split_hint_regex">填写正则表达式</string>
+    <string name="title_sub_font_size">次行字号</string>
+    <string name="title_line_spacing">标题行距</string>
     <string name="title_margin_bottom">下边距</string>
     <string name="show">显示</string>
     <string name="hide">隐藏</string>
@@ -1388,6 +1395,13 @@
     <string name="check_selected_interval">选中所选区间</string>
     <string name="show_add_to_shelf_alert_title">返回时提示放入书架</string>
     <string name="show_add_to_shelf_alert_summary">阅读未放入书架的书籍在返回时提示放入书架</string>
+    <string name="auto_add_shelf_title">按阅读时长自动加入书架</string>
+    <string name="auto_add_shelf_summary">阅读时长达到设定区间后自动将该书加入书架</string>
+    <string name="auto_add_shelf_min_title">最短阅读时长（分钟）</string>
+    <string name="auto_add_shelf_min_summary">阅读达到该时长后即可自动加入书架</string>
+    <string name="auto_add_shelf_max_title">最长阅读时长（分钟）</string>
+    <string name="auto_add_shelf_max_summary">阅读超过该时长前会加入书架</string>
+    <string name="auto_add_shelf_toast">已自动加入书架</string>
     <string name="review">段评</string>
     <string name="rule_review_url">段评URL（reviewUrl）</string>
     <string name="rule_avatar">段评发布者头像（avatarRule）</string>
@@ -2695,4 +2709,10 @@
     <string name="backup_encrypt_s">仅对上传到 WebDAV 的备份包使用 AES-GCM 加密，需先设置备份密码</string>
     <string name="backup_keep_count_t">保留最近备份数</string>
     <string name="fvd_manifest_summary">%1$s · %2$s · %3$d 项</string>
+    <!-- 视频播放器控制（R4/R5） -->
+    <string name="video_prev_episode">上一集</string>
+    <string name="video_double_tap_forward">快进 %1$d 秒</string>
+    <string name="video_double_tap_backward">快退 %1$d 秒</string>
+    <string name="video_double_tap_pause">已暂停</string>
+    <string name="video_double_tap_resume">继续播放</string>
 </resources>

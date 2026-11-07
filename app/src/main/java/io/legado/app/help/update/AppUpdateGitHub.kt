@@ -9,6 +9,7 @@ import io.legado.app.help.http.newCallResponse
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.text
 import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
 import kotlinx.coroutines.CoroutineScope
 
@@ -27,11 +28,8 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
         }
 
     private suspend fun getLatestRelease(): List<AppReleaseInfo> {
-        val lastReleaseUrl = if (checkVariant.isBeta()) {
-            "https://api.github.com/repos/gedoor/legado/releases/tags/beta"
-        } else {
-            "https://api.github.com/repos/gedoor/legado/releases/latest"
-        }
+        // 更新源：Suml-1/Legado_Max 的 GitHub Releases（含预发布），按发布时间倒序，由下游按变体筛选最新
+        val lastReleaseUrl = "https://api.github.com/repos/Suml-1/Legado_Max/releases?per_page=20"
         val res = okHttpClient.newCallResponse {
             url(lastReleaseUrl)
         }
@@ -42,11 +40,11 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
         if (body.isBlank()) {
             throw NoStackTraceException("获取新版本出错")
         }
-        return GSON.fromJsonObject<GithubRelease>(body)
+        return GSON.fromJsonArray<GithubRelease>(body)
             .getOrElse {
                 throw NoStackTraceException("获取新版本出错 " + it.localizedMessage)
             }
-            .gitReleaseToAppReleaseInfo()
+            .flatMap { it.gitReleaseToAppReleaseInfo() }
             .sortedByDescending { it.createdAt }
     }
 
@@ -90,7 +88,7 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
     }
 
     private suspend fun getAllReleases(): List<AppReleaseInfo> {
-        val latestReleaseUrl = "https://api.github.com/repos/gedoor/legado/releases/latest"
+        val latestReleaseUrl = "https://api.github.com/repos/Suml-1/Legado_Max/releases?per_page=20"
         val res = okHttpClient.newCallResponse {
             url(latestReleaseUrl)
         }
@@ -101,10 +99,10 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
         if (body.isBlank()) {
             throw NoStackTraceException("获取新版本出错")
         }
-        return GSON.fromJsonObject<GithubRelease>(body)
+        return GSON.fromJsonArray<GithubRelease>(body)
             .getOrElse {
                 throw NoStackTraceException("获取新版本出错 " + it.localizedMessage)
             }
-            .gitReleaseToAppReleaseInfo()
+            .flatMap { it.gitReleaseToAppReleaseInfo() }
     }
 }

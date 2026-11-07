@@ -610,6 +610,21 @@ object VideoPlay : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 状态移交完成，断开对交出方实例的静态强引用。
+     *
+     * `sSwitchVideo` / `sMediaPlayerListener` 是静态字段，持有的是**交出方**的 View，
+     * 而它的 mContext 是已经被销毁的 Activity —— 不清空就是 LeakCanary 报的
+     * `VideoPlay.sMediaPlayerListener → VideoPlayer → VideoPlayerActivity(mDestroyed=true)`。
+     * 接收方 clone 完参数后立刻调用本方法，让旧 Activity 可以正常回收。
+     *
+     * 注意与 [release] 的区别：这里**不停播放**，媒体要继续在接收方播。
+     */
+    fun clearPlayState() {
+        sSwitchVideo = null
+        sMediaPlayerListener = null
+    }
+
     fun release() {
         sMediaPlayerListener?.onAutoCompletion()
         sMediaPlayerListener = null
