@@ -23,6 +23,10 @@
 - [Github主干youfengknight](https://github.com/youfengknight/Legado_Max)
 - [Github分支GEd520](https://github.com/GEd520/legados)
 - [Github分支Suml-1](https://github.com/Suml-1/Legado_Max)
+- 
+**2026/11/7**
+
+- fix(发现): 新版发现页分组条大于1才展示，只有一排时隐藏其它
 
 **2026/11/7**
 
