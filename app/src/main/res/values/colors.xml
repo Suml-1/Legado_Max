@@ -70,6 +70,12 @@
     <color name="black">#000000</color>
     <color name="white">#ffffff</color>
 
+    <!-- 播放器进度色：覆盖 GSY 库默认的蓝色 style_color（#005fff）。
+         播放器底栏进度条、拖动屏幕时的浮层进度条、浮层里的当前时间文字都取这个色，
+         统一改成白色，与底栏半透明渐变底 + 白色文字同一套视觉；
+         项目内没有其它地方引用 style_color，覆盖不影响非播放器界面。 -->
+    <color name="style_color">#ffffffff</color>
+
     <!-- btn -->
     <color name="btn_write">#ffffffff</color>
     <color name="btn_write_press">#efe0e0e0</color>

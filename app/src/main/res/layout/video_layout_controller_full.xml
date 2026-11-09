@@ -34,7 +34,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:background="#80000000"
+        android:background="@drawable/video_ctrl_bar_gradient"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingBottom="12dp"
@@ -48,34 +48,30 @@
             android:layout_marginStart="12dp"
             android:text="00:00"
             android:textColor="#ffffff"
+            app:layout_constraintBottom_toBottomOf="@+id/progress"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:ignore="HardcodedText" />
-
-        <TextView
-            android:id="@+id/sprit"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="/"
-            android:textColor="#ffffff"
-            app:layout_constraintStart_toEndOf="@+id/current"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/progress"
             tools:ignore="HardcodedText" />
 
         <TextView
             android:id="@+id/total"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
             android:text="00:00"
             android:textColor="#ffffff"
-            app:layout_constraintStart_toEndOf="@+id/sprit"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="@+id/progress"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/progress"
             tools:ignore="HardcodedText" />
 
+        <!-- 进度条夹在左右两端的时间之间，宽度撑满剩余空间，因此天然居中 -->
         <SeekBar
             android:id="@+id/progress"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
             android:background="@null"
             android:max="100"
             android:maxHeight="4dp"
@@ -84,7 +80,9 @@
             android:paddingBottom="8dp"
             android:progressDrawable="@drawable/video_seek_progress"
             android:thumb="@drawable/video_seek_thumb"
-            app:layout_constraintTop_toBottomOf="@+id/sprit" />
+            app:layout_constraintEnd_toStartOf="@+id/total"
+            app:layout_constraintStart_toEndOf="@+id/current"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
             android:id="@+id/start"
@@ -272,10 +270,23 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:ellipsize="end"
             android:paddingStart="10dp"
+            android:singleLine="true"
             android:textColor="@android:color/white"
             android:textSize="18sp"
             tools:ignore="RtlSymmetry" />
+
+        <!-- 横屏右上角的当前时间：全屏时系统状态栏隐藏，用这个补上时刻信息 -->
+        <TextView
+            android:id="@+id/tv_clock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="8dp"
+            android:paddingEnd="4dp"
+            android:textColor="@android:color/white"
+            android:textSize="15sp"
+            tools:text="21:30" />
 
         <ImageView
             android:id="@+id/iv_settings"
@@ -297,19 +308,46 @@
         android:layout_marginBottom="30dp"
         android:visibility="gone" />
 
-    <TextView
-        android:id="@+id/tip_view"
+    <!-- 播放器统一提示：无底板纯文字，靠阴影压住画面。
+         第一行显示"当前 / 总时长"，第二行显示本次调整的相对量（±N秒 / ±N分），
+         与拖动、双击、底栏快进快退共用同一套结构。 -->
+    <LinearLayout
+        android:id="@+id/tip_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
         android:layout_centerInParent="true"
-        android:layout_marginTop="50dp"
         android:alpha="0"
-        android:background="@drawable/selector_fillet_btn_bg"
-        android:elevation="4dp"
         android:gravity="center"
-        android:padding="12dp"
-        android:textColor="@android:color/white"
-        android:visibility="invisible" />
+        android:orientation="vertical"
+        android:visibility="invisible">
+
+        <TextView
+            android:id="@+id/tip_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:shadowColor="#CC000000"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="6"
+            android:textColor="@android:color/white"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tip_delta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:shadowColor="#CC000000"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="6"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
 
 </RelativeLayout>

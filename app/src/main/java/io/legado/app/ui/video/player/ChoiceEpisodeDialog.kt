@@ -5,7 +5,6 @@ import android.app.Dialog
 import android.content.Context
 import android.widget.TextView
 import android.os.Bundle
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.AdapterView
@@ -36,8 +35,13 @@ class ChoiceEpisodeDialog(private val mContext: Context) :
         super.onCreate(savedInstanceState)
     }
 
+    override fun onStart() {
+        super.onStart()
+        applyVideoPanelWindow(PANEL_WIDTH_FRACTION)
+    }
+
     override fun onStop() {
-        onItemClickListener!!.finishDialog()
+        onItemClickListener?.finishDialog()
         super.onStop()
     }
 
@@ -60,13 +64,7 @@ class ChoiceEpisodeDialog(private val mContext: Context) :
             listView!!.setSelectionFromTop(initialSelection, 0)
         }
         listView!!.onItemClickListener = this@ChoiceEpisodeDialog.OnItemClickListener()
-        val dialogWindow = window
-        val lp = dialogWindow!!.attributes
-        val d = mContext.resources.displayMetrics // 获取屏幕宽、高用
-        lp.width = (d.widthPixels * 0.4).toInt() // 宽度设置为屏幕的0.4
-        lp.height = d.heightPixels
-        lp.gravity = Gravity.END // 设置靠右对齐
-        dialogWindow.setAttributes(lp)
+        applyVideoPanelWindow(PANEL_WIDTH_FRACTION)
     }
 
     private inner class OnItemClickListener : AdapterView.OnItemClickListener {
@@ -77,7 +75,11 @@ class ChoiceEpisodeDialog(private val mContext: Context) :
             id: Long,
         ) {
             dismiss()
-            onItemClickListener!!.onItemClick(position)
+            onItemClickListener?.onItemClick(position)
         }
+    }
+
+    companion object {
+        private const val PANEL_WIDTH_FRACTION = 0.40f
     }
 }

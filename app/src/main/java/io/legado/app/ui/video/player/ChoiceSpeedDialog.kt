@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.app.Dialog
 import android.content.Context
 import android.os.Bundle
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.AdapterView
@@ -34,8 +33,13 @@ class ChoiceSpeedDialog(private val mContext: Context) :
         super.onCreate(savedInstanceState)
     }
 
+    override fun onStart() {
+        super.onStart()
+        applyVideoPanelWindow(PANEL_WIDTH_FRACTION)
+    }
+
     override fun onStop() {
-        onItemClickListener!!.finishDialog()
+        onItemClickListener?.finishDialog()
         super.onStop()
     }
 
@@ -53,13 +57,7 @@ class ChoiceSpeedDialog(private val mContext: Context) :
         adapter = SwitchVideoAdapter(mContext, data) { item -> item.toString() + "X" }
         listView!!.setAdapter(adapter)
         listView!!.onItemClickListener = this@ChoiceSpeedDialog.OnItemClickListener()
-        val dialogWindow = window
-        val lp = dialogWindow!!.attributes
-        val d = mContext.resources.displayMetrics // 获取屏幕宽、高用
-        lp.width = (d.widthPixels * 0.3).toInt() // 宽度设置为屏幕的0.3
-        lp.height = d.heightPixels
-        lp.gravity = Gravity.END // 设置靠右对齐
-        dialogWindow.setAttributes(lp)
+        applyVideoPanelWindow(PANEL_WIDTH_FRACTION)
     }
 
     private inner class OnItemClickListener : AdapterView.OnItemClickListener {
@@ -70,7 +68,11 @@ class ChoiceSpeedDialog(private val mContext: Context) :
             id: Long,
         ) {
             dismiss()
-            onItemClickListener!!.onItemClick(data?.get(position) ?: 1.0f)
+            onItemClickListener?.onItemClick(data?.get(position) ?: 1.0f)
         }
+    }
+
+    companion object {
+        private const val PANEL_WIDTH_FRACTION = 0.30f
     }
 }
