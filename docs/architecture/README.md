@@ -17,6 +17,7 @@
 | [rss-debug-design.md](./rss-debug-design.md)                       | 订阅源（RSS）调试功能的设计与实现结构                                                                | 动 `ui/rss/source/debug/` 或对照书源调试能力时                            |
 | [TextMenuCustomization.md](./TextMenuCustomization.md)             | 阅读页文本选择菜单项自定义功能说明                                                                   | 改正文选择菜单、菜单 ID 与 `res/menu/` 映射时                             |
 | [日志体系与选型说明.md](./日志体系与选型说明.md)                   | 项目内 5 个日志入口（android.util.Log / DebugLog / LogUtils / TimberLog / AppLog）的去向、开关与选型 | 想知道某行日志会出现在 logcat / 文件 / 日志页哪一处、或新写日志该用哪个时 |
+| [manga-page-predownload.md](./manga-page-predownload.md)           | 漫画卷轴模式向后预下载：缓存 key 口径、按位置取页、窗口替换、生命周期与验证方法 | 改 `model/ReadManga.kt` 的预下载、排查"预下载不生效"时 |
 
 ## 二、测试与验证方法论
 
