@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 播放器底部控制栏背景：半透明渐变，不是纯色横带。
+     angle=90 的起点在**下方**，所以 startColor 最深、endColor 全透明：
+     底部 40% 用 centerColor 保持一段稳定暗度（时间、按钮文字都落在这一段，
+     白字压得住），再往上平滑淡出到画面，避免把控制栏切成一条生硬的横带。
+     竖屏与横屏共用这一份，两个方向观感一致。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="90"
+        android:startColor="#CC000000"
+        android:centerColor="#8C000000"
+        android:centerY="0.45"
+        android:endColor="#00000000" />
+</shape>
