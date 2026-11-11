@@ -27,6 +27,7 @@ import io.legado.app.ui.book.manga.entities.MangaContent
 import io.legado.app.ui.book.manga.entities.MangaPage
 import io.legado.app.ui.book.manga.entities.ReaderLoading
 import io.legado.app.utils.mapIndexed
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers.IO
@@ -34,6 +35,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -60,6 +62,16 @@ object ReadManga : CoroutineScope by MainScope() {
     var simulatedChapterSize = 0
     var mCallback: Callback? = null
     var preDownloadTask: Job? = null
+
+    // 卷轴模式向后预下载：按页把图片写入 BookHelp 的图片文件缓存
+    private val pagePreDownloadChannel = Channel<String>(Channel.UNLIMITED)
+    // 当前预下载窗口，每次翻页整体替换
+    private val pagePreDownloadWanted = LinkedHashSet<String>()
+    // 已入队但还没下完的地址，避免同一张图重复入队
+    private val pagePreDownloadScheduled = hashSetOf<String>()
+    private val pagePreDownloadFailed = hashSetOf<String>()
+    private var pagePreDownloadJob: Job? = null
+
     val downloadedChapters = hashSetOf<Int>()
     val downloadFailChapters = hashMapOf<Int, Int>()
     val downloadScope = CoroutineScope(SupervisorJob() + IO)
@@ -127,10 +139,7 @@ object ReadManga : CoroutineScope by MainScope() {
         nextMangaChapter = null
     }
 
-    /**
-     * 翻页心跳：只延长内存中的打开会话，不逐页写库。
-     * 会话在暂停/退出/换书/跨度过长时由 [ReadSessionRecorder] 统一落库。
-     */
+    //只延长内存中的打开会话，不逐页写库。会话在暂停/退出/换书/跨度过长时由 [ReadSessionRecorder] 统一落库。
     fun upReadTime() {
         val book = book ?: return
         if (!AppConfig.enableReadRecord) {
@@ -147,7 +156,7 @@ object ReadManga : CoroutineScope by MainScope() {
         )
     }
 
-    /** 阅读暂停/退出：落库当前会话 */
+    //阅读暂停/退出：落库当前会话
     fun flushReadTime() {
         if (!AppConfig.enableReadRecord) {
             return
@@ -223,9 +232,6 @@ object ReadManga : CoroutineScope by MainScope() {
         }
     }
 
-    /**
-     * 内容加载完成
-     */
     suspend fun contentLoadFinish(
         chapter: BookChapter,
         content: String?,
@@ -303,9 +309,7 @@ object ReadManga : CoroutineScope by MainScope() {
         return MangaContent(pos, items, curFinish, nextFinish)
     }
 
-    /**
-     * 加载下一章
-     */
+    //加载下一章
     fun moveToNextChapter(toFirst: Boolean = false): Boolean {
         if (durChapterIndex < simulatedChapterSize - 1) {
             if (toFirst) {
@@ -358,6 +362,98 @@ object ReadManga : CoroutineScope by MainScope() {
     fun curPageChanged() {
         upReadTime()
         preDownload()
+        preDownloadNextPages()
+    }
+
+    // 卷轴模式向后预下载：从当前页之后取 mangaPreDownloadNum 页图片，写入显示路径的图片缓存
+    fun preDownloadNextPages() {
+        val book = book ?: return
+        val count = AppConfig.mangaPreDownloadNum
+        if (count <= 0 || book.isLocal) return
+        val wanted = LinkedHashSet<String>()
+        // 先取当前章剩余页，再越过章尾取下一章，凑满 count 页（卷轴模式下会自然跨章）
+        val curPages = curMangaChapter?.pages
+        if (curPages != null) {
+            for (page in curPages) {
+                if (wanted.size >= count) break
+                if (page is MangaPage && page.index > durChapterPos && page.mImageUrl.isNotBlank()) {
+                    wanted.add(page.mImageUrl)
+                }
+            }
+        }
+        if (wanted.size < count) {
+            val nextPages = nextMangaChapter?.pages
+            if (nextPages != null) {
+                for (page in nextPages) {
+                    if (wanted.size >= count) break
+                    if (page is MangaPage && page.mImageUrl.isNotBlank()) {
+                        wanted.add(page.mImageUrl)
+                    }
+                }
+            }
+        }
+        if (wanted.isEmpty()) return
+        synchronized(pagePreDownloadWanted) {
+            pagePreDownloadWanted.clear()
+            pagePreDownloadWanted.addAll(wanted)
+            wanted.forEach { url ->
+                if (url !in pagePreDownloadScheduled && url !in pagePreDownloadFailed) {
+                    pagePreDownloadScheduled.add(url)
+                    pagePreDownloadChannel.trySend(url)
+                }
+            }
+        }
+        startPagePreDownload(book)
+    }
+
+    private fun startPagePreDownload(book: Book) {
+        if (pagePreDownloadJob?.isActive == true) return
+        pagePreDownloadJob = downloadScope.launch {
+            while (true) {
+                val url = pagePreDownloadChannel.receive()
+                val obsolete = synchronized(pagePreDownloadWanted) {
+                    url !in pagePreDownloadWanted
+                }
+                if (obsolete) {
+                    synchronized(pagePreDownloadWanted) {
+                        pagePreDownloadScheduled.remove(url)
+                    }
+                    continue
+                }
+                var success = false
+                try {
+                    if (!BookHelp.isImageExist(book, url)) {
+                        BookHelp.saveImage(bookSource, book, url)
+                    }
+                    success = true
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    AppLog.putDebug("漫画预下载失败 $url\n${e.localizedMessage}")
+                } finally {
+                    synchronized(pagePreDownloadWanted) {
+                        pagePreDownloadScheduled.remove(url)
+                        if (!success) {
+                            pagePreDownloadFailed.add(url)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 取消页级预下载，离开阅读页时调用
+    fun cancelPagePreDownload() {
+        pagePreDownloadJob?.cancel()
+        pagePreDownloadJob = null
+        synchronized(pagePreDownloadWanted) {
+            pagePreDownloadWanted.clear()
+            pagePreDownloadScheduled.clear()
+            pagePreDownloadFailed.clear()
+        }
+        while (true) {
+            pagePreDownloadChannel.tryReceive().getOrNull() ?: break
+        }
     }
     //保存阅读进度
     fun saveRead(pageChanged: Boolean = false) {
@@ -421,7 +517,6 @@ object ReadManga : CoroutineScope by MainScope() {
             }
             preDownloadTask?.cancel()
             preDownloadTask = launch(IO) {
-                //预下载当前章节前后2章，避免用户切换章节时，需要等待下载完成
                 launch {
                     val maxChapterIndex =
                         min(durChapterIndex + AppConfig.preDownloadNum, chapterSize)
@@ -448,6 +543,7 @@ object ReadManga : CoroutineScope by MainScope() {
             preDownloadTask?.cancel()
             downloadScope.coroutineContext.cancelChildren()
         }
+        cancelPagePreDownload()
     }
 
     private suspend fun downloadIndex(index: Int) {
@@ -468,9 +564,7 @@ object ReadManga : CoroutineScope by MainScope() {
         }
     }
 
-    /**
-     * 获取正文
-     */
+    //获取正文
     private suspend fun download(
         scope: CoroutineScope,
         chapter: BookChapter,
@@ -533,10 +627,7 @@ object ReadManga : CoroutineScope by MainScope() {
         }
     }
 
-    /**
-     * 同步阅读进度
-     * 如果当前进度快于服务器进度或者没有进度进行上传，如果慢与服务器进度则执行传入动作
-     */
+    //同步阅读进度
     fun syncProgress(
         newProgressAction: ((progress: BookProgress) -> Unit)? = null,
         uploadSuccessAction: (() -> Unit)? = null,
@@ -553,7 +644,6 @@ object ReadManga : CoroutineScope by MainScope() {
                 (progress.durChapterIndex == book.durChapterIndex
                         && progress.durChapterPos < book.durChapterPos)
             ) {
-                // 服务器没有进度或者进度比服务器快，上传现有进度
                 Coroutine.async {
                     AppWebDav.uploadBookProgress(BookProgress(book), uploadSuccessAction)
                     book.update()
@@ -561,7 +651,6 @@ object ReadManga : CoroutineScope by MainScope() {
             } else if (progress.durChapterIndex > book.durChapterIndex ||
                 progress.durChapterPos > book.durChapterPos
             ) {
-                // 进度比服务器慢，执行传入动作
                 newProgressAction?.invoke(progress)
             } else {
                 syncSuccessAction?.invoke()
@@ -611,16 +700,12 @@ object ReadManga : CoroutineScope by MainScope() {
         }
     }
 
-    /**
-     * 注册回调
-     */
+    //注册回调
     fun register(cb: Callback) {
         mCallback = cb
     }
 
-    /**
-     * 取消注册回调
-     */
+    //取消注册回调
     fun unregister(cb: Callback) {
         if (mCallback === cb) {
             mCallback = null

@@ -18,9 +18,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.PagerSnapHelper
 import com.bumptech.glide.Glide
-import com.bumptech.glide.integration.recyclerview.RecyclerViewPreloader
-import com.bumptech.glide.request.target.Target.SIZE_ORIGINAL
-import com.bumptech.glide.util.FixedPreloadSizeProvider
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
@@ -97,10 +94,6 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         MangaAdapter(this)
     }
 
-    private val mSizeProvider by lazy {
-        FixedPreloadSizeProvider<Any>(resources.displayMetrics.widthPixels, SIZE_ORIGINAL)
-    }
-
     private val mPagerSnapHelper: PagerSnapHelper by lazy {
         PagerSnapHelper()
     }
@@ -109,8 +102,6 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     private val mLabelBuilder by lazy { StringBuilder() }
 
     private var mMenu: Menu? = null
-
-    private var mRecyclerViewPreloader: RecyclerViewPreloader<Any>? = null
 
     private val networkChangedListener by lazy {
         NetworkChangedListener(this)
@@ -219,7 +210,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             setHasFixedSize(true)
             setDisableClickScroll(AppConfig.disableClickScroll)
             setDisableMangaScale(AppConfig.disableMangaScale)
-            setRecyclerViewPreloader(AppConfig.mangaPreDownloadNum)
+            setRecyclerViewPreloader()
             setPreScrollListener { _, _, _, position ->
                 if (mAdapter.isNotEmpty()) {
                     val item = mAdapter.getItem(position)
@@ -364,6 +355,8 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     override fun onResume() {
         super.onResume()
         ReadManga.markReadStart()
+        // onPause 会取消页级预下载，回到前台后按当前位置重新开一个窗口
+        setRecyclerViewPreloader()
         networkChangedListener.register()
         networkChangedListener.onNetworkChanged = {
             // 当网络是可用状态且无需初始化时同步进度（初始化中已有同步进度逻辑）
@@ -416,11 +409,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
     override fun onDestroy() {
         ReadManga.unregister(this)
-        // 关闭页面时停止预加载监听，避免销毁后滚动/预加载回调继续访问 Activity。
-        mRecyclerViewPreloader?.let {
-            binding.recyclerView.removeOnScrollListener(it)
-            mRecyclerViewPreloader = null
-        }
+        ReadManga.cancelPagePreDownload()
         binding.recyclerView.adapter = null
         super.onDestroy()
     }
@@ -496,9 +485,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         return super.onPrepareOptionsMenu(menu)
     }
 
-    /**
-     * 菜单
-     */
+    //菜单
     @SuppressLint("StringFormatMatches", "NotifyDataSetChanged")
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         if (handleMangaMenuItem(item)) {
@@ -534,7 +521,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
                 ) {
                     AppConfig.mangaPreDownloadNum = it
                     item.title = getString(R.string.pre_download_m, it)
-                    setRecyclerViewPreloader(it)
+                    setRecyclerViewPreloader()
                 }
             }
 
@@ -728,10 +715,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         }
     }
 
-    /**
-     * 显示离线缓存对话框，可选择章节范围与缓存并发率
-     * 并发率输入校验：仅允许 "纯数字" 或 "次数/毫秒" 两种格式
-     */
+    //显示离线缓存对话框，可选择章节范围与缓存并发率
     @SuppressLint("InflateParams", "SetTextI18n")
     private fun showDownloadDialog() {
         ReadManga.book?.let { book ->
@@ -792,16 +776,12 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         }
         return super.dispatchKeyEvent(event)
     }
-    //设置RecyclerView的预加载器
-    private fun setRecyclerViewPreloader(maxPreload: Int) {
-        if (mRecyclerViewPreloader != null) {
-            binding.recyclerView.removeOnScrollListener(mRecyclerViewPreloader!!)
+    // 更新 RecyclerView 预加载器：按当前设置刷新一次预下载窗口
+    // 预下载由 ReadManga.preDownloadNextPages() 直接写入显示路径的图片缓存
+    private fun setRecyclerViewPreloader() {
+        if (ReadManga.curMangaChapter != null) {
+            ReadManga.preDownloadNextPages()
         }
-        mRecyclerViewPreloader = RecyclerViewPreloader(
-            // 预加载不需要 Activity 生命周期，避免退出页面后 Glide 拒绝启动请求。
-            Glide.with(applicationContext), mAdapter, mSizeProvider, maxPreload
-        )
-        binding.recyclerView.addOnScrollListener(mRecyclerViewPreloader!!)
     }
     //设置是否启用水平滚动
     private fun setHorizontalScroll(enable: Boolean) {
@@ -1005,7 +985,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
 
     override fun onMangaPreloadChanged() {
-        setRecyclerViewPreloader(AppConfig.mangaPreDownloadNum)
+        setRecyclerViewPreloader()
         mMenu?.findItem(R.id.menu_pre_manga_number)?.title =
             getString(R.string.pre_download_m, AppConfig.mangaPreDownloadNum)
     }
