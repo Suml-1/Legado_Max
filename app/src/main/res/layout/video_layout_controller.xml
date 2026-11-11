@@ -54,7 +54,7 @@
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_alignParentBottom="true"
-        android:background="#99000000"
+        android:background="@drawable/video_ctrl_bar_gradient"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:visibility="invisible">
@@ -143,6 +143,19 @@
         android:layout_centerVertical="true"
         android:layout_gravity="center_vertical" />
 
+    <!-- 亮度 / 音量滑动指示器：外层定位，内层是实际控件。
+         音量在左、亮度在右，由代码按当前调节类型切换对齐方向 -->
+    <RelativeLayout
+        android:id="@+id/gesture_indicator_host"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_centerVertical="true"
+        android:layout_marginStart="16dp">
+
+        <include layout="@layout/video_gesture_indicator" />
+    </RelativeLayout>
+
     <RelativeLayout
         android:id="@+id/preview_layout"
         android:layout_width="@dimen/seek_bar_image"
@@ -152,19 +165,46 @@
         android:layout_marginBottom="30dp"
         android:visibility="gone" />
 
-    <TextView
-        android:id="@+id/tip_view"
+    <!-- 播放器统一提示：无底板纯文字，靠阴影压住画面。
+         第一行显示"当前 / 总时长"，第二行显示本次调整的相对量（±N秒 / ±N分），
+         与拖动、双击、底栏快进快退共用同一套结构。 -->
+    <LinearLayout
+        android:id="@+id/tip_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
         android:layout_centerInParent="true"
-        android:layout_marginTop="50dp"
         android:alpha="0"
-        android:background="@drawable/selector_fillet_btn_bg"
-        android:elevation="4dp"
         android:gravity="center"
-        android:padding="12dp"
-        android:textColor="@android:color/white"
-        android:visibility="invisible" />
+        android:orientation="vertical"
+        android:visibility="invisible">
+
+        <TextView
+            android:id="@+id/tip_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:shadowColor="#CC000000"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="6"
+            android:textColor="@android:color/white"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tip_delta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:shadowColor="#CC000000"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="6"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
 
 </RelativeLayout>

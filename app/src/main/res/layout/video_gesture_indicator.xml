@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 亮度 / 音量滑动调节指示器：左侧竖条 + 底部图标，滑动时显示当前档位 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/gesture_indicator"
+    android:layout_width="44dp"
+    android:layout_height="wrap_content"
+    android:alpha="0"
+    android:background="@drawable/video_gesture_indicator_bg"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingHorizontal="8dp"
+    android:paddingVertical="12dp"
+    android:visibility="invisible"
+    tools:visibility="visible">
+
+    <!-- 竖条：固定高度容器 + 底部对齐的填充块，用高度表达档位 -->
+    <FrameLayout
+        android:layout_width="4dp"
+        android:layout_height="@dimen/gesture_indicator_height">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/video_gesture_indicator_track" />
+
+        <View
+            android:id="@+id/gesture_indicator_fill"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="bottom"
+            android:background="@drawable/video_gesture_indicator_fill" />
+    </FrameLayout>
+
+    <ImageView
+        android:id="@+id/gesture_indicator_icon"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_marginTop="10dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_volume_up"
+        android:tint="@android:color/white"
+        tools:ignore="UseAppTint" />
+
+</LinearLayout>

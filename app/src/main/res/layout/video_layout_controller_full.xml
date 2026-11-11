@@ -34,7 +34,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:background="#80000000"
+        android:background="@drawable/video_ctrl_bar_gradient"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingBottom="12dp"
@@ -48,34 +48,30 @@
             android:layout_marginStart="12dp"
             android:text="00:00"
             android:textColor="#ffffff"
+            app:layout_constraintBottom_toBottomOf="@+id/progress"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:ignore="HardcodedText" />
-
-        <TextView
-            android:id="@+id/sprit"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="/"
-            android:textColor="#ffffff"
-            app:layout_constraintStart_toEndOf="@+id/current"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/progress"
             tools:ignore="HardcodedText" />
 
         <TextView
             android:id="@+id/total"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
             android:text="00:00"
             android:textColor="#ffffff"
-            app:layout_constraintStart_toEndOf="@+id/sprit"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="@+id/progress"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/progress"
             tools:ignore="HardcodedText" />
 
+        <!-- 进度条夹在左右两端的时间之间，宽度撑满剩余空间，因此天然居中 -->
         <SeekBar
             android:id="@+id/progress"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
             android:background="@null"
             android:max="100"
             android:maxHeight="4dp"
@@ -84,7 +80,9 @@
             android:paddingBottom="8dp"
             android:progressDrawable="@drawable/video_seek_progress"
             android:thumb="@drawable/video_seek_thumb"
-            app:layout_constraintTop_toBottomOf="@+id/sprit" />
+            app:layout_constraintEnd_toStartOf="@+id/total"
+            app:layout_constraintStart_toEndOf="@+id/current"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
             android:id="@+id/start"
@@ -110,13 +108,28 @@
             app:layout_constraintStart_toEndOf="@+id/start"
             app:layout_constraintTop_toBottomOf="@+id/progress" />
 
-        <!-- 快捷跳转按钮容器，居中显示 -->
+        <!-- 静音切换：点击在静音 / 恢复之间切换，图标随播放器静音状态更新。
+             尺寸与 start / next 保持一致，padding 让图标视觉大小对齐 -->
+        <ImageView
+            android:id="@+id/btn_mute"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="12dp"
+            android:padding="2dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_volume_up"
+            app:layout_constraintStart_toEndOf="@+id/next"
+            app:layout_constraintTop_toBottomOf="@+id/progress"
+            tools:ignore="ContentDescription" />
+
+        <!-- 快捷跳转按钮容器，绝对居中；高度与两侧按钮同为 24dp，保证同一水平线 -->
         <LinearLayout
             android:id="@+id/quick_jump_container"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="24dp"
             android:orientation="horizontal"
-            android:gravity="center"
+            android:gravity="center_vertical"
             android:visibility="gone"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -239,13 +252,13 @@
 
     <ImageView
         android:id="@+id/lock_screen"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:layout_alignParentEnd="true"
         android:layout_centerVertical="true"
         android:layout_marginEnd="50dp"
-        android:scaleType="centerInside"
-        android:src="@drawable/unlock"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_lock_open"
         android:visibility="gone"
         tools:visibility="visible" />
 
@@ -272,10 +285,23 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:ellipsize="end"
             android:paddingStart="10dp"
+            android:singleLine="true"
             android:textColor="@android:color/white"
             android:textSize="18sp"
             tools:ignore="RtlSymmetry" />
+
+        <!-- 横屏右上角的当前时间：全屏时系统状态栏隐藏，用这个补上时刻信息 -->
+        <TextView
+            android:id="@+id/tv_clock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="8dp"
+            android:paddingEnd="4dp"
+            android:textColor="@android:color/white"
+            android:textSize="15sp"
+            tools:text="21:30" />
 
         <ImageView
             android:id="@+id/iv_settings"
@@ -288,6 +314,19 @@
 
     </LinearLayout>
 
+    <!-- 亮度 / 音量滑动指示器：外层定位，内层是实际控件。
+         音量在左、亮度在右，由代码按当前调节类型切换对齐方向 -->
+    <RelativeLayout
+        android:id="@+id/gesture_indicator_host"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_centerVertical="true"
+        android:layout_marginStart="16dp">
+
+        <include layout="@layout/video_gesture_indicator" />
+    </RelativeLayout>
+
     <RelativeLayout
         android:id="@+id/preview_layout"
         android:layout_width="@dimen/seek_bar_image"
@@ -297,19 +336,46 @@
         android:layout_marginBottom="30dp"
         android:visibility="gone" />
 
-    <TextView
-        android:id="@+id/tip_view"
+    <!-- 播放器统一提示：无底板纯文字，靠阴影压住画面。
+         第一行显示"当前 / 总时长"，第二行显示本次调整的相对量（±N秒 / ±N分），
+         与拖动、双击、底栏快进快退共用同一套结构。 -->
+    <LinearLayout
+        android:id="@+id/tip_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
         android:layout_centerInParent="true"
-        android:layout_marginTop="50dp"
         android:alpha="0"
-        android:background="@drawable/selector_fillet_btn_bg"
-        android:elevation="4dp"
         android:gravity="center"
-        android:padding="12dp"
-        android:textColor="@android:color/white"
-        android:visibility="invisible" />
+        android:orientation="vertical"
+        android:visibility="invisible">
+
+        <TextView
+            android:id="@+id/tip_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:shadowColor="#CC000000"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="6"
+            android:textColor="@android:color/white"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tip_delta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:shadowColor="#CC000000"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="6"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
 
 </RelativeLayout>
