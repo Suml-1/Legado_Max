@@ -6,7 +6,8 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 
-
+// 播放器右侧面板（选集 / 倍速）的窗口尺寸：宽取屏宽比例、高取整屏，贴右贴顶。
+// 面板是独立 Dialog，不继承播放器的沉浸式全屏状态，因此需要自己铺到物理屏幕边界
 internal fun Dialog.applyVideoPanelWindow(widthFraction: Float) {
     val dialogWindow = window ?: return
     val metrics = context.resources.displayMetrics
@@ -26,9 +27,11 @@ internal fun Dialog.applyVideoPanelWindow(widthFraction: Float) {
     lp.gravity = Gravity.END or Gravity.TOP
     lp.y = 0
     dialogWindow.setAttributes(lp)
+    // show() 后会重新下发 LayoutParams，onStart() 再调一次保证尺寸不被覆盖
     dialogWindow.setLayout(width, height)
 }
 
+// 让 Dialog 内容从屏幕物理边界开始绘制，与播放器的沉浸式全屏对齐
 @Suppress("DEPRECATION")
 private fun applyImmersive(decorView: View) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

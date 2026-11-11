@@ -33,6 +33,7 @@ class ChoiceSpeedDialog(private val mContext: Context) :
         super.onCreate(savedInstanceState)
     }
 
+    // show() 会重设 LayoutParams，这里再应用一次窗口尺寸
     override fun onStart() {
         super.onStart()
         applyVideoPanelWindow(PANEL_WIDTH_FRACTION)

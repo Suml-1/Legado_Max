@@ -55,4 +55,9 @@
     <dimen name="bookshelf_tag_item_corner_radius_selected">14dp</dimen>
     <!-- 选中标签描边厚度 -->
     <dimen name="bookshelf_tag_item_stroke_width">1dp</dimen>
+
+    <!-- 亮度 / 音量滑动指示器竖条高度 -->
+    <dimen name="gesture_indicator_height">120dp</dimen>
+    <!-- 亮度 / 音量滑动指示器与屏幕边缘的间距 -->
+    <dimen name="gesture_indicator_margin">16dp</dimen>
 </resources>

@@ -143,6 +143,19 @@
         android:layout_centerVertical="true"
         android:layout_gravity="center_vertical" />
 
+    <!-- 亮度 / 音量滑动指示器：外层定位，内层是实际控件。
+         音量在左、亮度在右，由代码按当前调节类型切换对齐方向 -->
+    <RelativeLayout
+        android:id="@+id/gesture_indicator_host"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_centerVertical="true"
+        android:layout_marginStart="16dp">
+
+        <include layout="@layout/video_gesture_indicator" />
+    </RelativeLayout>
+
     <RelativeLayout
         android:id="@+id/preview_layout"
         android:layout_width="@dimen/seek_bar_image"
