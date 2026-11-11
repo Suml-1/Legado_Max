@@ -17,6 +17,7 @@
 | [rss-debug-design.md](./rss-debug-design.md)                       | 订阅源（RSS）调试功能的设计与实现结构                                                                | 动 `ui/rss/source/debug/` 或对照书源调试能力时                            |
 | [TextMenuCustomization.md](./TextMenuCustomization.md)             | 阅读页文本选择菜单项自定义功能说明                                                                   | 改正文选择菜单、菜单 ID 与 `res/menu/` 映射时                             |
 | [日志体系与选型说明.md](./日志体系与选型说明.md)                   | 项目内 5 个日志入口（android.util.Log / DebugLog / LogUtils / TimberLog / AppLog）的去向、开关与选型 | 想知道某行日志会出现在 logcat / 文件 / 日志页哪一处、或新写日志该用哪个时 |
+| [video-player-control-layer.md](./video-player-control-layer.md)   | 视频播放器控制层：两套布局、双击三等分、亮度/音量滑动与指示器、选集/倍速面板、提示系统、加载态按钮 | 改 `ui/video/player/`、调播放器手势或面板样式时 |
 
 ## 二、测试与验证方法论
 
