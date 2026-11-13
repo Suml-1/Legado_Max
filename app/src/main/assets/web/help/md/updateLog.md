@@ -25,6 +25,7 @@
 - [Github分支Suml-1](https://github.com/Suml-1/Legado_Max)
 
 **2026/11/14**
+### 这几天关于js引擎和js书源的提交直接参考了[NG版本](https://github.com/joestar817/legado_NG)
 
 - feat(JS书源): 列表中点击 JS 书源直接进入代码编辑页，保存时校验脚本并写库；普通书源仍进规则编辑页
 - fix(详情页): JS 书源补回 `durChapterTitle`/`totalChapterNum`/`latestChapterTitle`，目录不再显示「目录：null」；目录懒加载（Flow）分支也支持 JS 源
@@ -39,6 +40,8 @@
 - fix(书源导入): 网络导入/本地导入统一走书源解析器，`.js` 地址与本地 `.js` 文件不再被当 JSON 解析失败
 - feat(JS沙箱): 补齐 `java.getQuickJsSandbox().evalString()` 纯 JS 隔离沙箱（无宿主对象、全新作用域），依赖 BigInt 的签名类书源可用
 - refactor(书源作用域): jsLib 共享作用域按书源隔离，支持结构化 jsLib 包（`legado.js.library/1`）
+- fix(阅读页): 字重调整即时生效
+- fix(主题设置): 编辑弹窗按内容收缩，消除表单下方空白
 
 **2026/11/7**
 
