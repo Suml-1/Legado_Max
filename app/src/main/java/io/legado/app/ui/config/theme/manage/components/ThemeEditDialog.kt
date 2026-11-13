@@ -155,7 +155,6 @@ private fun ColorRow(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp)
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
@@ -165,7 +164,7 @@ private fun ColorRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -213,7 +212,6 @@ private fun OptionRow(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp)
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
@@ -223,7 +221,7 @@ private fun OptionRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -246,9 +244,10 @@ private fun OptionRow(
 }
 
 /**
- * 背景图片行：左边标题，中间缩略图预览（异步解码，失败显示占位块），右边文件名。
+ * 背景图片行：左边标题，中间缩略图预览（异步解码），右边文件名。
  *
  * 预览不做虚化渲染，仅用于确认已选图片；虚化值在应用主题时生效。
+ * 未选图片时不画占位框：空占位框会把行撑到 40dp 高，弹窗里看着像一段空白。
  */
 @Composable
 private fun BackgroundImageRow(
@@ -257,7 +256,7 @@ private fun BackgroundImageRow(
     onClick: () -> Unit,
     onClear: () -> Unit,
 ) {
-    // 在 IO 线程异步解码缩略图，避免阻塞主线程；解码失败或未选图时置空显示占位块
+    // 在 IO 线程异步解码缩略图，避免阻塞主线程；解码失败或未选图时置空
     val thumbnail: ImageBitmap? by produceState<ImageBitmap?>(initialValue = null, path) {
         value = withContext(Dispatchers.IO) {
             if (path.isNullOrBlank()) {
@@ -277,7 +276,6 @@ private fun BackgroundImageRow(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp)
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
@@ -287,7 +285,7 @@ private fun BackgroundImageRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -297,15 +295,15 @@ private fun BackgroundImageRow(
                 modifier = Modifier.weight(1f),
             )
 
-            // 缩略图预览：解码成功显示图片，否则显示灰色占位块
-            Box(
-                modifier = Modifier
-                    .size(width = 48.dp, height = 40.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center,
-            ) {
-                thumbnail?.let { image ->
+            // 缩略图预览：仅已选图片且解码成功时显示，行高与其它选项行一致
+            thumbnail?.let { image ->
+                Box(
+                    modifier = Modifier
+                        .size(width = 36.dp, height = 26.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Image(
                         bitmap = image,
                         contentDescription = title,
@@ -315,9 +313,8 @@ private fun BackgroundImageRow(
                             .clip(RoundedCornerShape(4.dp)),
                     )
                 }
+                Spacer(Modifier.width(10.dp))
             }
-
-            Spacer(Modifier.width(10.dp))
 
             Text(
                 text = fileName ?: stringResource(R.string.select_image),
@@ -359,7 +356,6 @@ private fun SwitchRow(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp)
             .clip(RoundedCornerShape(8.dp)),
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,

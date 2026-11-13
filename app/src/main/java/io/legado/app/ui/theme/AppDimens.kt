@@ -107,9 +107,6 @@ object AppDimens {
     val manageBadgePaddingHorizontal: Dp = 8.dp
     val manageBadgePaddingVertical: Dp = 1.dp
 
-    /** 配置编辑弹窗内容区最大高度，超出后内部滚动（避免长表单顶穿屏幕） */
-    val dialogEditMaxHeight: Dp = 480.dp
-
     /** 配置列表条目左侧预览图的容器尺寸（气泡包等） */
     val managePreviewBoxSize: Dp = 44.dp
 
