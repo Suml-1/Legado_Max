@@ -198,6 +198,8 @@ class BookSourceEditActivity :
      */
     override fun onMenuOpened(featureId: Int, menu: Menu): Boolean {
         menu.findItem(R.id.menu_login)?.isVisible = !getSource().loginUrl.isNullOrBlank()
+        // 只有单文件 JS 书源才有可编辑的 mainJs 脚本
+        menu.findItem(R.id.menu_edit_js)?.isVisible = !getSource().mainJs.isNullOrBlank()
         menu.findItem(R.id.menu_auto_complete)?.isChecked = viewModel.autoComplete
         return super.onMenuOpened(featureId, menu)
     }
@@ -217,7 +219,10 @@ class BookSourceEditActivity :
             val tabKey = data?.getStringExtra("tabKey")
             val cursorPosition = data?.getIntExtra("cursorPosition", -1) ?: -1
             
-            if (text != null && !fieldKey.isNullOrEmpty() && !tabKey.isNullOrEmpty()) {
+            if (text != null && tabKey == "js" && fieldKey == "mainJs") {
+                // JS 单文件书源的主脚本没有对应的规则输入框，直接写回当前编辑中的书源
+                viewModel.bookSource?.mainJs = text
+            } else if (text != null && !fieldKey.isNullOrEmpty() && !tabKey.isNullOrEmpty()) {
                 updateEditEntityValue(tabKey, fieldKey, text, cursorPosition)
             } else if (!fieldKey.isNullOrEmpty() && !tabKey.isNullOrEmpty()) {
                 scrollToField(tabKey, fieldKey, cursorPosition)
@@ -380,6 +385,27 @@ class BookSourceEditActivity :
     }
 
     /**
+     * 编辑单文件 JS 书源的主脚本。
+     *
+     * 复用全屏代码编辑器，返回后写回 [BookSourceEditViewModel.bookSource]，
+     * 由既有保存流程一起落库（保存时会带上 mainJs 列）。
+     */
+    private fun openJsSourceEdit() {
+        val source = getSource()
+        val script = source.mainJs ?: return
+        val intent = Intent(this, CodeEditActivity::class.java).apply {
+            CodeEditLauncher.putText(this, script)
+            putExtra("title", "${source.bookSourceName}.js")
+            putExtra("cursorPosition", 0)
+            putExtra("sourceType", "bookSource")
+            putExtra("sourceKey", source.bookSourceUrl)
+            putExtra("fieldKey", "mainJs")
+            putExtra("tabKey", "js")
+        }
+        textEditLauncher.launch(intent)
+    }
+
+    /**
      * 处理全屏编辑按钮点击
      * 将当前光标焦点的文本框内容打开到 CodeEditActivity 进行全屏编辑
      */
@@ -430,6 +456,8 @@ class BookSourceEditActivity :
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.menu_fullscreen_edit -> onFullEditClicked()
+
+            R.id.menu_edit_js -> openJsSourceEdit()
 
             R.id.menu_edit_json -> showSourceJsonEdit()
 

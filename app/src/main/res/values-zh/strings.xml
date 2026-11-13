@@ -2710,4 +2710,5 @@
     <string name="backup_encrypt_s">仅对上传到 WebDAV 的备份包使用 AES-GCM 加密，需先设置备份密码</string>
     <string name="backup_keep_count_t">保留最近备份数</string>
     <string name="fvd_manifest_summary">%1$s · %2$s · %3$d 项</string>
+    <string name="edit_js_script">编辑 JS 脚本</string>
 </resources>

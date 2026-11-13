@@ -11,6 +11,7 @@ import androidx.room.TypeConverters
 import com.google.gson.JsonElement
 import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
+import com.google.gson.annotations.SerializedName
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.BookSourceType
 import io.legado.app.data.entities.rule.BookInfoRule
@@ -101,6 +102,9 @@ data class BookSource(
     var ruleContent: ContentRule? = null,
     // 段评规则
     var ruleReview: ReviewRule? = null,
+    // 纯 JavaScript 单文件书源主脚本，非空时优先使用脚本抓取流程（不走规则解析链）
+    @SerializedName("mainJs")
+    var mainJs: String? = null,
     @ColumnInfo(defaultValue = "0")
     var eventListener: Boolean = false, // 是否监听事件来执行回调规则
     @ColumnInfo(defaultValue = "0")
@@ -257,6 +261,7 @@ data class BookSource(
                 && equal(variableComment, source.variableComment)
                 && equal(concurrentRate, source.concurrentRate)
                 && equal(jsLib, source.jsLib)
+                && equal(mainJs, source.mainJs)
                 && equal(header, source.header)
                 && equal(loginUrl, source.loginUrl)
                 && equal(loginUi, source.loginUi)

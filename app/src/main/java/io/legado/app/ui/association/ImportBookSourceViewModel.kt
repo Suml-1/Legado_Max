@@ -20,6 +20,7 @@ import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.model.RuleUpdate
+import io.legado.app.model.jsSource.JsSourceConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonArrayOrObject
@@ -169,7 +170,13 @@ class ImportBookSourceViewModel(app: Application) : BaseViewModel(app) {
                     val uri = Uri.parse(mText)
                     uri.inputStream(context).getOrThrow().use { inputS ->
                         val text = inputS.reader().readText()
-                        GSON.fromJsonArrayOrObject<BookSource>(text).getOrThrow().let {
+                        // 本地 .js 文件：按单文件 JS 书源解析（JSON 解析失败才回落）
+                        runCatching {
+                            GSON.fromJsonArrayOrObject<BookSource>(text).getOrThrow()
+                        }.getOrElse {
+                            allSources.add(JsSourceConfig.extract(text))
+                            return@use
+                        }.let {
                             val source = it.firstOrNull() ?: return@let
                             if (source.bookSourceUrl.isEmpty()) {
                                 throw NoStackTraceException("不是书源")
@@ -179,7 +186,8 @@ class ImportBookSourceViewModel(app: Application) : BaseViewModel(app) {
                     }
                 }
 
-                else -> throw NoStackTraceException(context.getString(R.string.wrong_format))
+                // 其余情况按纯 JavaScript 单文件书源处理（NG_main 的导入约定）
+                else -> allSources.add(JsSourceConfig.extract(mText))
             }
         }.onError {
             errorLiveData.postValue("ImportError:${it.localizedMessage}")

@@ -15,6 +15,8 @@ import io.legado.app.help.http.StrResponse
 import io.legado.app.help.source.exploreInfoMapList
 import io.legado.app.help.source.getBookType
 import io.legado.app.model.Debug
+import io.legado.app.model.jsSource.JsSourceBook
+import io.legado.app.model.jsSource.isJsSource
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setToastRuleType
@@ -101,6 +103,10 @@ object WebBook {
         shouldBreak: ((size: Int) -> Boolean)? = null
     ): ArrayList<SearchBook> {
         FlowLogRecorder.setOperation(bookSource.bookSourceUrl, "搜索")
+        // 单文件 JS 书源：脚本抓取，不走规则解析链
+        if (bookSource.isJsSource()) {
+            return JsSourceBook.searchAwait(bookSource, key, page, filter)
+        }
         val searchUrl = bookSource.searchUrl
         if (searchUrl.isNullOrBlank()) {
             throw NoStackTraceException("搜索url不能为空")
@@ -194,6 +200,9 @@ object WebBook {
         page: Int? = 1,
     ): ArrayList<SearchBook> {
         FlowLogRecorder.setOperation(bookSource.bookSourceUrl, "发现")
+        if (bookSource.isJsSource()) {
+            return JsSourceBook.exploreAwait(bookSource, url, page)
+        }
         val ruleData = RuleData()
         val sourceUrl = bookSource.bookSourceUrl
         val exploreInfoMap = exploreInfoMapList[sourceUrl]
@@ -284,6 +293,9 @@ object WebBook {
         canReName: Boolean = true,
     ): Book {
         FlowLogRecorder.setOperation(bookSource.bookSourceUrl, "详情")
+        if (bookSource.isJsSource()) {
+            return JsSourceBook.getBookInfoAwait(bookSource, book, canReName)
+        }
         book.removeAllBookType()
         book.addType(bookSource.getBookType())
         if (!book.infoHtml.isNullOrEmpty()) {
@@ -413,6 +425,9 @@ object WebBook {
         isFromBookInfo : Boolean = false
     ): Result<List<BookChapter>> {
         FlowLogRecorder.setOperation(bookSource.bookSourceUrl, "目录")
+        if (bookSource.isJsSource()) {
+            return JsSourceBook.getChapterListAwait(bookSource, book)
+        }
         book.removeAllBookType()
         book.addType(bookSource.getBookType())
         return kotlin.runCatching {
@@ -645,6 +660,11 @@ object WebBook {
         needSave: Boolean = true
     ): String {
         FlowLogRecorder.setOperation(bookSource.bookSourceUrl, "正文")
+        if (bookSource.isJsSource()) {
+            return JsSourceBook.getContentAwait(
+                bookSource, book, bookChapter, nextChapterUrl, needSave
+            )
+        }
         val contentRule = bookSource.getContentRule()
         if (contentRule.content.isNullOrEmpty()) {
             Debug.log(bookSource.bookSourceUrl, "⇒正文规则为空,使用章节链接:${bookChapter.url}")
