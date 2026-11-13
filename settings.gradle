@@ -25,6 +25,13 @@ plugins {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        // 本地离线依赖（HtmlUnit Rhino 分支 htmlunit-core-js，见 third_party/maven 的 SOURCE.md）
+        maven {
+            url = uri("$rootDir/third_party/maven")
+            content {
+                includeModule("org.htmlunit", "htmlunit-core-js")
+            }
+        }
         //原仓库
         google {
             content {

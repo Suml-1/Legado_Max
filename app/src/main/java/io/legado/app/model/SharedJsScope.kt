@@ -2,7 +2,9 @@ package io.legado.app.model
 
 import androidx.collection.LruCache
 import com.google.gson.reflect.TypeToken
+import com.script.CompiledScript
 import com.script.ScriptBindings
+import com.script.rhino.RhinoClassShutter
 import com.script.rhino.RhinoScriptEngine
 import io.legado.app.constant.AppLog
 import io.legado.app.exception.NoStackTraceException
@@ -18,179 +20,231 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.mozilla.javascript.Scriptable
-import org.mozilla.javascript.ScriptableObject
+import org.htmlunit.corejs.javascript.BaseFunction
+import org.htmlunit.corejs.javascript.Context
+import org.htmlunit.corejs.javascript.Scriptable
+import org.htmlunit.corejs.javascript.ScriptableObject
+import org.htmlunit.corejs.javascript.VarScope
 import splitties.init.appCtx
 import java.io.File
 import java.lang.ref.WeakReference
+import java.security.SecureRandom
 import kotlin.coroutines.CoroutineContext
 
 /**
  * 书源共享 JS 作用域管理器。
  *
  * 书源 `BookSource.jsLib` 允许作者声明一段跨规则复用的 JS 代码：
- * 可以是普通 JS 字符串，也可以是 JSON 对象 `{ "名字": "内联JS 或 远程URL", ... }`。
+ * 可以是普通 JS 字符串、JSON 对象 `{ "名字": "内联JS 或 远程URL" }`，
+ * 或结构化 bundle（`legado.js.library/1`，见 [JsLibraryBundle]）。
+ *
  * 本对象承担 4 件事：
  * 1. 把 jsLib 中指向 URL 的片段下载并落到 [ACache] 磁盘缓存，避免每次执行都联网；
  * 2. 把所有片段拼装成一份可直接 eval / 内联注入的 JS 字符串（[getJsLibString]）；
- * 3. 给 Rhino 引擎构建一份共享的 [Scriptable] 运行时作用域（[getScope]），
- *    并用 [LruCache] + [WeakReference] 缓存 16 项，减少重复初始化开销；
- * 4. jsLib 被更新或删除时同步清掉内存/磁盘缓存（[remove]）。
+ * 3. 构建共享 [ScriptBindings] 运行时作用域（[getScope]）并按书源命名空间隔离；
+ * 4. 内置 CryptoJS（[installCryptoJs] / [getCryptoScope]）：从 assets 读取
+ *    `scripts/cryptojs.min.js` 编译一次，脚本里可直接 `CryptoJS.MD5(...)`。
  *
  * 典型调用点：
- * - AnalyzeRule / AnalyzeJs 执行书源规则时通过 [getScope] 取共享作用域；
- * - [io.legado.app.help.webView.WebJsExtensions] 通过 [getJsLibString] 把 jsLib 内联注入 WebView。
+ * - AnalyzeRule / AnalyzeUrl 执行书源规则时通过 [getShareScope] 取共享作用域；
+ * - [io.legado.app.model.jsSource.JsSourceEngine] 通过 [getCryptoScope] 兜底；
+ * - [io.legado.app.help.webView.WebJsExtensions] 通过 [getJsLibString] 内联注入 WebView。
  *
- * 注意：[resolveJsLibString] 为兼容同步调用点在内部使用了 [runBlocking] 做 URL 下载，
- * 若在 UI 线程调用会阻塞渲染，调用方应尽量放到 IO 线程预热或改造为 suspend 版本。
+ * 注意：legacy 映射形式的 URL 片段在缓存未命中时用 [runBlocking] 同步下载，
+ * 调用方应尽量放到 IO 线程，或提前用 [prefetch] 预热。
  */
 object SharedJsScope {
 
+    private const val CRYPTO_JS_ASSET = "scripts/cryptojs.min.js"
+    private const val SECURE_RANDOM_BINDING = "__legadoSecureRandomInt"
+
     /** jsLib 下载后的磁盘缓存目录（APP cacheDir/shareJs），随系统清理 */
-    private val cacheFolder = File(appCtx.cacheDir, "shareJs")
-    private val aCache = ACache.get(cacheFolder)
+    private val aCache by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        ACache.get(File(appCtx.cacheDir, "shareJs"))
+    }
 
-    /**
-     * jsLib → Rhino 作用域的内存缓存。
-     * key 用 `MD5(jsLib)` 做指纹；value 用 [WeakReference] 包住，
-     * 防止外部不再引用时仍被 object 生命周期锁住，允许 GC 回收。
-     */
-    private val scopeMap = LruCache<String, WeakReference<Scriptable>>(16)
+    /** jsLib → 共享作用域缓存，key 含策略前缀 + 命名空间 + MD5(jsLib) */
+    private val scopeMap = LruCache<String, WeakReference<ScriptBindings>>(16)
 
-    /**
-     * [prefetch] 专用的后台协程作用域：IO + SupervisorJob，
-     * 单个 URL 下载失败不影响其他 URL，也不向上传播到调用者。
-     */
+    /** 无 jsLib 但需要内置 CryptoJS 时的兜底作用域缓存 */
+    private val cryptoScopeMap = LruCache<String, WeakReference<ScriptBindings>>(16)
+    private val cryptoScopeLock = Any()
+
+    @Volatile
+    private var cryptoJsScript: CompiledScript? = null
+    private val cryptoCompileLock = Any()
+    private val secureRandom by lazy { SecureRandom() }
+
+    /** [prefetch] 专用后台作用域，单个 URL 失败不影响其它 URL */
     private val prefetchScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     /**
-     * jsLib 解析核心：下载 URL 片段并按顺序拼装成一段可执行的 JS 字符串。
+     * 把内置 CryptoJS 装进 [scope]，并把 `WordArray.random` 换成宿主 [SecureRandom]。
      *
-     * 处理策略：
-     * - `null` 或空白 → 返回 `null`；
-     * - 不是 JSON 对象（普通 JS 字符串）→ 原样返回；
-     * - 是 JSON 对象 → 遍历所有 value：
-     *   - value 是绝对 URL：先查 [aCache]；命中直接用，未命中通过 [runBlocking] 同步下载并回写缓存；
-     *     下载失败抛 [NoStackTraceException]；
-     *   - value 是内联 JS：直接使用；
-     *   - 非空片段按顺序用 `\n` 拼接。
+     * 脚本侧的 `Math.random`/`CryptoJS.lib.WordArray.random` 默认实现安全性不足，
+     * 这里用临时绑定 `__legadoSecureRandomInt` 把宿主随机源注入后立即删除。
      *
-     * 被 [getScope] 和 [getJsLibString] 共同复用，属于"下载 + 拼装"的唯一入口。
+     * @return 资源缺失（老安装包）时返回 false，调用方应视为「无 CryptoJS」继续运行
      */
-    private fun resolveJsLibString(jsLib: String?): String? {
-        if (jsLib.isNullOrBlank()) {
-            return null
+    internal fun installCryptoJs(
+        scope: ScriptBindings,
+        coroutineContext: CoroutineContext?,
+    ): Boolean {
+        val cryptoJs = compiledCryptoJs() ?: return false
+        cryptoJs.eval(scope, coroutineContext)
+        val secureRandomFunction = object : BaseFunction() {
+            override fun call(
+                cx: Context,
+                callScope: VarScope,
+                thisObj: Scriptable,
+                args: Array<Any>,
+            ): Any = secureRandom.nextInt().toDouble()
+        }.apply {
+            parentScope = scope
+            prototype = ScriptableObject.getFunctionPrototype(scope)
         }
-        return if (jsLib.isJsonObject()) {
-            val jsMap: Map<String, String> = GSON.fromJson(
-                jsLib,
-                TypeToken.getParameterized(
-                    Map::class.java,
-                    String::class.java,
-                    String::class.java
-                ).type
-            )
-            buildString {
-                jsMap.values.forEach { value ->
-                    val js = when {
-                        value.isAbsUrl() -> {
-                            val fileName = MD5Utils.md5Encode(value)
-                            var cacheJs = aCache.getAsString(fileName)
-                            if (cacheJs == null) {
-                                cacheJs = runBlocking {
-                                    okHttpClient.newCallStrResponse {
-                                        url(value)
-                                    }.body
-                                }
-                                if (cacheJs != null) {
-                                    aCache.put(fileName, cacheJs)
-                                } else {
-                                    throw NoStackTraceException("下载jsLib-${value}失败")
-                                }
-                            }
-                            cacheJs
-                        }
+        ScriptableObject.putProperty(scope, SECURE_RANDOM_BINDING, secureRandomFunction)
+        try {
+            RhinoScriptEngine.eval(SECURE_RANDOM_PATCH, scope, coroutineContext)
+        } finally {
+            scope.delete(SECURE_RANDOM_BINDING)
+        }
+        return true
+    }
 
-                        else -> value
-                    }
-                    if (!js.isNullOrBlank()) {
-                        if (isNotEmpty()) append('\n')
-                        append(js)
-                    }
+    /**
+     * 取「只含内置 CryptoJS」的共享作用域（书源没有有效 jsLib 时的兜底）。
+     *
+     * key 带线程 id：ScriptBindings 的全局对象不是线程安全的，
+     * 不同线程各自持有一份，避免并发执行同一 JS 书源时互相踩。
+     */
+    fun getCryptoScope(
+        scopeNamespace: String,
+        coroutineContext: CoroutineContext?,
+        bookSourceClassPolicy: Boolean = false,
+        bookSourceLabel: String? = null,
+    ): ScriptBindings? {
+        return RhinoClassShutter.withBookSourceClassPolicy(
+            enabled = bookSourceClassPolicy,
+            sourceLabel = bookSourceLabel,
+        ) {
+            val key = "${if (bookSourceClassPolicy) "bookSource" else "default"}:" +
+                "$scopeNamespace:${Thread.currentThread().id}"
+            synchronized(cryptoScopeLock) {
+                cryptoScopeMap[key]?.get()?.let { return@withBookSourceClassPolicy it }
+                val scope = RhinoScriptEngine.getRuntimeScope(ScriptBindings())
+                if (!installCryptoJs(scope, coroutineContext)) {
+                    return@withBookSourceClassPolicy null
                 }
-            }.takeIf { it.isNotBlank() }
-        } else {
-            jsLib
+                scope.globalThis.preventExtensions()
+                cryptoScopeMap.put(key, WeakReference(scope))
+                scope
+            }
         }
     }
 
     /**
-     * 取或构建基于 jsLib 的 Rhino 运行时作用域。
+     * 取或构建基于 jsLib 的共享作用域。
      *
-     * 相同 jsLib 用 `MD5(jsLib)` 作 key 走 [scopeMap]；命中直接返回。
-     * 未命中时：
-     * 1. 通过 [RhinoScriptEngine.getRuntimeScope] 新建一份空 scope；
-     * 2. 用 [resolveJsLibString] 拿到拼装后的 JS 文本并 `eval` 进 scope；
-     * 3. 若 scope 是 [ScriptableObject]，调用 `preventExtensions()` 锁死全局变量表；
-     * 4. 用 [WeakReference] 包好后放回 [scopeMap]。
-     *
-     * @param jsLib 书源 jsLib 字段原文（普通 JS 字符串 或 JSON 对象），空则返回 `null`
-     * @param coroutineContext 传给 [RhinoScriptEngine.eval] 的协程上下文，用于取消传播
+     * @param jsLib 书源 jsLib 字段原文，空则返回 `null`
+     * @param coroutineContext 传给 eval 的协程上下文，用于取消传播
+     * @param bookSourceClassPolicy 是否套用书源类访问策略（书源规则执行时为 true）
+     * @param scopeNamespace 书源命名空间，`bookSourceClassPolicy` 为 true 时必填
      */
-    fun getScope(jsLib: String?, coroutineContext: CoroutineContext?): Scriptable? {
+    fun getScope(
+        jsLib: String?,
+        coroutineContext: CoroutineContext?,
+        bookSourceClassPolicy: Boolean = false,
+        bookSourceLabel: String? = null,
+        scopeNamespace: String? = null
+    ): ScriptBindings? {
         if (jsLib.isNullOrBlank()) {
             return null
         }
-        val key = MD5Utils.md5Encode(jsLib)
-        var scope = scopeMap[key]?.get()
-        if (scope == null) {
-            scope = RhinoScriptEngine.run {
-                getRuntimeScope(ScriptBindings())
-            }
-            resolveJsLibString(jsLib)?.let {
-                RhinoScriptEngine.eval(it, scope, coroutineContext)
-            }
-            if (scope is ScriptableObject) {
+        return RhinoClassShutter.withBookSourceClassPolicy(
+            enabled = bookSourceClassPolicy,
+            sourceLabel = bookSourceLabel
+        ) {
+            val key = scopeKey(jsLib, bookSourceClassPolicy, scopeNamespace)
+            var scope = scopeMap[key]?.get()
+            if (scope == null) {
+                scope = RhinoScriptEngine.run {
+                    getRuntimeScope(ScriptBindings())
+                }
+                val bundle = JsLibraryBundle.parse(jsLib)
+                // 未声明 builtins 的历史 bundle 与所有旧写法默认都装 CryptoJS
+                if (bundle?.usesCryptoJs != false) installCryptoJs(scope, coroutineContext)
+                if (bundle != null) {
+                    bundle.scripts.forEach { script ->
+                        RhinoScriptEngine.eval(script, scope, coroutineContext)
+                    }
+                } else if (jsLib.isJsonObject()) {
+                    val jsMap: Map<String, String> = GSON.fromJson(
+                        jsLib,
+                        TypeToken.getParameterized(
+                            Map::class.java,
+                            String::class.java,
+                            String::class.java
+                        ).type
+                    )
+                    jsMap.values.forEach { value ->
+                        if (value.isAbsUrl()) {
+                            evalLegacyUrlFragment(value, scope, coroutineContext)
+                        }
+                    }
+                } else {
+                    RhinoScriptEngine.eval(jsLib, scope, coroutineContext)
+                }
                 /**
-                 * 锁死全局变量表：函数内未使用 `var` 声明的赋值会被直接拒绝，
-                 * 后续读取该"隐式全局变量"时报"变量未定义"，避免跨规则相互污染。
+                 * 阻止新全局增加（即函数内未用var的隐性全局变量创建）,会直接隐性创建失败,提示变量未定义
                  */
-                scope.preventExtensions()
+                scope.globalThis.preventExtensions()
+                scopeMap.put(key, WeakReference(scope))
             }
-            scopeMap.put(key, WeakReference(scope))
+            scope
         }
-        return scope
     }
 
     /**
-     * 只做"下载 + 拼装"，返回可直接塞给 WebView / eval 的 JS 字符串，
-     * 不构建 Rhino 作用域，也不进 [scopeMap] 缓存。
-     *
-     * 主要给 [io.legado.app.help.webView.WebJsExtensions.buildUseWebInjection]
-     * 这类只需要 JS 文本、不需要 Scriptable 的场景使用。
-     *
-     * 同样存在 URL 未命中缓存时通过 [runBlocking] 同步下载的行为，
-     * 主线程直接调用会阻塞渲染，调用方需注意切线程。
+     * 只做「下载 + 拼装」，返回可直接塞给 WebView / eval 的 JS 字符串，
+     * 不构建作用域，也不进 [scopeMap] 缓存。
      */
     fun getJsLibString(jsLib: String?): String? {
-        return resolveJsLibString(jsLib)
+        if (jsLib.isNullOrBlank()) {
+            return null
+        }
+        JsLibraryBundle.parse(jsLib)?.let { return it.scripts.joinToString("\n") }
+        if (!jsLib.isJsonObject()) {
+            return jsLib
+        }
+        val jsMap: Map<String, String> = GSON.fromJson(
+            jsLib,
+            TypeToken.getParameterized(
+                Map::class.java,
+                String::class.java,
+                String::class.java
+            ).type
+        )
+        return buildString {
+            jsMap.values.forEach { value ->
+                val js = if (value.isAbsUrl()) loadLegacyUrlFragment(value) else value
+                if (!js.isNullOrBlank()) {
+                    if (isNotEmpty()) append('\n')
+                    append(js)
+                }
+            }
+        }.takeIf { it.isNotBlank() }
     }
 
     /**
-     * 后台异步预下载 jsLib 里的 URL 片段到磁盘缓存。
+     * 后台异步预下载 legacy 映射形式里 URL 片段到磁盘缓存。
      *
-     * 语义：
-     * - 若 jsLib 为 null / 空 / 纯内联 JS（非 JSON 对象）：no-op；
-     * - 若 jsLib 是 JSON 对象：遍历 URL 型 value，对未命中 [aCache] 的 URL 在后台下载并写入；
-     * - 下载失败静默，仅打 [AppLog]，不抛；
-     * - 立即返回，不阻塞调用者。
-     *
-     * 建议在 UI 渲染前提前调用（例如 ViewModel 拿到 bookSource 之后、
-     * 书源导入 / 换源 完成后），让首次 useweb 走到 [resolveJsLibString]
-     * 时大概率能命中缓存，避免 [runBlocking] 阻塞主线程。
+     * - bundle / 纯内联 jsLib：no-op（bundle 的代码本来就是内联的）；
+     * - 下载失败静默，仅打 [AppLog]，不抛。
      */
     fun prefetch(jsLib: String?) {
         if (jsLib.isNullOrBlank() || !jsLib.isJsonObject()) return
+        if (JsLibraryBundle.parse(jsLib) != null) return
         val jsMap: Map<String, String> = runCatching {
             GSON.fromJson(
                 jsLib,
@@ -224,16 +278,13 @@ object SharedJsScope {
     /**
      * 让 jsLib 相关缓存失效：书源被编辑或删除时调用。
      *
-     * - 若 jsLib 是 JSON 对象，遍历其中所有 URL 型 value，删除它们在 [aCache] 中的磁盘缓存；
-     * - 不论哪种形式，都从 [scopeMap] 中移除对应的内存项。
-     *
-     * 下一次 [getScope] / [getJsLibString] 会重新走下载与 eval 流程。
+     * 磁盘缓存只针对 legacy 映射里的 URL；内存作用域按 MD5 后缀整体清理。
      */
     fun remove(jsLib: String?) {
         if (jsLib.isNullOrBlank()) {
             return
         }
-        if (jsLib.isJsonObject()) {
+        if (JsLibraryBundle.parse(jsLib) == null && jsLib.isJsonObject()) {
             val jsMap: Map<String, String> = GSON.fromJson(
                 jsLib,
                 TypeToken.getParameterized(
@@ -249,8 +300,77 @@ object SharedJsScope {
                 }
             }
         }
-        val key = MD5Utils.md5Encode(jsLib)
-        scopeMap.remove(key)
+        val jsLibHash = MD5Utils.md5Encode(jsLib)
+        scopeMap.snapshot().keys.forEach { key ->
+            if (key.endsWith(":$jsLibHash")) {
+                scopeMap.remove(key)
+            }
+        }
     }
 
+    private fun compiledCryptoJs(): CompiledScript? {
+        cryptoJsScript?.let { return it }
+        synchronized(cryptoCompileLock) {
+            cryptoJsScript?.let { return it }
+            val script = runCatching {
+                appCtx.assets.open(CRYPTO_JS_ASSET).bufferedReader().use { it.readText() }
+            }.getOrNull() ?: return null
+            return RhinoScriptEngine.compile(script).also { cryptoJsScript = it }
+        }
+    }
+
+    /** legacy 映射里的 URL 片段：先取磁盘缓存，未命中同步下载并回写 */
+    private fun loadLegacyUrlFragment(url: String): String? {
+        val fileName = MD5Utils.md5Encode(url)
+        aCache.getAsString(fileName)?.let { return it }
+        val js = runBlocking {
+            okHttpClient.newCallStrResponse {
+                url(url)
+            }.body
+        }
+        if (js != null) {
+            aCache.put(fileName, js)
+        } else {
+            throw NoStackTraceException("下载jsLib-${url}失败")
+        }
+        return js
+    }
+
+    private fun evalLegacyUrlFragment(
+        url: String,
+        scope: ScriptBindings,
+        coroutineContext: CoroutineContext?
+    ) {
+        loadLegacyUrlFragment(url)?.let {
+            RhinoScriptEngine.eval(it, scope, coroutineContext)
+        }
+    }
+
+    private fun scopeKey(
+        jsLib: String,
+        bookSourceClassPolicy: Boolean,
+        scopeNamespace: String?
+    ): String {
+        val policyPrefix = if (bookSourceClassPolicy) {
+            require(!scopeNamespace.isNullOrBlank()) {
+                "BookSource shared JS scope requires a source namespace"
+            }
+            "bookSource:$scopeNamespace"
+        } else {
+            "default"
+        }
+        return "$policyPrefix:${MD5Utils.md5Encode(jsLib)}"
+    }
+
+    private const val SECURE_RANDOM_PATCH = """
+        CryptoJS.lib.WordArray.random = (function(nextInt) {
+            return function(nBytes) {
+                var words = [];
+                for (var i = 0; i < nBytes; i += 4) {
+                    words.push(nextInt());
+                }
+                return CryptoJS.lib.WordArray.create(words, nBytes);
+            };
+        })(__legadoSecureRandomInt);
+    """
 }

@@ -25,9 +25,10 @@
 package com.script.rhino
 
 import android.os.Build
-import org.mozilla.javascript.ClassShutter
-import org.mozilla.javascript.Context
-import org.mozilla.javascript.Scriptable
+import org.htmlunit.corejs.javascript.ClassShutter
+import org.htmlunit.corejs.javascript.Context
+import org.htmlunit.corejs.javascript.Scriptable
+import org.htmlunit.corejs.javascript.VarScope
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.lang.reflect.Member
@@ -44,6 +45,29 @@ import java.util.Collections
  * @since 1.6
  */
 object RhinoClassShutter : ClassShutter {
+
+    private const val appClassPrefix = "io.legado.app."
+
+    /**
+     * BookSource 脚本必须主动构造且已经过兼容审计的 App 类型。
+     *
+     * 宿主注入或返回的对象不属于直接类导入，必须通过包装能力暴露，不能因此加入本表。
+     * 新增条目必须同时提供现有书源证据和默认拒绝回归测试。
+     */
+    private val bookSourceDirectClassImports = setOf(
+        "io.legado.app.help.http.StrResponse"
+    )
+
+    private val bookSourceProtectedClassNames = setOf(
+        "android.webkit.CookieManager",
+        "android.webkit.CookieSyncManager"
+    )
+
+    private val bookSourcePolicyDepth = ThreadLocal<Int>()
+
+    private val bookSourceLabel = ThreadLocal<String>()
+
+    private val hostObjectClassAccess = ThreadLocal<Set<String>>()
 
     private val protectedClassNamesMatcher by lazy {
         listOf(
@@ -87,7 +111,8 @@ object RhinoClassShutter : ClassShutter {
             "cn.hutool.core.util.ReflectUtil",
             "cn.hutool.core.util.SerializeUtil",
             "cn.hutool.core.util.ClassUtil",
-            "org.mozilla.javascript.DefiningClassLoader",
+            "org.htmlunit.corejs.javascript.DefiningClassLoader",
+            "org.htmlunit.corejs.javascript.NestedScriptScope",
             "io.legado.app.data.AppDatabase",
             "io.legado.app.data.AppDatabase_Impl",
             "io.legado.app.data.AppDatabaseKt",
@@ -107,12 +132,18 @@ object RhinoClassShutter : ClassShutter {
             "cn.hutool.core.io",
             "cn.hutool.core.bean",
             "cn.hutool.core.lang.reflect",
+            // QuickJS 只能经宿主注入的隔离进程窄门面调用，禁止 Rhino 直接构造运行时。
+            "com.dokar.quickjs",
+            // System JS execution is available only through the bounded host facade.
+            "androidx.javascriptengine",
+            "org.chromium.android_webview.js_sandbox",
             "dalvik.system",
             "java.nio.file",
             "java.lang.reflect",
             "java.lang.invoke",
             "io.legado.app.data.dao",
             "com.script",
+            "org.htmlunit.corejs",
             "org.mozilla",
             "sun",
             "libcore",
@@ -161,7 +192,7 @@ object RhinoClassShutter : ClassShutter {
                 is Path -> return false
             }
         }
-        return visibleToScripts(obj.javaClass.name)
+        return !protectedClassNamesMatcher.match(obj.javaClass.name)
     }
 
     fun visibleToScripts(clazz: Class<*>): Boolean {
@@ -170,10 +201,54 @@ object RhinoClassShutter : ClassShutter {
                 return false
             }
         }
-        return true
+        return visibleToScripts(clazz.name)
     }
 
-    fun wrapJavaClass(scope: Scriptable, javaClass: Class<*>): Scriptable {
+    fun <T> withBookSourceClassPolicy(
+        enabled: Boolean,
+        sourceLabel: String? = null,
+        block: () -> T
+    ): T {
+        if (!enabled) return block()
+        val previousDepth = bookSourcePolicyDepth.get() ?: 0
+        val previousLabel = bookSourceLabel.get()
+        bookSourcePolicyDepth.set(previousDepth + 1)
+        if (!sourceLabel.isNullOrBlank()) {
+            bookSourceLabel.set(sourceLabel)
+        }
+        return try {
+            block()
+        } finally {
+            if (previousDepth == 0) {
+                bookSourcePolicyDepth.remove()
+            } else {
+                bookSourcePolicyDepth.set(previousDepth)
+            }
+            if (previousLabel == null) {
+                bookSourceLabel.remove()
+            } else {
+                bookSourceLabel.set(previousLabel)
+            }
+        }
+    }
+
+    fun currentBookSourceLabel(): String? = bookSourceLabel.get()
+
+    fun <T> withHostObjectClassAccess(clazz: Class<*>, block: () -> T): T {
+        val previous = hostObjectClassAccess.get().orEmpty()
+        hostObjectClassAccess.set(previous + clazz.name)
+        return try {
+            block()
+        } finally {
+            if (previous.isEmpty()) {
+                hostObjectClassAccess.remove()
+            } else {
+                hostObjectClassAccess.set(previous)
+            }
+        }
+    }
+
+    fun wrapJavaClass(scope: VarScope, javaClass: Class<*>): Scriptable {
         return when (javaClass) {
             System::class.java -> {
                 ProtectedNativeJavaClass(scope, javaClass, systemClassProtectedName)
@@ -184,7 +259,25 @@ object RhinoClassShutter : ClassShutter {
     }
 
     override fun visibleToScripts(fullClassName: String): Boolean {
-        return !protectedClassNamesMatcher.match(fullClassName)
+        if (protectedClassNamesMatcher.match(fullClassName)) {
+            return false
+        }
+        if (
+            (bookSourcePolicyDepth.get() ?: 0) > 0 &&
+            fullClassName in bookSourceProtectedClassNames
+        ) {
+            return false
+        }
+        if (fullClassName in hostObjectClassAccess.get().orEmpty()) {
+            return true
+        }
+        if (
+            (bookSourcePolicyDepth.get() ?: 0) > 0 &&
+            fullClassName.startsWith(appClassPrefix)
+        ) {
+            return fullClassName in bookSourceDirectClassImports
+        }
+        return true
     }
 
 }

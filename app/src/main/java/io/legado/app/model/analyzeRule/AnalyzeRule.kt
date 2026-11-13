@@ -40,9 +40,10 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.apache.commons.text.StringEscapeUtils
+import org.htmlunit.corejs.javascript.NativeObject
+import org.htmlunit.corejs.javascript.Scriptable
+import org.htmlunit.corejs.javascript.TopLevel
 import org.jsoup.nodes.Node
-import org.mozilla.javascript.NativeObject
-import org.mozilla.javascript.Scriptable
 import java.lang.ref.WeakReference
 import java.net.URL
 import java.util.Locale
@@ -81,7 +82,7 @@ class AnalyzeRule(
     private val stringRuleCache = hashMapOf<String, List<SourceRule>>()
     private val regexCache = hashMapOf<String, Regex?>()
     private val scriptCache = hashMapOf<String, CompiledScript>()
-    private var topScopeRef: WeakReference<Scriptable>? = null
+    private var topScopeRef: WeakReference<TopLevel>? = null
     private var evalJSCallCount = 0
 
     private var coroutineContext: CoroutineContext = EmptyCoroutineContext
@@ -1064,14 +1065,19 @@ class AnalyzeRule(
         }
         val topScope = source?.getShareScope(coroutineContext) ?: topScopeRef?.get()
         val scope = if (topScope == null) {
-            RhinoScriptEngine.getRuntimeScope(bindings).apply {
-                if (evalJSCallCount++ > 16) {
-                    topScopeRef = WeakReference(prototype)
-                }
+            // 首次（或缓存被 GC）时新建一套标准对象顶层；调用次数多了之后缓存起来复用，
+            // 省掉重复 initStandardObjects 的开销（旧实现缓存的是 prototype）。
+            val standardTop = RhinoScriptEngine.newStandardTopLevel()
+            bindings.apply {
+                chainTo(standardTop)
             }
+            if (evalJSCallCount++ > 16) {
+                topScopeRef = WeakReference(standardTop)
+            }
+            bindings
         } else {
             bindings.apply {
-                prototype = topScope
+                chainTo(topScope)
             }
         }
         

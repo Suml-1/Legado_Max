@@ -1,99 +1,65 @@
-/*
- * Copyright (c) 2005, 2006, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
- */
 package com.script.rhino
 
 import com.script.CompiledScript
-import com.script.ScriptEngine
 import com.script.ScriptException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.asContextElement
 import kotlinx.coroutines.withContext
-import org.mozilla.javascript.Context
-import org.mozilla.javascript.ContinuationPending
-import org.mozilla.javascript.RhinoException
-import org.mozilla.javascript.Script
-import org.mozilla.javascript.Scriptable
+import org.htmlunit.corejs.javascript.Context
+import org.htmlunit.corejs.javascript.ContinuationPending
+import org.htmlunit.corejs.javascript.NestedScriptScope
+import org.htmlunit.corejs.javascript.RhinoException
+import org.htmlunit.corejs.javascript.Script
+import org.htmlunit.corejs.javascript.VarScope
 import java.io.IOException
 import kotlin.coroutines.CoroutineContext
 
-/**
- * Represents compiled JavaScript code.
- *
- * @author Mike Grogan
- * @since 1.6
- */
 internal class RhinoCompiledScript(
-    private val engine: RhinoScriptEngine,
     private val script: Script,
     private val source: String,
     private val sourceName: String,
 ) : CompiledScript() {
 
-    override fun getEngine(): ScriptEngine {
-        return engine
-    }
-
-    override fun eval(scope: Scriptable, coroutineContext: CoroutineContext?): Any? {
+    override fun eval(scope: VarScope, coroutineContext: CoroutineContext?): Any? {
         val cx = Context.enter() as RhinoContext
         val previousCoroutineContext = cx.coroutineContext
-        val previousDebugger = cx.debugger
+        val previousAllowScriptRun = cx.allowScriptRun
         if (coroutineContext != null && coroutineContext[Job] != null) {
             cx.coroutineContext = coroutineContext
         }
         cx.allowScriptRun = true
         cx.recursiveCount++
-        // 安装 RhinoDebugAdapter 以追踪脚本执行行号，执行完毕后恢复原来的 debugger
-        cx.setDebugger(RhinoDebugAdapter, null)
         val result: Any?
         try {
             cx.checkRecursive()
-            val ret = script.exec(cx, scope)
-            result = engine.unwrapReturnValue(ret)
+            val ret = NestedScriptScope.enter(cx, scope).use {
+                script.exec(cx, scope, RhinoScriptEngine.topLevelThis(scope))
+            }
+            result = RhinoScriptEngine.unwrapReturnValue(ret)
         } catch (re: RhinoException) {
             throw RhinoScriptEngine.createScriptException(re, source, sourceName)
         } finally {
             cx.coroutineContext = previousCoroutineContext
-            cx.allowScriptRun = false
+            cx.allowScriptRun = previousAllowScriptRun
             cx.recursiveCount--
-            // 恢复之前的 debugger，避免影响其他脚本引擎的调试行为
-            cx.setDebugger(previousDebugger, null)
             Context.exit()
         }
         return result
     }
 
-    override suspend fun evalSuspend(scope: Scriptable): Any? {
+    override suspend fun evalSuspend(scope: VarScope): Any? {
         val cx = Context.enter() as RhinoContext
+        Context.exit()
         var ret: Any?
-        withContext(VMBridgeReflect.contextLocal.asContextElement()) {
+        withContext(RhinoContextElement(cx)) {
+            val previousAllowScriptRun = cx.allowScriptRun
             cx.allowScriptRun = true
             cx.recursiveCount++
             try {
                 cx.checkRecursive()
                 try {
-                    ret = cx.executeScriptWithContinuations(script, scope)
+                    ret = NestedScriptScope.enter(cx, scope).use {
+                        cx.executeScriptWithContinuations(script, scope)
+                    }
                 } catch (e: ContinuationPending) {
                     var pending = e
                     while (true) {
@@ -102,7 +68,9 @@ internal class RhinoCompiledScript(
                             val suspendFunction = pending.applicationState as suspend () -> Any?
                             val functionResult = suspendFunction()
                             val continuation = pending.continuation
-                            ret = cx.resumeContinuation(continuation, scope, functionResult)
+                            ret = NestedScriptScope.enter(cx, scope).use {
+                                cx.resumeContinuation(continuation, scope, functionResult)
+                            }
                             break
                         } catch (e: ContinuationPending) {
                             pending = e
@@ -114,12 +82,11 @@ internal class RhinoCompiledScript(
             } catch (var14: IOException) {
                 throw ScriptException(var14)
             } finally {
-                cx.allowScriptRun = false
+                cx.allowScriptRun = previousAllowScriptRun
                 cx.recursiveCount--
-                Context.exit()
             }
         }
-        return engine.unwrapReturnValue(ret)
+        return RhinoScriptEngine.unwrapReturnValue(ret)
     }
 
 }

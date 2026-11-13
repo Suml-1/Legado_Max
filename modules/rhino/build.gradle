@@ -39,7 +39,8 @@ android {
 
 dependencies {
 //    api(fileTree(dir: 'lib', include: ['rhino-1.7.14.jar']))
-    api libs.mozilla.rhino
+    // HtmlUnit Rhino 分支：与 NG 分支 JS 单文件书源参考实现保持一致的 JS 引擎版本
+    api libs.htmlunit.core.js
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.okhttp)

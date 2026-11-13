@@ -1,10 +1,11 @@
 package com.script.rhino
 
-import org.mozilla.javascript.Context
-import org.mozilla.javascript.Scriptable
-import org.mozilla.javascript.debug.DebugFrame
-import org.mozilla.javascript.debug.DebuggableScript
-import org.mozilla.javascript.debug.Debugger
+import org.htmlunit.corejs.javascript.Context
+import org.htmlunit.corejs.javascript.Scriptable
+import org.htmlunit.corejs.javascript.VarScope
+import org.htmlunit.corejs.javascript.debug.DebugFrame
+import org.htmlunit.corejs.javascript.debug.DebuggableScript
+import org.htmlunit.corejs.javascript.debug.Debugger
 
 /**
  * 轻量级 Rhino 调试器，用于追踪脚本执行时的当前行号。
@@ -21,7 +22,12 @@ object RhinoDebugAdapter : Debugger {
     }
 
     private object ScriptDebugFrame : DebugFrame {
-        override fun onEnter(cx: Context, activation: Scriptable, thisObj: Scriptable, args: Array<Any?>) {
+        override fun onEnter(
+            cx: Context,
+            activation: VarScope,
+            thisObj: Scriptable,
+            args: Array<Any?>
+        ) {
             if (cx is RhinoContext) {
                 cx.currentScriptLine = -1
             }

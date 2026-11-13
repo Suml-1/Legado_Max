@@ -33,7 +33,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import org.mozilla.javascript.Context
+import org.htmlunit.corejs.javascript.Context
 import splitties.init.appCtx
 import io.legado.app.constant.AppPattern
 import kotlinx.coroutines.currentCoroutineContext
