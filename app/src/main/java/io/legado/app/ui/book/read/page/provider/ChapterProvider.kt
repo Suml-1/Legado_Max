@@ -211,17 +211,20 @@ object ChapterProvider {
     fun upStyle() {
         typeface = getTypeface(ReadBookConfig.textFont)
         getPaints(typeface).let {
-            titlePaint = it.first
-            contentPaint = it.second
+            // 原地 set 而不是换新对象：已排版的行通过 TextLine.lineTextPaint 持有这两个画笔，
+            // TextChapterLayout 也在构造时捕获了它们的引用。换成新对象后，这些持有方会一直
+            // 用旧字重/旧样式绘制，表现为「调字重、调粗细没反应，重进阅读页才生效」
+            titlePaint.set(it.first)
+            contentPaint.set(it.second)
 //            reviewPaint.color = contentPaint.color
 //            reviewPaint.textSize = contentPaint.textSize * 0.45f
 //            reviewPaint.textAlign = Paint.Align.CENTER
         }
         // 次行只在标题分段后出现，字号 = 首行字号 × 倍数（<1 比首行小，>1 比首行大）。
-        // 下限 1px：倍数可以拖到 0，字号为 0 会让文字测量与绘制失去意义
-        titleSubPaint = TextPaint(titlePaint).apply {
-            textSize = (titlePaint.textSize * ReadBookConfig.titleSubScale).coerceAtLeast(1f)
-        }
+        // 下限 1px：倍数可以拖到 0，字号为 0 会让文字测量与绘制失去意义。
+        // 同样原地更新：已排版的次行也持有这个画笔对象
+        titleSubPaint.set(titlePaint)
+        titleSubPaint.textSize = (titlePaint.textSize * ReadBookConfig.titleSubScale).coerceAtLeast(1f)
         //间距
         lineSpacingExtra = ReadBookConfig.lineSpacingExtra / 10f
         titleLineSpacing = ReadBookConfig.titleLineSpacingExtra / 10f
