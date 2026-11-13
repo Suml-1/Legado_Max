@@ -9,6 +9,7 @@ import com.script.ScriptBindings
 import com.script.buildScriptBindings
 import com.script.rhino.RhinoContext
 import com.script.rhino.RhinoScriptEngine
+import io.legado.app.R
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.BookSource
 import io.legado.app.exception.NoStackTraceException
@@ -37,6 +38,7 @@ import org.htmlunit.corejs.javascript.Scriptable
 import org.htmlunit.corejs.javascript.ScriptableObject
 import org.htmlunit.corejs.javascript.Undefined
 import org.htmlunit.corejs.javascript.Wrapper
+import splitties.init.appCtx
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPInputStream
@@ -89,10 +91,10 @@ class JsSourceEngine(
      */
     fun postBase64Body(url: String, bodyBase64: String, headersJson: String?): String {
         val httpUrl = url.toHttpUrl()
-        require(httpUrl.isHttps) { "二进制请求只允许 HTTPS" }
+        require(httpUrl.isHttps) { appCtx.getString(R.string.js_source_error_https_only) }
         val body = Base64.decode(bodyBase64)
-        require(body.isNotEmpty()) { "二进制请求正文不能为空" }
-        require(body.size <= MAX_BINARY_REQUEST_BYTES) { "二进制请求正文过大" }
+        require(body.isNotEmpty()) { appCtx.getString(R.string.js_source_content_empty) }
+        require(body.size <= MAX_BINARY_REQUEST_BYTES) { appCtx.getString(R.string.js_source_error_body_too_large) }
         val headers = headersJson
             ?.let { GSON.fromJsonObject<Map<String, String>>(it).getOrNull() }
             ?: emptyMap()
@@ -142,7 +144,7 @@ class JsSourceEngine(
     fun callFunction(name: String, args: List<Pair<String, Any?>>): String? {
         val scope = buildScope(args)
         if (ScriptableObject.getProperty(scope, name) !is Function) {
-            throw NoStackTraceException("JS源缺少函数 $name")
+            throw NoStackTraceException(appCtx.getString(R.string.js_source_error_function_required, name))
         }
         val expression = "$name(${args.joinToString(", ") { it.first }})"
         return normalizeJsResult(compile(expression).eval(scope, coroutineContext), coroutineContext)
@@ -177,7 +179,7 @@ class JsSourceEngine(
         val profiling = Debug.isLocalDebug(source.getKey())
         val started = if (profiling) SystemClock.elapsedRealtime() else 0L
         val script = source.mainJs?.takeIf { it.isNotBlank() }
-            ?: throw NoStackTraceException("mainJs 为空，不是 JS 书源")
+            ?: throw NoStackTraceException(appCtx.getString(R.string.js_source_error_main_empty))
         val bindings = buildScriptBindings { values ->
             values["java"] = this
             values["source"] = source
@@ -265,7 +267,7 @@ class JsSourceEngine(
                     throw error
                 } catch (error: Exception) {
                     throw NoStackTraceException(
-                        "JS返回值 JSON.stringify 失败: ${error.message}",
+                        appCtx.getString(R.string.js_source_error_stringify, error.message),
                     )
                 }
                 return RhinoScriptEngine.unwrapReturnValue(raw) as? String

@@ -24,6 +24,12 @@
 - [Github分支GEd520](https://github.com/GEd520/legados)
 - [Github分支Suml-1](https://github.com/Suml-1/Legado_Max)
 
+**2026/11/14**
+
+- feat(JS书源): 列表中点击 JS 书源直接进入代码编辑页，保存时校验脚本并写库；普通书源仍进规则编辑页
+- fix(详情页): JS 书源补回 `durChapterTitle`/`totalChapterNum`/`latestChapterTitle`，目录不再显示「目录：null」；目录懒加载（Flow）分支也支持 JS 源
+- refactor(JS书源): 导入/保存/沙箱的错误提示全部改用字符串资源；补全 JS 书源帮助页与代码注释
+
 **2026/11/13**
 
 - feat(JS引擎): JavaScript 引擎切换为 HtmlUnit Rhino 分支（含嵌套作用域修复、动态 eval/this 补丁），书源规则支持更完整的 ES6 语法

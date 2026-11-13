@@ -4,6 +4,7 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
+import io.legado.app.R
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
@@ -14,6 +15,7 @@ import io.legado.app.help.source.getBookType
 import io.legado.app.model.Debug
 import io.legado.app.utils.GSON
 import io.legado.app.utils.NetworkUtils
+import splitties.init.appCtx
 
 /**
  * JS 返回值 → 实体。
@@ -45,7 +47,9 @@ object JsSourceMarshaller {
         val result = arrayListOf<SearchBook>()
         if (json.isNullOrBlank()) return result
         val array = runCatching { GSON.fromJson(json, JsonArray::class.java) }.getOrNull()
-            ?: throw NoStackTraceException("search/explore 返回值不是数组")
+            ?: throw NoStackTraceException(
+                appCtx.getString(R.string.js_source_error_result_type, "search/explore")
+            )
         array.forEach { element ->
             val jsonObject = element as? JsonObject ?: return@forEach
             val book = runCatching { GSON.fromJson(jsonObject, SearchBook::class.java) }
@@ -71,7 +75,9 @@ object JsSourceMarshaller {
     ) {
         if (json.isNullOrBlank()) return
         val jsonObject = runCatching { GSON.fromJson(json, JsonObject::class.java) }.getOrNull()
-            ?: throw NoStackTraceException("getBookInfo 返回值不是对象")
+            ?: throw NoStackTraceException(
+                appCtx.getString(R.string.js_source_error_result_type, "getBookInfo")
+            )
         jsonObject.entrySet().forEach { (key, value) ->
             if (value.isJsonNull) return@forEach
             when (key) {
@@ -82,6 +88,11 @@ object JsSourceMarshaller {
                 "kind" -> book.kind = value.asString
                 "wordCount" -> book.wordCount = value.asString
                 "latestChapterTitle" -> book.latestChapterTitle = value.asString
+                // 详情页「目录」行显示的是 durChapterTitle；部分源会在详情里直接给出
+                "durChapterTitle" -> book.durChapterTitle = value.asString
+                "totalChapterNum" -> {
+                    runCatching { value.asInt }.getOrNull()?.let { book.totalChapterNum = it }
+                }
                 "tocUrl" -> book.tocUrl = value.asString
                 "downloadUrls" -> mergeDownloadUrls(book, value, source)
                 "variable" -> mergeVariable(book, value, source)
@@ -144,7 +155,9 @@ object JsSourceMarshaller {
         val chapters = arrayListOf<BookChapter>()
         if (json.isNullOrBlank()) return chapters
         val array = runCatching { GSON.fromJson(json, JsonArray::class.java) }.getOrNull()
-            ?: throw NoStackTraceException("getChapters 返回值不是数组")
+            ?: throw NoStackTraceException(
+                appCtx.getString(R.string.js_source_error_result_type, "getChapters")
+            )
         array.forEach { element ->
             val jsonObject = element as? JsonObject ?: return@forEach
             val chapter = runCatching { GSON.fromJson(jsonObject, BookChapter::class.java) }

@@ -84,6 +84,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 书源管理界面
@@ -136,8 +137,9 @@ class BookSourceActivity :
             runCatching { JsSourceUpsert.save(script) }
                 .onSuccess { source ->
                     toastOnUi(R.string.success)
-                    startActivity<BookSourceEditActivity> {
-                        putExtra("sourceUrl", source.bookSourceUrl)
+                    // 新建完成直接进代码编辑页，用户可以接着调整脚本
+                    startActivity<CodeEditActivity> {
+                        putExtra(CodeEditActivity.EXTRA_JS_SOURCE_URL, source.bookSourceUrl)
                     }
                 }
                 .onFailure { error ->
@@ -806,9 +808,26 @@ class BookSourceActivity :
         }
     }
 
+    /**
+     * 打开书源编辑。
+     *
+     * JS 书源（mainJs 非空）没有规则字段可填，直接进代码编辑页；普通书源仍进规则编辑页。
+     * mainJs 不在 BookSourcePart 视图里，所以这里查一次库再决定（IO 线程，避免阻塞列表）。
+     */
     override fun edit(bookSource: BookSourcePart) {
-        startActivity<BookSourceEditActivity> {
-            putExtra("sourceUrl", bookSource.bookSourceUrl)
+        lifecycleScope.launch {
+            val source = withContext(IO) {
+                appDb.bookSourceDao.getBookSource(bookSource.bookSourceUrl)
+            }
+            if (source?.mainJs.isNullOrBlank()) {
+                startActivity<BookSourceEditActivity> {
+                    putExtra("sourceUrl", bookSource.bookSourceUrl)
+                }
+            } else {
+                startActivity<CodeEditActivity> {
+                    putExtra(CodeEditActivity.EXTRA_JS_SOURCE_URL, bookSource.bookSourceUrl)
+                }
+            }
         }
     }
 

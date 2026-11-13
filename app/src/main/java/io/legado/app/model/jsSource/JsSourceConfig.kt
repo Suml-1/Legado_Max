@@ -5,6 +5,7 @@ import com.script.ScriptBindings
 import com.script.buildScriptBindings
 import com.script.rhino.RhinoClassShutter
 import com.script.rhino.RhinoScriptEngine
+import io.legado.app.R
 import io.legado.app.constant.BookSourceType
 import io.legado.app.data.entities.BookSource
 import io.legado.app.exception.NoStackTraceException
@@ -22,6 +23,7 @@ import org.htmlunit.corejs.javascript.ast.ObjectLiteral
 import org.htmlunit.corejs.javascript.ast.ObjectProperty
 import org.htmlunit.corejs.javascript.ast.StringLiteral
 import org.htmlunit.corejs.javascript.ast.VariableInitializer
+import splitties.init.appCtx
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -81,13 +83,13 @@ object JsSourceConfig {
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            throw NoStackTraceException("JS源脚本执行失败: ${error.message}")
+            throw NoStackTraceException(appCtx.getString(R.string.js_source_error_script_failed, error.message))
         }
         val (configName, config) = findConfig(scope, coroutineContext)
         val json = JsSourceEngine.normalizeJsResult(config, coroutineContext)
-            ?: throw NoStackTraceException("$configName 配置对象无法解析")
+            ?: throw NoStackTraceException(appCtx.getString(R.string.js_source_error_config_invalid, configName))
         val jsonObject = runCatching { GSON.fromJson(json, JsonObject::class.java) }.getOrNull()
-            ?: throw NoStackTraceException("$configName 配置对象不是合法对象")
+            ?: throw NoStackTraceException(appCtx.getString(R.string.js_source_error_config_invalid, configName))
         strippedKeys.forEach(jsonObject::remove)
         jsonObject.get("jsLib")?.takeIf {
             it.isJsonPrimitive && it.asJsonPrimitive.isString
@@ -100,12 +102,12 @@ object JsSourceConfig {
         normalizeExploreUrl(jsonObject)
         normalizeLoginUi(jsonObject)
         val source = runCatching { GSON.fromJson(jsonObject, BookSource::class.java) }.getOrNull()
-            ?: throw NoStackTraceException("$configName 配置对象字段类型不符")
+            ?: throw NoStackTraceException(appCtx.getString(R.string.js_source_error_config_invalid, configName))
         if (source.bookSourceUrl.isBlank()) {
-            throw NoStackTraceException("JS源 $configName.bookSourceUrl 不能为空")
+            throw NoStackTraceException(appCtx.getString(R.string.js_source_error_url_required))
         }
         if (source.bookSourceName.isBlank()) {
-            throw NoStackTraceException("JS源 $configName.bookSourceName 不能为空")
+            throw NoStackTraceException(appCtx.getString(R.string.js_source_error_name_required))
         }
         val required = if (source.bookSourceType == BookSourceType.file) {
             fileSourceRequiredFunctions
@@ -114,13 +116,13 @@ object JsSourceConfig {
         }
         required.forEach { name ->
             if (ScriptableObject.getProperty(scope, name) !is Function) {
-                throw NoStackTraceException("JS源缺少必备函数 $name")
+                throw NoStackTraceException(appCtx.getString(R.string.js_source_error_function_required, name))
             }
         }
         if (!source.exploreUrl.isNullOrBlank() &&
             ScriptableObject.getProperty(scope, "explore") !is Function
         ) {
-            throw NoStackTraceException("JS源声明了 exploreUrl，缺少配对的 explore 函数")
+            throw NoStackTraceException(appCtx.getString(R.string.js_source_error_explore_function))
         }
         source.mainJs = text
         return source
@@ -140,7 +142,7 @@ object JsSourceConfig {
         if (hasLegacyConfig) {
             return LEGACY_CONFIG_PROPERTY to requireNotNull(legacyConfig)
         }
-        throw NoStackTraceException("JS源缺少顶层 config 配置对象（兼容旧版 source）")
+        throw NoStackTraceException(appCtx.getString(R.string.js_source_error_no_config))
     }
 
     private fun isCompleteConfig(
@@ -167,7 +169,7 @@ object JsSourceConfig {
         array.forEachIndexed { index, item ->
             val title = runCatching { item.asJsonObject.get("title")?.asString }.getOrNull()
             if (title.isNullOrBlank()) {
-                throw NoStackTraceException("exploreUrl 第 ${index + 1} 项缺少 title")
+                throw NoStackTraceException(appCtx.getString(R.string.js_source_error_explore_title, index + 1))
             }
         }
         jsonObject.addProperty("exploreUrl", GSON.toJson(array))
@@ -190,7 +192,7 @@ object JsSourceConfig {
         array.forEachIndexed { index, item ->
             val name = runCatching { item.asJsonObject.get("name")?.asString }.getOrNull()
             if (name.isNullOrBlank()) {
-                throw NoStackTraceException("loginUi 第 ${index + 1} 项缺少 name")
+                throw NoStackTraceException(appCtx.getString(R.string.js_source_error_login_ui_name, index + 1))
             }
         }
         jsonObject.addProperty("loginUi", GSON.toJson(array))

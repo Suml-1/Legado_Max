@@ -28,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Semaphore
 import kotlin.coroutines.CoroutineContext
 
@@ -520,6 +521,13 @@ object WebBook {
         )
         book.removeAllBookType()
         book.addType(bookSource.getBookType())
+        // JS 源目录一次性返回，包装成单次发射的 Flow，复用上层的增量保存/字段回填逻辑
+        if (bookSource.isJsSource()) {
+            return flow {
+                val chapters = JsSourceBook.getChapterListAwait(bookSource, book).getOrThrow()
+                emit(PartialChapterList(chapters, isComplete = true))
+            }
+        }
         if (runPerJs) {
             val tPre = System.currentTimeMillis()
             AppLog.putReaderDebug("[TOC] getChapterListFlow.preUpdateJs开始")

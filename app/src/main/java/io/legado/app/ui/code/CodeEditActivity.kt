@@ -24,6 +24,7 @@ import io.github.rosemoe.sora.widget.EditorSearcher
 import io.github.rosemoe.sora.widget.EditorSearcher.SearchOptions
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
+import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.ActivityCodeEditBinding
 import io.legado.app.help.config.AppConfig
@@ -32,6 +33,7 @@ import io.legado.app.lib.dialogs.AndroidAlertBuilder
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
+import io.legado.app.model.jsSource.JsSourceUpsert
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.source.manage.SourceContentSearchDialog
 import io.legado.app.ui.code.config.ChangeThemeDialog
@@ -44,6 +46,7 @@ import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.showHelp
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import kotlinx.coroutines.launch
 
 /**
  * 代码编辑活动
@@ -54,6 +57,11 @@ class CodeEditActivity :
     VMBaseActivity<ActivityCodeEditBinding, CodeEditViewModel>(),
     KeyboardToolPop.CallBack, ChangeThemeDialog.CallBack, SettingsDialog.CallBack {
     companion object {
+        /**
+         * 传入该 extra 表示「直接编辑某个 JS 书源的主脚本」：
+         * 初始文本来自数据库，保存时由本页调用 JsSourceUpsert 写库并结束页面。
+         */
+        const val EXTRA_JS_SOURCE_URL = "jsSourceUrl"
         private var isInitialized = false
         private var findText = ""
         private var replaceText = ""
@@ -126,6 +134,11 @@ class CodeEditActivity :
     private fun save(check: Boolean) {
         if (!viewModel.writable) return super.finish()
         val text = editor.text.toString()
+        // JS 书源编辑模式：保存 = 写库，不把文本回传给调用方
+        if (viewModel.jsSourceUrl != null) {
+            saveJsSource(text, check)
+            return
+        }
         val cursorPos = editor.cursor?.left ?: 0
         // 获取当前编辑的字段标识和板块标识，用于返回时告诉调用者更新哪个字段
         val fieldKey = viewModel.fieldKey
@@ -172,6 +185,46 @@ class CodeEditActivity :
                 setResult(RESULT_OK, result)
                 super.finish()
             }
+        }
+    }
+
+    /**
+     * 保存 JS 书源主脚本。
+     *
+     * 写库前会重新执行脚本提取 `config`（[JsSourceUpsert.save]），校验不过就留在编辑页并提示原因，
+     * 避免把跑不起来的脚本存进书源列表；成功时把书源 URL 回传给列表页刷新。
+     *
+     * @param script 编辑器当前内容
+     * @param check 是否为「返回键退出」路径（true 时先确认是否放弃修改）
+     */
+    private fun saveJsSource(script: String, check: Boolean) {
+        if (script == viewModel.initialText) {
+            super.finish()
+            return
+        }
+        if (check) {
+            alert(R.string.exit) {
+                setMessage(R.string.exit_no_save)
+                positiveButton(R.string.yes)
+                negativeButton(R.string.no) { super.finish() }
+            }
+            return
+        }
+        val sourceUrl = viewModel.jsSourceUrl ?: return
+        lifecycleScope.launch {
+            runCatching { JsSourceUpsert.save(script, sourceUrl) }
+                .onSuccess {
+                    viewModel.initialText = script
+                    setResult(RESULT_OK, Intent().putExtra("origin", it.bookSourceUrl))
+                    super.finish()
+                }
+                .onFailure {
+                    toastOnUi(
+                        getString(R.string.js_source_save_failed)
+                            .format(it.localizedMessage.orEmpty())
+                    )
+                    AppLog.put("JS书源保存失败:${it.localizedMessage}", it)
+                }
         }
     }
 

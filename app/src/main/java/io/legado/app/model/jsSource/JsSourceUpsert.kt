@@ -1,5 +1,6 @@
 package io.legado.app.model.jsSource
 
+import io.legado.app.R
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
 import io.legado.app.help.ConcurrentRateLimiter.Companion.concurrentRecordMap
@@ -9,6 +10,7 @@ import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.model.SharedJsScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.currentCoroutineContext
+import splitties.init.appCtx
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -48,7 +50,10 @@ object JsSourceUpsert {
     ): BookSource {
         validatePayload(text)?.let {
             throw IllegalArgumentException(
-                if (it == PayloadIssue.EMPTY) "JS 书源内容为空" else "JS 书源不能超过 1 MiB",
+                appCtx.getString(
+                    if (it == PayloadIssue.EMPTY) R.string.js_source_error_empty
+                    else R.string.js_source_error_too_large
+                ),
             )
         }
         return withSaveLock(timeoutMillis) {
@@ -56,7 +61,9 @@ object JsSourceUpsert {
                 val oldUrl = openedSourceUrl?.takeIf(String::isNotBlank)
                 val openedSource = oldUrl?.let(appDb.bookSourceDao::getBookSource)
                 if (oldUrl != null && openedSource == null) {
-                    throw IllegalArgumentException("原书源已不存在，请重新打开后保存")
+                    throw IllegalArgumentException(
+                        appCtx.getString(R.string.js_source_error_not_found)
+                    )
                 }
                 val source = if (timeoutMillis == null) {
                     JsSourceConfig.extract(text, currentCoroutineContext(), openedSource?.jsLib)
@@ -67,7 +74,9 @@ object JsSourceUpsert {
                 }
                 val targetSource = appDb.bookSourceDao.getBookSource(source.bookSourceUrl)
                 if (hasTargetConflict(openedSource, targetSource, source.bookSourceUrl)) {
-                    throw IllegalArgumentException("目标书源 URL 已存在，请先删除目标书源")
+                    throw IllegalArgumentException(
+                        appCtx.getString(R.string.js_source_error_url_conflict)
+                    )
                 }
                 val old = openedSource ?: targetSource
                 val changed = prepareForSave(source, old)

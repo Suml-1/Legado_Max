@@ -906,13 +906,23 @@ class BookInfoActivity :
                     R.string.toc_s,
                     getString(R.string.error_load_toc),
                 )
-                binding.tvLasted.text = getString(R.string.lasted_show, book?.latestChapterTitle)
+                binding.tvLasted.text = getString(
+                    R.string.lasted_show,
+                    book?.latestChapterTitle.orEmpty()
+                )
             }
 
             else -> {
+                val chapters = chapterList.orEmpty()
                 book?.let {
-                    binding.tvToc.text = getString(R.string.toc_s, it.durChapterTitle)
-                    binding.tvLasted.text = getString(R.string.lasted_show, it.latestChapterTitle)
+                    // durChapterTitle / latestChapterTitle 都可能为空（例如尚未打开过的 JS 源书籍），
+                    // 这里用目录首末章兜底，避免 String.format 把 null 打成字面量 "null"
+                    val currentTitle = it.durChapterTitle?.takeIf(String::isNotBlank)
+                        ?: chapters.firstOrNull()?.title.orEmpty()
+                    val latestTitle = it.latestChapterTitle?.takeIf(String::isNotBlank)
+                        ?: chapters.lastOrNull()?.title.orEmpty()
+                    binding.tvToc.text = getString(R.string.toc_s, currentTitle)
+                    binding.tvLasted.text = getString(R.string.lasted_show, latestTitle)
                 }
             }
         }

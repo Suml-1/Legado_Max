@@ -687,7 +687,12 @@ java.openVideoPlayer(url: String, title: String, isFloat: Boolean = false)
 书源可以不再写规则，而是用一份 JavaScript 脚本实现全部抓取流程：脚本保存在书源的 `mainJs` 字段，
 该字段非空时优先走脚本抓取，不再解析规则字段。
 
-导入方式：书源管理 → 导入书源，粘贴纯 JS 文本，或选择本地 `.js` 文件。
+导入方式：书源管理 → 右上角菜单 → 网络导入 / 本地导入 / 二维码导入，地址可以返回 JSON 合集，
+也可以直接是 `.js` 脚本；也可以粘贴纯 JS 文本导入。
+
+新建与编辑：书源管理 → 右上角菜单 → 「新建 JS 书源」打开带模板的代码编辑页；
+列表里点击 JS 书源条目会**直接进入代码编辑页**（普通书源仍进规则编辑页），
+保存时会重新执行脚本提取 `config`，提取失败会留在编辑页并提示原因。
 
 脚本必须提供顶层 `config` 对象（兼容旧版 `source`），并按书源类型导出下列函数：
 
@@ -743,7 +748,21 @@ var out = java.getQuickJsSandbox().evalString("(function(){ return (BigInt(1) <<
 沙箱每次都是一个全新的空作用域：看不到 `java`/`source`/`cache`，也不会污染或读取书源主脚本的全局变量，
 只按字符串返回结果（对象会转成 JSON），适合放签名、加密这类纯计算逻辑。
 
-> JS 书源运行在按书源隔离的 Rhino 作用域中，未声明 `var/let/const` 的隐式全局变量会被拒绝。
->
-> 编辑已有 JS 书源：书源编辑页 → 菜单 → 「编辑 JS 脚本」；新建：书源管理 → 右上角菜单 → 「新建 JS 书源」。
+### 目录与详情字段
+
+`getChapters` 返回目录后，引擎会自动回填这些 Book 字段（与声明式书源一致）：
+
+* `totalChapterNum`：章节总数；
+* `durChapterTitle`：当前阅读进度对应章节标题，详情页「目录」一行显示的就是它；
+* `latestChapterTitle`：最后一章标题。
+
+标题会按书源的替换规则/简繁设置处理。`getBookInfo` 也可以直接给出
+`latestChapterTitle`、`durChapterTitle`、`totalChapterNum`，脚本给了就优先用脚本的值。
+
+### 调试与限制
+
+* 书源调试页可以对 JS 源跑完整链路（搜索 → 详情 → 目录 → 正文），日志里能看到每个函数 return 的 JSON。
+* JS 源运行在按书源隔离的 Rhino 作用域中，未声明 `var/let/const` 的隐式全局变量会被拒绝。
+* 沙箱是同进程隔离：没有独立进程与硬超时，脚本体积/返回值都有上限。
+* 段评（`java.showBrowser` + WebView 回调）尚未支持 JS 源，其它宿主能力以本文档列出的为准。
 

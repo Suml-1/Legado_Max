@@ -9,9 +9,11 @@ import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel
 import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver
 import io.github.rosemoe.sora.widget.CodeEditor
+import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
+import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.CacheManager
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.BackstageWebView
@@ -56,6 +58,11 @@ class CodeEditViewModel(application: Application) : BaseViewModel(application) {
     var fieldKey: String? = null
     // 当前编辑的板块标识，如 "info" 表示详情板块
     var tabKey: String? = null
+    /**
+     * 非空表示当前页面是「直接编辑某个 JS 书源的主脚本」，保存时由本页写库
+     * （[io.legado.app.model.jsSource.JsSourceUpsert]），而不是把文本回传给调用方。
+     */
+    var jsSourceUrl: String? = null
 
     /**
      * 初始化 Sora 编辑器
@@ -79,42 +86,61 @@ class CodeEditViewModel(application: Application) : BaseViewModel(application) {
         intent: Intent, success: () -> Unit
     ) {
         execute {
-            val cacheKey = intent.getStringExtra("cacheKey")
-            if (cacheKey != null) {
-                // 只读预览（TextDialog 等）:从内存取,保持 writable = false;读后即删防滞留
-                val cacheText = CacheManager.getFromMemory(cacheKey) as? String ?: throw Exception("未获取到查看文本")
-                CacheManager.deleteMemory(cacheKey)
-                writable = false
-                initialText = cacheText
+            val targetSourceUrl = intent.getStringExtra(CodeEditActivity.EXTRA_JS_SOURCE_URL)
+                ?.takeIf(String::isNotBlank)
+            if (targetSourceUrl != null) {
+                // 直接编辑 JS 书源：脚本来自数据库，保存也由本页负责
+                val source = appDb.bookSourceDao.getBookSource(targetSourceUrl)
+                    ?: throw NoStackTraceException(
+                        appCtx.getString(R.string.js_source_error_not_found)
+                    )
+                jsSourceUrl = targetSourceUrl
+                initialText = source.mainJs.orEmpty()
+                title = source.bookSourceName
+                languageName = "source.js"
+                sourceType = "bookSource"
+                sourceJson = GSON.toJson(source)
             } else {
-                // 可编辑文本:小文本走 "text" 直传,大文本走 CodeEditLauncher 内存中转(读后即删)
-                initialText = CodeEditLauncher.readText(intent) ?: throw Exception("未获取到待编辑文本")
-            }
-            if (isHtmlStr(initialText)) {
-                languageName = "text.html.basic"
-            } else {
-                intent.getStringExtra("languageName")?.let { languageName = it }
+                val cacheKey = intent.getStringExtra("cacheKey")
+                if (cacheKey != null) {
+                    // 只读预览（TextDialog 等）:从内存取,保持 writable = false;读后即删防滞留
+                    val cacheText = CacheManager.getFromMemory(cacheKey) as? String
+                        ?: throw Exception(appCtx.getString(R.string.js_source_error_empty))
+                    CacheManager.deleteMemory(cacheKey)
+                    writable = false
+                    initialText = cacheText
+                } else {
+                    // 可编辑文本:小文本走 "text" 直传,大文本走 CodeEditLauncher 内存中转(读后即删)
+                    initialText = CodeEditLauncher.readText(intent)
+                        ?: throw Exception(appCtx.getString(R.string.js_source_error_empty))
+                }
+                if (isHtmlStr(initialText)) {
+                    languageName = "text.html.basic"
+                } else {
+                    intent.getStringExtra("languageName")?.let { languageName = it }
+                }
+                title = intent.getStringExtra("title")
+                sourceType = intent.getStringExtra("sourceType")
+                fieldKey = intent.getStringExtra("fieldKey")
+                tabKey = intent.getStringExtra("tabKey")
+                val sourceKey = intent.getStringExtra("sourceKey")
+                if (!sourceKey.isNullOrBlank()) {
+                    when (sourceType) {
+                        "bookSource" -> appDb.bookSourceDao.getBookSource(sourceKey)?.let {
+                            sourceJson = GSON.toJson(it)
+                        }
+
+                        "rssSource" -> appDb.rssSourceDao.getByKey(sourceKey)?.let {
+                            sourceJson = GSON.toJson(it)
+                        }
+                    }
+                } else {
+                    sourceJson = intent.getStringExtra("sourceJson")
+                }
             }
             initialLanguageName = languageName  // 保存初始语言
             language = TextMateLanguage.create(languageName, AppConfig.editAutoComplete)
             cursorPosition = intent.getIntExtra("cursorPosition", 0)
-            title = intent.getStringExtra("title")
-            sourceType = intent.getStringExtra("sourceType")
-            fieldKey = intent.getStringExtra("fieldKey")
-            tabKey = intent.getStringExtra("tabKey")
-            val sourceKey = intent.getStringExtra("sourceKey")
-            if (!sourceKey.isNullOrBlank()) {
-                when (sourceType) {
-                    "bookSource" -> appDb.bookSourceDao.getBookSource(sourceKey)?.let {
-                        sourceJson = GSON.toJson(it)
-                    }
-                    "rssSource" -> appDb.rssSourceDao.getByKey(sourceKey)?.let {
-                        sourceJson = GSON.toJson(it)
-                    }
-                }
-            } else {
-                sourceJson = intent.getStringExtra("sourceJson")
-            }
         }.onSuccess {
             success.invoke()
         }.onError {

@@ -2,22 +2,36 @@ package io.legado.app.model.jsSource
 
 import android.system.OsConstants.S_ISREG
 import cn.hutool.core.codec.Base64
+import io.legado.app.R
 import me.zhanghai.android.libarchive.Archive
 import me.zhanghai.android.libarchive.ArchiveEntry
+import splitties.init.appCtx
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 
-/** In-memory extraction only. Entry names are never used as filesystem paths. */
+/**
+ * 只在内存里解压书源自带的（Base64）压缩包，供 `java.getArchiveByteArrayContent` 使用。
+ *
+ * 之所以不落盘：书源可以携带任意数据，条目名不可信（可能含路径穿越），
+ * 这里只按名字查找并返回字节；[entryName] 也不参与任何文件路径拼接。
+ * 解压前会限制输入大小、展开后大小与条目数量，避免压缩炸弹。
+ */
 internal object MemoryArchiveReader {
     private const val MAX_BASE64_CHARS = 2_000_000
     private const val MAX_EXPANDED_BYTES = 8 * 1024 * 1024
     private const val MAX_ENTRIES = 128
 
     fun read(base64: String, entryName: String): ByteArray? {
-        require(base64.length in 1..MAX_BASE64_CHARS) { "Archive input exceeds limit" }
-        require(entryName.length in 1..1024 && entryName.none { it.code < 32 }) { "Invalid archive entry name" }
+        require(base64.length in 1..MAX_BASE64_CHARS) {
+            appCtx.getString(R.string.js_source_archive_too_large)
+        }
+        require(entryName.length in 1..1024 && entryName.none { it.code < 32 }) {
+            appCtx.getString(R.string.js_source_archive_entry_invalid)
+        }
         val bytes = Base64.decode(base64)
-        require(bytes.isNotEmpty() && bytes.size <= MAX_BASE64_CHARS * 3 / 4) { "Archive input exceeds limit" }
+        require(bytes.isNotEmpty() && bytes.size <= MAX_BASE64_CHARS * 3 / 4) {
+            appCtx.getString(R.string.js_source_archive_too_large)
+        }
         val input = ByteBuffer.allocateDirect(bytes.size).apply {
             put(bytes)
             flip()

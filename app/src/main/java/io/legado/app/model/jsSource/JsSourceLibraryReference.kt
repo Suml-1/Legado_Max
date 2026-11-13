@@ -1,6 +1,8 @@
 package io.legado.app.model.jsSource
 
+import io.legado.app.R
 import io.legado.app.exception.NoStackTraceException
+import splitties.init.appCtx
 import java.security.MessageDigest
 
 /**
@@ -20,16 +22,16 @@ internal object JsSourceLibraryReference {
         if (!value.startsWith("legado.js.library.ref/")) return value
         val expected = value.removePrefix(PREFIX)
         if (!value.startsWith(PREFIX) || !digestPattern.matches(expected)) {
-            throw NoStackTraceException("外置 JS 库引用格式不支持")
+            throw NoStackTraceException(appCtx.getString(R.string.js_source_library_ref_invalid))
         }
         if (externalJsLib.isNullOrBlank()) {
-            throw NoStackTraceException("此 JS 书源依赖外置库，请导入完整 JSON 书源")
+            throw NoStackTraceException(appCtx.getString(R.string.js_source_library_missing))
         }
         val actual = MessageDigest.getInstance("SHA-256")
             .digest(externalJsLib.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it.toInt() and 0xff) }
         if (actual != expected) {
-            throw NoStackTraceException("外置 JS 库与主脚本不匹配，请重新导入完整 JSON 书源")
+            throw NoStackTraceException(appCtx.getString(R.string.js_source_library_mismatch))
         }
         return externalJsLib
     }
