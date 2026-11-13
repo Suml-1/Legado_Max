@@ -2727,4 +2727,6 @@ Night: %5$s / %6$s / %7$s / %8$s</string>
     <string name="backup_keep_count_t">Keep recent backups</string>
     <string name="fvd_manifest_summary">%1$s · %2$s · %3$d items</string>
     <string name="edit_js_script">Edit JS script</string>
+    <string name="js_source_new">New JS book source</string>
+    <string name="js_source_save_failed">Failed to save JS book source: %1$s</string>
 </resources>

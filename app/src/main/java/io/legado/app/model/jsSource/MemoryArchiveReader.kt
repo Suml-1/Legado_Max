@@ -18,7 +18,10 @@ internal object MemoryArchiveReader {
         require(entryName.length in 1..1024 && entryName.none { it.code < 32 }) { "Invalid archive entry name" }
         val bytes = Base64.decode(base64)
         require(bytes.isNotEmpty() && bytes.size <= MAX_BASE64_CHARS * 3 / 4) { "Archive input exceeds limit" }
-        val input = ByteBuffer.allocateDirect(bytes.size).apply { put(bytes); flip() }
+        val input = ByteBuffer.allocateDirect(bytes.size).apply {
+            put(bytes)
+            flip()
+        }
         val archive = Archive.readNew()
         val started = System.nanoTime()
         fun checkRunning() {

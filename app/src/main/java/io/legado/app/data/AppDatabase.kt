@@ -70,13 +70,12 @@ import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.entities.UploadHistory
 import io.legado.app.data.entities.UrlRecord
 import io.legado.app.help.DefaultData
-import org.intellij.lang.annotations.Language
 import splitties.init.appCtx
 import java.util.Locale
 
 val appDb by lazy {
     Room.databaseBuilder(appCtx, AppDatabase::class.java, AppDatabase.DATABASE_NAME)
-        .fallbackToDestructiveMigrationFrom(false, 1, 2, 3, 4, 5, 6, 7, 8, 9)  
+        .fallbackToDestructiveMigrationFrom(false, 1, 2, 3, 4, 5, 6, 7, 8, 9)
         .addMigrations(*DatabaseMigrations.migrations)
         .allowMainThreadQueries()
         .addCallback(AppDatabase.dbCallback)
@@ -86,7 +85,8 @@ val appDb by lazy {
 @Database(
     version = 101,
     exportSchema = true,
-    entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
+    entities = [
+        Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
         RssSource::class, Bookmark::class, RssArticle::class, RssReadRecord::class,
         RssStar::class, TxtTocRule::class, ReadRecord::class, ReadRecordDetail::class,
@@ -94,7 +94,8 @@ val appDb by lazy {
         RuleSub::class, DictRule::class, KeyboardAssist::class, Server::class,
         UrlRecord::class, DirectLinkUploadRule::class, UploadHistory::class,
         CoverGalleryGroup::class, CoverGalleryImage::class, SourceRecycleBin::class,
-        HomepageModule::class, HomepageCustomSet::class],
+        HomepageModule::class, HomepageCustomSet::class,
+    ],
     views = [BookSourcePart::class],
     autoMigrations = [
         AutoMigration(from = 43, to = 44),
@@ -150,8 +151,8 @@ val appDb by lazy {
         AutoMigration(from = 93, to = 94),
         AutoMigration(from = 94, to = 95),
         // 101：book_sources 新增可空列 mainJs（单文件 JS 书源主脚本），自动迁移
-        AutoMigration(from = 100, to = 101)
-    ]
+        AutoMigration(from = 100, to = 101),
+    ],
 )
 abstract class AppDatabase : RoomDatabase() {
 
@@ -217,34 +218,34 @@ abstract class AppDatabase : RoomDatabase() {
                 // 逐个包裹 try-catch 确保单个失败不影响后续流程。
 
                 val bookGroupSqls = listOf(
-                    """insert into book_groups(groupId, groupName, 'order', show) 
+                    """insert into book_groups(groupId, groupName, 'order', show)
                         select ${BookGroup.IdAll}, '全部', -10, 1
                         where not exists (select * from book_groups where groupId = ${BookGroup.IdAll})"""
                         .trimIndent(),
-                    """insert into book_groups(groupId, groupName, 'order', enableRefresh, show) 
+                    """insert into book_groups(groupId, groupName, 'order', enableRefresh, show)
                         select ${BookGroup.IdLocal}, '本地', -9, 0, 1
                         where not exists (select * from book_groups where groupId = ${BookGroup.IdLocal})"""
                         .trimIndent(),
-                    """insert into book_groups(groupId, groupName, 'order', show) 
+                    """insert into book_groups(groupId, groupName, 'order', show)
                         select ${BookGroup.IdAudio}, '音频', -8, 1
                         where not exists (select * from book_groups where groupId = ${BookGroup.IdAudio})"""
                         .trimIndent(),
-                    """insert into book_groups(groupId, groupName, 'order', show) 
+                    """insert into book_groups(groupId, groupName, 'order', show)
                         select ${BookGroup.IdNetNone}, '网络未分组', -7, 1
                         where not exists (select * from book_groups where groupId = ${BookGroup.IdNetNone})"""
                         .trimIndent(),
-                    """insert into book_groups(groupId, groupName, 'order', show) 
+                    """insert into book_groups(groupId, groupName, 'order', show)
                         select ${BookGroup.IdLocalNone}, '本地未分组', -6, 0
                         where not exists (select * from book_groups where groupId = ${BookGroup.IdLocalNone})"""
                         .trimIndent(),
-                    """insert into book_groups(groupId, groupName, 'order', show) 
+                    """insert into book_groups(groupId, groupName, 'order', show)
                         select ${BookGroup.IdVideo}, '视频', -5, 1
                         where not exists (select * from book_groups where groupId = ${BookGroup.IdVideo})"""
                         .trimIndent(),
-                    """insert into book_groups(groupId, groupName, 'order', show) 
+                    """insert into book_groups(groupId, groupName, 'order', show)
                         select ${BookGroup.IdError}, '更新失败', -1, 1
                         where not exists (select * from book_groups where groupId = ${BookGroup.IdError})"""
-                        .trimIndent()
+                        .trimIndent(),
                 )
                 for (sql in bookGroupSqls) {
                     try {
@@ -259,7 +260,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "update book_sources set loginUi = null where loginUi = 'null'",
                     "update rssSources set loginUi = null where loginUi = 'null'",
                     "update httpTTS set loginUi = null where loginUi = 'null'",
-                    "update httpTTS set concurrentRate = '0' where concurrentRate is null"
+                    "update httpTTS set concurrentRate = '0' where concurrentRate is null",
                 )
                 for (sql in cleanupSqls) {
                     try {
@@ -283,7 +284,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 db.insert(
                                     "keyboardAssists",
                                     SQLiteDatabase.CONFLICT_REPLACE,
-                                    contentValues
+                                    contentValues,
                                 )
                             }
                         }
@@ -293,7 +294,5 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
         }
-
     }
-
 }

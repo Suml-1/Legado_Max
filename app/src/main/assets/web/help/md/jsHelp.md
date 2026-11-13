@@ -1,6 +1,6 @@
 # js变量和函数
 
-> 阅读使用[Rhino v1.8.1](https://github.com/mozilla/rhino) 作为JavaScript引擎以便于[调用Java类和方法](https://m.jb51.net/article/92138.htm)，查看[ECMAScript兼容性表格](https://mozilla.github.io/rhino/compat/engines.html)　
+> 阅读使用[HtmlUnit Rhino 分支（htmlunit-core-js 5.3.0-legado.4）](https://github.com/mgx0227/htmlunit-rhino-fork) 作为JavaScript引擎以便于[调用Java类和方法](https://m.jb51.net/article/92138.htm)，查看[ECMAScript兼容性表格](https://mozilla.github.io/rhino/compat/engines.html)　
 
 > [Rhino运行时](https://github.com/mozilla/rhino/blob/master/rhino/src/main/java/org/mozilla/javascript/ScriptRuntime.java)懒加载导入的Java类和方法
 
@@ -681,4 +681,69 @@ java.openUrl(url: String, mimeType: String = null)
 * @param isFloat 是否悬浮窗打开
 java.openVideoPlayer(url: String, title: String, isFloat: Boolean = false)
 ```
+
+## 单文件 JS 书源（mainJs）
+
+书源可以不再写规则，而是用一份 JavaScript 脚本实现全部抓取流程：脚本保存在书源的 `mainJs` 字段，
+该字段非空时优先走脚本抓取，不再解析规则字段。
+
+导入方式：书源管理 → 导入书源，粘贴纯 JS 文本，或选择本地 `.js` 文件。
+
+脚本必须提供顶层 `config` 对象（兼容旧版 `source`），并按书源类型导出下列函数：
+
+| 函数 | 必填 | 返回 |
+| --- | --- | --- |
+| `search(key, page)` | 文本源必填 | 书籍数组（`name`/`author`/`bookUrl`/`kind`/`intro`…） |
+| `explore(url, page)` | 声明了 `exploreUrl` 时必填 | 同 `search` |
+| `getBookInfo(book)` | 文件源必填（文本源可选） | 书籍字段对象，未定义时沿用搜索阶段字段 |
+| `getChapters(book)` | 文本源必填 | 章节目录数组（`title`/`url`） |
+| `getContent(chapter, book, nextChapterUrl)` | 文本源必填 | 正文字符串 |
+
+```js
+var config = {
+    bookSourceUrl: "https://example.com/js",
+    bookSourceName: "示例JS源",
+    bookSourceGroup: "JS",
+    bookSourceType: 0,
+    enabled: true
+};
+
+function search(key, page = 1) {
+    const body = java.ajax("https://example.com/search?q=" + encodeURIComponent(key));
+    // 解析 body 后返回数组
+    return [{ name: key, author: "作者", bookUrl: "https://example.com/book/1" }];
+}
+
+function getChapters(book) {
+    return [{ title: "第一章", url: "https://example.com/c/1" }];
+}
+
+function getContent(chapter, book) {
+    return java.ajax(chapter.url);
+}
+```
+
+脚本作用域内可用：`java`（当前执行器）、`source`/`sourceApi`（书源对象）、`baseUrl`（书源 URL）、
+`cookie`（CookieStore）、`cache`（CacheManager），以及**内置 CryptoJS**（无需自行引入）：
+
+```js
+CryptoJS.MD5("abc").toString();     // 900150983cd24fb0d6963f7d28e17f72
+CryptoJS.SHA256("abc").toString();
+CryptoJS.AES.encrypt("text", key, { mode: CryptoJS.mode.ECB }).toString();
+```
+
+`CryptoJS.lib.WordArray.random` 已接到宿主的 `SecureRandom`，可直接用于随机数。
+
+需要大量 64 位 / BigInt 运算（例如协议签名）时，可以把纯 JS 函数丢进沙箱单独执行：
+
+```js
+var out = java.getQuickJsSandbox().evalString("(function(){ return (BigInt(1) << BigInt(64)).toString(16); })()");
+```
+
+沙箱每次都是一个全新的空作用域：看不到 `java`/`source`/`cache`，也不会污染或读取书源主脚本的全局变量，
+只按字符串返回结果（对象会转成 JSON），适合放签名、加密这类纯计算逻辑。
+
+> JS 书源运行在按书源隔离的 Rhino 作用域中，未声明 `var/let/const` 的隐式全局变量会被拒绝。
+>
+> 编辑已有 JS 书源：书源编辑页 → 菜单 → 「编辑 JS 脚本」；新建：书源管理 → 右上角菜单 → 「新建 JS 书源」。
 

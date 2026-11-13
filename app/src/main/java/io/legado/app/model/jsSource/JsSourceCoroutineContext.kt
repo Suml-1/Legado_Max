@@ -8,5 +8,4 @@ import kotlin.coroutines.CoroutineContext
  *
  * 同步 JS 桥（runBlocking 形式）若继续带调度器，会把任务重新派发回自己正在阻塞的线程池。
  */
-internal fun CoroutineContext.withoutScriptDispatcher(): CoroutineContext =
-    minusKey(ContinuationInterceptor)
+internal fun CoroutineContext.withoutScriptDispatcher(): CoroutineContext = minusKey(ContinuationInterceptor)

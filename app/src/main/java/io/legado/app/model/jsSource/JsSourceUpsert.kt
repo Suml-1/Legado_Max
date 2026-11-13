@@ -48,7 +48,7 @@ object JsSourceUpsert {
     ): BookSource {
         validatePayload(text)?.let {
             throw IllegalArgumentException(
-                if (it == PayloadIssue.EMPTY) "JS 书源内容为空" else "JS 书源不能超过 1 MiB"
+                if (it == PayloadIssue.EMPTY) "JS 书源内容为空" else "JS 书源不能超过 1 MiB",
             )
         }
         return withSaveLock(timeoutMillis) {
@@ -138,19 +138,15 @@ object JsSourceUpsert {
             normalizedSource.customButton == normalizedOld.customButton
     }
 
-    private fun normalizeManagedUpdateTime(script: String?): String? {
-        return script?.let { JsSourceConfig.stampLastUpdateTime(it, 0) ?: it }
-    }
+    private fun normalizeManagedUpdateTime(script: String?): String? = script?.let { JsSourceConfig.stampLastUpdateTime(it, 0) ?: it }
 
     internal fun hasTargetConflict(
         openedSource: BookSource?,
         targetSource: BookSource?,
         targetUrl: String,
-    ): Boolean {
-        return openedSource != null &&
-            openedSource.bookSourceUrl != targetUrl &&
-            targetSource != null
-    }
+    ): Boolean = openedSource != null &&
+        openedSource.bookSourceUrl != targetUrl &&
+        targetSource != null
 
     internal fun preserveUserState(source: BookSource, old: BookSource?) {
         old ?: return

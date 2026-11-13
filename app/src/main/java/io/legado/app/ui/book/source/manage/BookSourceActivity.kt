@@ -1,8 +1,10 @@
 package io.legado.app.ui.book.source.manage
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import android.view.Menu
 import android.view.MenuItem
 import android.view.SubMenu
@@ -34,6 +36,10 @@ import io.legado.app.lib.theme.primaryColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.model.CheckSource
 import io.legado.app.model.Debug
+import io.legado.app.model.jsSource.JsSourceTemplate
+import io.legado.app.model.jsSource.JsSourceUpsert
+import io.legado.app.ui.code.CodeEditActivity
+import io.legado.app.ui.code.CodeEditLauncher
 import io.legado.app.ui.association.ImportBookSourceDialog
 import io.legado.app.ui.association.ImportUrlDialogHelper
 import io.legado.app.ui.book.search.SearchActivity
@@ -119,6 +125,30 @@ class BookSourceActivity :
             showDialogFragment(ImportBookSourceDialog(uri.toString()))
         }
     }
+
+    // 「新建 JS 书源」：用全屏代码编辑器写脚本，保存时走 JsSourceUpsert（提取 config + 校验函数契约）
+    private val jsSourceEditor = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+        val script = CodeEditLauncher.readText(result.data) ?: return@registerForActivityResult
+        lifecycleScope.launch {
+            runCatching { JsSourceUpsert.save(script) }
+                .onSuccess { source ->
+                    toastOnUi(R.string.success)
+                    startActivity<BookSourceEditActivity> {
+                        putExtra("sourceUrl", source.bookSourceUrl)
+                    }
+                }
+                .onFailure { error ->
+                    toastOnUi(
+                        getString(R.string.js_source_save_failed)
+                            .format(error.localizedMessage.orEmpty()),
+                    )
+                    AppLog.put("新建JS书源失败:${error.localizedMessage}", error)
+                }
+        }
+    }
     private val exportDir = registerForActivityResult(HandleFileContract()) {
         ExportResultHandler.handleExportResult(this, it, { text ->
             sendToClip(text)
@@ -171,11 +201,20 @@ class BookSourceActivity :
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.menu_add_book_source -> startActivity<BookSourceEditActivity>()
+            R.id.menu_add_js_source -> jsSourceEditor.launch(
+                Intent(this, CodeEditActivity::class.java).apply {
+                    CodeEditLauncher.putText(this, JsSourceTemplate.NEW_SOURCE)
+                    putExtra("title", getString(R.string.js_source_new))
+                    putExtra("languageName", "source.js")
+                    putExtra("cursorPosition", 0)
+                },
+            )
+
             R.id.menu_import_qr -> qrResult.launch()
             R.id.menu_group_manage -> showDialogFragment<GroupManageDialog>()
             R.id.menu_import_local -> importDoc.launch {
                 mode = HandleFileContract.FILE
-                allowExtensions = arrayOf("txt", "json")
+                allowExtensions = arrayOf("txt", "json", "js")
             }
 
             R.id.menu_import_onLine -> showImportDialog()

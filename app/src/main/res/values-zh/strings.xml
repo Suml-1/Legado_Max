@@ -2711,4 +2711,6 @@
     <string name="backup_keep_count_t">保留最近备份数</string>
     <string name="fvd_manifest_summary">%1$s · %2$s · %3$d 项</string>
     <string name="edit_js_script">编辑 JS 脚本</string>
+    <string name="js_source_new">新建 JS 书源</string>
+    <string name="js_source_save_failed">JS 书源保存失败：%1$s</string>
 </resources>

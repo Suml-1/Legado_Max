@@ -70,9 +70,11 @@ object JsSourceConfig {
         coroutineContext: CoroutineContext?,
         externalJsLib: String?,
     ): BookSource {
-        val scope = RhinoScriptEngine.getRuntimeScope(buildScriptBindings { values ->
-            values[JsSourceLibraryReference.SUPPORT_BINDING] = JsSourceLibraryReference.VERSION
-        })
+        val scope = RhinoScriptEngine.getRuntimeScope(
+            buildScriptBindings { values ->
+                values[JsSourceLibraryReference.SUPPORT_BINDING] = JsSourceLibraryReference.VERSION
+            },
+        )
         SharedJsScope.installCryptoJs(scope, coroutineContext)
         try {
             RhinoScriptEngine.eval(text, scope, coroutineContext)
@@ -208,7 +210,8 @@ object JsSourceConfig {
                     val name = (initializer.target as? Name)?.identifier
                     val config = initializer.initializer as? ObjectLiteral
                     if (initializer.enclosingFunction != null ||
-                        name != CONFIG_PROPERTY && name != LEGACY_CONFIG_PROPERTY ||
+                        name != CONFIG_PROPERTY &&
+                        name != LEGACY_CONFIG_PROPERTY ||
                         config == null
                     ) {
                         return@visit true
@@ -221,7 +224,8 @@ object JsSourceConfig {
                         }
                         val value = property.value
                         val supported = value is NumberLiteral ||
-                            value is FunctionCall && value.arguments.isEmpty() &&
+                            value is FunctionCall &&
+                            value.arguments.isEmpty() &&
                             value.target.toSource() == "Date.now"
                         if (key == "lastUpdateTime" && supported) {
                             add(value.absolutePosition until value.absolutePosition + value.length)

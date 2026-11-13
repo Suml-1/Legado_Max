@@ -24,6 +24,16 @@
 - [Github分支GEd520](https://github.com/GEd520/legados)
 - [Github分支Suml-1](https://github.com/Suml-1/Legado_Max)
 
+**2026/11/13**
+
+- feat(JS引擎): JavaScript 引擎切换为 HtmlUnit Rhino 分支（含嵌套作用域修复、动态 eval/this 补丁），书源规则支持更完整的 ES6 语法
+- feat(JS书源): 支持单文件 JavaScript 书源（`mainJs`），导入纯 JS 文本或本地 `.js` 文件即可；搜索/发现/详情/目录/正文全部由脚本实现
+- feat(CryptoJS): 内置 CryptoJS，书源脚本可直接使用 MD5/SHA/AES 等，无需再联网引入，随机数走系统 SecureRandom
+- feat(书源编辑): JS 书源编辑页新增「编辑 JS 脚本」入口；书源管理右上角菜单恢复「新建 JS 书源」，带可运行模板
+- fix(书源导入): 网络导入/本地导入统一走书源解析器，`.js` 地址与本地 `.js` 文件不再被当 JSON 解析失败
+- feat(JS沙箱): 补齐 `java.getQuickJsSandbox().evalString()` 纯 JS 隔离沙箱（无宿主对象、全新作用域），依赖 BigInt 的签名类书源可用
+- refactor(书源作用域): jsLib 共享作用域按书源隔离，支持结构化 jsLib 包（`legado.js.library/1`）
+
 **2026/11/7**
 
 - feat(我的): 新增「订阅源管理」入口，位于「书源管理」下方；订阅界面顶栏的订阅源管理图标入口同步移除

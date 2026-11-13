@@ -3,8 +3,6 @@ package io.legado.app.ui.association
 import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.MutableLiveData
-import com.jayway.jsonpath.JsonPath
-import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
@@ -20,18 +18,11 @@ import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.model.RuleUpdate
-import io.legado.app.model.jsSource.JsSourceConfig
-import io.legado.app.utils.GSON
-import io.legado.app.utils.fromJsonArray
-import io.legado.app.utils.fromJsonArrayOrObject
-import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.inputStream
 import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.isJsonArray
-import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.isUri
 import io.legado.app.utils.splitNotBlank
-
+import java.io.StringReader
 
 class ImportBookSourceViewModel(app: Application) : BaseViewModel(app) {
     var isAddGroup = false
@@ -134,60 +125,23 @@ class ImportBookSourceViewModel(app: Application) : BaseViewModel(app) {
     fun importSource(text: String) {
         execute {
             val mText = text.trim()
+            // 首字符是 [ / { 的交给统一解析器（里面区分 JSON 合集与 sourceUrls 包装）
+            val isJsonLike = mText.startsWith("[") || mText.startsWith("{")
             when {
-                mText.isJsonObject() -> {
-                    kotlin.runCatching {
-                        val json = JsonPath.parse(mText)
-                        json.read<List<String>>("$.sourceUrls")
-                    }.onSuccess { listUrl ->
-                        listUrl.forEach {
-                            importSourceUrl(it)
-                        }
-                    }.onFailure {
-                        GSON.fromJsonObject<BookSource>(mText).getOrThrow().let {
-                            if (it.bookSourceUrl.isEmpty()) {
-                                throw NoStackTraceException("不是书源")
-                            }
-                            allSources.add(it)
-                        }
-                    }
-                }
-
-                mText.isJsonArray() -> GSON.fromJsonArray<BookSource>(mText).getOrThrow()
-                    .let { items ->
-                        val source = items.firstOrNull() ?: return@let
-                        if (source.bookSourceUrl.isEmpty()) {
-                            throw NoStackTraceException("不是书源")
-                        }
-                        allSources.addAll(items)
-                    }
-
-                mText.isAbsUrl() -> {
+                !isJsonLike && mText.isAbsUrl() -> {
                     importSourceUrl(mText)
                 }
 
-                mText.isUri() -> {
-                    val uri = Uri.parse(mText)
-                    uri.inputStream(context).getOrThrow().use { inputS ->
-                        val text = inputS.reader().readText()
-                        // 本地 .js 文件：按单文件 JS 书源解析（JSON 解析失败才回落）
-                        runCatching {
-                            GSON.fromJsonArrayOrObject<BookSource>(text).getOrThrow()
-                        }.getOrElse {
-                            allSources.add(JsSourceConfig.extract(text))
-                            return@use
-                        }.let {
-                            val source = it.firstOrNull() ?: return@let
-                            if (source.bookSourceUrl.isEmpty()) {
-                                throw NoStackTraceException("不是书源")
-                            }
-                            allSources.addAll(it)
-                        }
+                !isJsonLike && mText.isUri() -> {
+                    Uri.parse(mText).inputStream(context).getOrThrow().bufferedReader().use {
+                        readBookSourceImport(it, false, ::addSource) { }
                     }
                 }
 
-                // 其余情况按纯 JavaScript 单文件书源处理（NG_main 的导入约定）
-                else -> allSources.add(JsSourceConfig.extract(mText))
+                // 粘贴内容：JSON、纯 JS 文本或 sourceUrls 包装都走同一个解析器
+                else -> StringReader(mText).use {
+                    readBookSourceImport(it, true, ::addSource, ::importSourceUrl)
+                }
             }
         }.onError {
             errorLiveData.postValue("ImportError:${it.localizedMessage}")
@@ -211,15 +165,16 @@ class ImportBookSourceViewModel(app: Application) : BaseViewModel(app) {
                 url(url)
             }
         }.decompressed().byteStream().use { inputS ->
-            val text = inputS.reader().readText()
-            GSON.fromJsonArrayOrObject<BookSource>(text).getOrThrow().let { list ->
-                val source = list.firstOrNull() ?: return@let
-                if (source.bookSourceUrl.isEmpty()) {
-                    throw NoStackTraceException("不是书源")
-                }
-                allSources.addAll(list)
-            }
+            // 网址返回的可能是 JSON 合集，也可能是一份 .js 单文件书源
+            readBookSourceImport(inputS.reader().buffered(), false, ::addSource) { }
         }
+    }
+
+    private fun addSource(source: BookSource) {
+        if (source.bookSourceUrl.isEmpty()) {
+            throw NoStackTraceException("不是书源")
+        }
+        allSources.add(source)
     }
 
     private fun comparisonSource() {
@@ -234,5 +189,4 @@ class ImportBookSourceViewModel(app: Application) : BaseViewModel(app) {
             successLiveData.postValue(allSources.size)
         }
     }
-
 }

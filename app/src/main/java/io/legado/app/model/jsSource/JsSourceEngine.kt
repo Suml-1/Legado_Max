@@ -73,8 +73,15 @@ class JsSourceEngine(
     fun getJsLibResource(name: String): String? = libraryBundle?.resources?.get(name)
 
     /** 书源自带的（Base64）压缩包解包能力，仅内存内解压，绝不落盘。 */
-    fun getArchiveByteArrayContent(base64: String, entryName: String): ByteArray? =
-        MemoryArchiveReader.read(base64, entryName)
+    fun getArchiveByteArrayContent(base64: String, entryName: String): ByteArray? = MemoryArchiveReader.read(base64, entryName)
+
+    /**
+     * 纯 JS 执行沙箱（对齐参考分支的 `java.getQuickJsSandbox()`）。
+     *
+     * 部分书源会把签名核心 `toString()` 后丢进沙箱运行（依赖 BigInt / 64 位位运算），
+     * 这里返回一个不暴露任何宿主对象的隔离执行器，只接受字符串进出。
+     */
+    fun getQuickJsSandbox(): JsSourceSandbox = JsSourceSandbox(coroutineContext, source.getTag())
 
     /**
      * 仅单文件 JS 运行时可达。用于协议确实要求原始二进制正文的请求；调用方以 Base64
@@ -141,9 +148,7 @@ class JsSourceEngine(
         return normalizeJsResult(compile(expression).eval(scope, coroutineContext), coroutineContext)
     }
 
-    fun callFunctionIfExists(name: String, args: List<Pair<String, Any?>>): String? {
-        return callOptionalFunction(name, args).value
-    }
+    fun callFunctionIfExists(name: String, args: List<Pair<String, Any?>>): String? = callOptionalFunction(name, args).value
 
     internal fun callOptionalFunction(
         name: String,
@@ -201,7 +206,7 @@ class JsSourceEngine(
             Debug.log(
                 source.getKey(),
                 "JS初始化：共享库 ${sharedReady - started}ms，" +
-                    "主脚本 ${SystemClock.elapsedRealtime() - sharedReady}ms"
+                    "主脚本 ${SystemClock.elapsedRealtime() - sharedReady}ms",
             )
         }
         return scope
@@ -260,7 +265,7 @@ class JsSourceEngine(
                     throw error
                 } catch (error: Exception) {
                     throw NoStackTraceException(
-                        "JS返回值 JSON.stringify 失败: ${error.message}"
+                        "JS返回值 JSON.stringify 失败: ${error.message}",
                     )
                 }
                 return RhinoScriptEngine.unwrapReturnValue(raw) as? String
