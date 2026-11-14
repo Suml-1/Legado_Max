@@ -1819,6 +1819,31 @@ class TextChapterLayout(
             // （行宽判断同样要含命中字距，留白是真实占位）
             val endSqueezeNeeded = endBleed > 0f &&
                 (visibleWidth - lineStartExtra - desiredWidth - lineMatchSpacing) < endBleed
+            // 行末落在九宫格气泡段里（匹配延续到下一行）：行末没有邻字可推（computeNeighborPush 的
+            // widthAdd 会落到下一行首字上，对本行无效）、也没有段末压缩可借。参考 MD3 分支：排版期
+            // 把角装饰宽度让出来——两端对齐按负 residual 压缩行宽、自然排列由 exceed 压回——
+            // 行末照常画出角，不再溢出正文列右边界被裁掉。预留量与绘制层外扩口径一致：
+            // min(角厚, 一个字宽) + 手动右间距（nineSliceSideWidth 已按字号夹一次）；
+            // 严格策略不外扩、不预留；段末行走上面的 endBleed 分支、标题走 titleEndExtra，都不重复算
+            val wrapEndBleed = if (!isTitle && lineIndex < layout.lineCount - 1 && lineEnd > lineStart) {
+                val endStyle = charStyles?.getOrNull(lineEnd - 1)
+                if (endStyle?.bgImage?.isNotEmpty() == true &&
+                    endStyle.bgBleedMode != HighlightRule.BLEED_STRICT
+                ) {
+                    TextLine.getBgBitmap(endStyle.bgImage)?.let { bitmap ->
+                        TextLine.nineSliceSideWidth(
+                            bitmap,
+                            endStyle.npLeft,
+                            endStyle.npRight,
+                            textPaint.textSize,
+                        )[1] + (endStyle.bgSpacingRight * textPaint.textSize).coerceAtLeast(0f)
+                    } ?: 0f
+                } else {
+                    0f
+                }
+            } else {
+                0f
+            }
             when (lineIndex) {
                 0 if layout.lineCount > 1 && !isTitle && isFirstLine -> {
                     // 多行的第一行 非标题
@@ -1826,6 +1851,7 @@ class TextChapterLayout(
                         book, absStartX, textLine, words, textPaint,
                         desiredWidth, lineMatchSpacing, widths, srcList, clickList, charStyles, lineStart,
                         lineStartExtra,
+                        wrapEndBleed,
                     )
                 }
                 layout.lineCount - 1 -> {
@@ -1887,12 +1913,14 @@ class TextChapterLayout(
                     } else {
                         // 中间行；续段（被图片分割出的残段）首行没有缩进、同样可能吃到行首匹配的
                         // 整行右移，desiredWidth 同步补上右移量、命中字距一并补上，
-                        // 让行尾仍落在正文列右边界（留白已参与自然换行，不允许再压负 residual）
+                        // 让行尾仍落在正文列右边界（留白已参与自然换行，不允许再压负 residual）；
+                        // 行末落在气泡段内时再补预留量，这次是刻意的负 residual（行末没有邻字可推）
                         addCharsToLineMiddle(
                             book, absStartX, textLine, words, textPaint,
                             desiredWidth + lineStartExtra + lineMatchSpacing, lineStartExtra,
                             widths, srcList, clickList, charStyles, lineStart,
-                            clampNegativeResidual = lineMatchSpacing > 0f,
+                            clampNegativeResidual = lineMatchSpacing > 0f && wrapEndBleed <= 0f,
+                            wrapEndBleed = wrapEndBleed,
                         )
                     }
                 }
@@ -1989,12 +2017,15 @@ class TextChapterLayout(
         lineStart: Int,
         /** 行首匹配让出的外扩量：整行右移让出背景（与标题左对齐同理，正文仅无缩进的段首会出现） **/
         startExtra: Float = 0f,
+        /** 行末落在气泡段内时预留的角装饰宽度（见调用方 wrapEndBleed） **/
+        wrapEndBleed: Float = 0f,
     ) {
         var x = startExtra
         if (!textFullJustify) {
             addCharsToLineNatural(
                 book, absStartX, textLine, words,
                 x, true, textWidths, srcList, clickList, charStyles, lineStart,
+                extraRightMargin = wrapEndBleed,
             )
             return
         }
@@ -2024,7 +2055,8 @@ class TextChapterLayout(
                 // （有缩进时 startExtra 恒为 0，缩进路径不受影响）
                 desiredWidth + startExtra + lineMatchSpacing, x, textWidths1, srcList, clickList,
                 charStyles, lineStart + bodyIndent.length,
-                clampNegativeResidual = lineMatchSpacing > 0f,
+                clampNegativeResidual = lineMatchSpacing > 0f && wrapEndBleed <= 0f,
+                wrapEndBleed = wrapEndBleed,
             )
         }
     }
@@ -2058,17 +2090,23 @@ class TextChapterLayout(
          * endSqueezeNeeded 分支），所以默认保持旧行为、由调用方决定。
          */
         clampNegativeResidual: Boolean = false,
+        /** 行末落在气泡段内时预留的角装饰宽度：两端对齐按负 residual 压缩行宽让出，
+         *  自然排列由 exceed 压回（见调用方 wrapEndBleed 的注释） */
+        wrapEndBleed: Float = 0f,
     ) {
         if (!textFullJustify) {
             addCharsToLineNatural(
                 book, absStartX, textLine, words,
                 startX, false, textWidths, srcList,
                 clickList, charStyles, lineStart,
+                extraRightMargin = wrapEndBleed,
             )
             return
         }
-        val residualWidth = (visibleWidth - desiredWidth).let {
-            if (clampNegativeResidual) it.coerceAtLeast(0f) else it
+        // 行末预留量让 residual 额外变负：两端对齐把行压缩 wrapEndBleed 宽，行尾正好落在
+        // 正文列右边界 - wrapEndBleed，气泡右缘（文字 + 外扩）完整落在列内不被裁掉
+        val residualWidth = (visibleWidth - desiredWidth - wrapEndBleed).let {
+            if (clampNegativeResidual && wrapEndBleed <= 0f) it.coerceAtLeast(0f) else it
         }
         val spaceSize = words.count { it == " " }
         textLine.startX = absStartX + startX
@@ -2135,6 +2173,8 @@ class TextChapterLayout(
         clickList: LinkedList<String?>?,
         charStyles: Array<CharStyle?>?,
         lineStart: Int,
+        /** 行末落在气泡段内时预留的角装饰宽度（见调用方 wrapEndBleed） */
+        extraRightMargin: Float = 0f,
     ) {
         val indentLength = paragraphIndent.length
         var x = startX
@@ -2165,7 +2205,7 @@ class TextChapterLayout(
                 textLine.indentWidth = x
             }
         }
-        exceed(absStartX, textLine, words)
+        exceed(absStartX, textLine, words, extraRightMargin)
     }
 
     /**
@@ -2265,7 +2305,13 @@ class TextChapterLayout(
     /**
      * 超出边界处理
      */
-    private fun exceed(absStartX: Int, textLine: TextLine, words: List<String>) {
+    private fun exceed(
+        absStartX: Int,
+        textLine: TextLine,
+        words: List<String>,
+        /** 行末落在气泡段内时预留的角装饰宽度：行尾连同它一起压回正文列右边界内（参考 MD3 分支） */
+        extraRightMargin: Float = 0f,
+    ) {
         var size = words.size
         if (size < 2) return
         val visibleEnd = absStartX + visibleWidth
@@ -2278,7 +2324,7 @@ class TextChapterLayout(
         } else {
             columns.last()
         }
-        val endX = endColumn.end.roundToInt()
+        val endX = endColumn.end.roundToInt() + extraRightMargin.roundToInt()
         if (endX > visibleEnd) {
             textLine.exceed = true
             val cc = (endX - visibleEnd) / size

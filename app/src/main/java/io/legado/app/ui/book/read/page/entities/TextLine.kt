@@ -1004,6 +1004,8 @@ data class TextLine(
          *   正数把背景向外撑大、离文字更远，负数向内收；与自动外扩叠加，所以"严格 + 正间距"也仍是
          *   用户主动往外撑。
          * 目标矩形放不下两侧边框时按比例收缩，避免短匹配 / 大间距时绘制区域失控。
+         * 行末/行首的角装饰溢出由排版期预留解决（见 TextChapterLayout 的 wrapEndBleed），
+         * 绘制层不做特殊处理。
          */
         fun drawNineSlice(
             bitmap: Bitmap,
