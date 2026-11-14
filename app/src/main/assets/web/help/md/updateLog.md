@@ -4,7 +4,7 @@
 
 ### minSdk 23 | compileSdk 37 | targetSdk 37
 
-### Kotlin版本: 2.3.10 | Rhino版本: 1.8.1 | Compose BOM版本: 2026.08.00 | Compose UI 版本: 1.12.x | Material3 版本: 1.4.x | okhttp版本: 5.3.2
+### Kotlin版本: 2.3.10 | HtmlUnit Rhino(core-js)版本: 5.3.0-legado.4 | Compose BOM版本: 2026.08.00 | Compose UI 版本: 1.12.x | Material3 版本: 1.4.x | okhttp版本: 5.3.2
 
 ### 项目继承历史
 
@@ -27,6 +27,7 @@
 **2026/11/14**
 ### 这几天关于js引擎和js书源的提交直接参考了[NG版本](https://github.com/joestar817/legado_NG)
 
+- fix(正式包): 修复 R8 版本下所有 JS 规则/JS 书源报 `ScriptException: NullPointerException` —— rhino 模块的 consumer rules 仍在保留旧包名 `org.mozilla.javascript.**`，未随引擎切换改为 `org.htmlunit.corejs.javascript.**`，导致 release 包把 Rhino 核心类混淆/裁剪
 - feat(JS书源): 列表中点击 JS 书源直接进入代码编辑页，保存时校验脚本并写库；普通书源仍进规则编辑页
 - fix(详情页): JS 书源补回 `durChapterTitle`/`totalChapterNum`/`latestChapterTitle`，目录不再显示「目录：null」；目录懒加载（Flow）分支也支持 JS 源
 - refactor(JS书源): 导入/保存/沙箱的错误提示全部改用字符串资源；补全 JS 书源帮助页与代码注释

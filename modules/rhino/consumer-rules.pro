@@ -20,16 +20,20 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-## Rhino
+## HtmlUnit core-js (Rhino fork)：引擎已从 org.mozilla:rhino 切换到
+## org.htmlunit:htmlunit-core-js，包名随之变为 org.htmlunit.corejs.*。
+## Rhino 内部大量依赖类名/成员名（JavaMembers 反射、E4X、NativeJavaPackage、
+## ClassShutter 白名单等），release 包缺 keep 会在脚本执行期抛 NPE。
 -keep class
-!org.mozilla.javascript.ast.**,
-!org.mozilla.javascript.xml.**,
-!org.mozilla.javascript.commonjs.**,
-!org.mozilla.javascript.optimizer.**,
-!org.mozilla.javascript.serialize.**,
-org.mozilla.javascript.** { *; }
+!org.htmlunit.corejs.javascript.ast.**,
+!org.htmlunit.corejs.javascript.xml.**,
+!org.htmlunit.corejs.javascript.commonjs.**,
+!org.htmlunit.corejs.javascript.optimizer.**,
+!org.htmlunit.corejs.javascript.serialize.**,
+!org.htmlunit.corejs.javascript.tools.**,
+org.htmlunit.corejs.javascript.** { *; }
 
--dontwarn org.mozilla.javascript.engine.RhinoScriptEngineFactory
+-dontwarn org.htmlunit.corejs.javascript.engine.RhinoScriptEngineFactory
 ### 以下内容是更新rhino1.7.14.jar后IDE提示添加的
 -dontwarn java.beans.**
 -dontwarn javax.script.**
