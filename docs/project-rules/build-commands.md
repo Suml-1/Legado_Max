@@ -75,5 +75,5 @@ product flavors 维度为 "app"：
 ## 版本与 SDK
 
 - 所有依赖版本统一在 `gradle/libs.versions.toml`，在 `build.gradle.kts` / `build.gradle` 中按 `libs.xxx` 引用，禁止硬编码版本号。
-- 主版本速览：Kotlin 2.3.10、Hilt 2.59、OkHttp 5.3.2、Room 2.8.4、Coroutines 1.10.2、Compose BOM 2026.08.00。
+- 主版本速览：Kotlin 2.3.10、Hilt 2.59、OkHttp 5.3.2、Room 2.8.4、Coroutines 1.10.2、Compose BOM 2026.08.00、JS 引擎 HtmlUnit core-js 5.3.0-legado.4-android21.1（`third_party/maven` 离线产物，换版本时须同步 `modules/rhino/consumer-rules.pro` 的 keep 包名）。
 - 新增依赖时同步更新本目录与相关规则文档（见 project-rules README 索引）。

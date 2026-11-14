@@ -143,7 +143,8 @@ Packages.io.legado.app.data.dao    // ❌ 禁止
 ### 6. Rhino 引擎相关
 
 ```javascript
-Packages.org.mozilla               // ❌ 禁止
+Packages.org.htmlunit.corejs       // ❌ 禁止（当前引擎实现，禁止脚本直接构造运行时）
+Packages.org.mozilla               // ❌ 禁止（旧引擎包名，仍在屏蔽名单内）
 Packages.com.script                // ❌ 禁止
 ```
 

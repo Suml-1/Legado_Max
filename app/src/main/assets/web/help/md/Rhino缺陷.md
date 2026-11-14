@@ -1,6 +1,8 @@
 # Rhino JavaScript 引擎缺陷记录
 
-> 本文档记录 Rhino JS 引擎在 Legado环境中存在的已知缺陷，供开发者参考和规避。不一定完全正确，有错误请提交 issue 
+> 本文档记录 **Mozilla Rhino 1.8.1（旧引擎）** 在 Legado 环境中存在的已知缺陷，供开发者参考和规避。不一定完全正确，有错误请提交 issue
+
+> 本分支自 2026-11-13 起引擎已切换为 [HtmlUnit Rhino 分支（htmlunit-core-js 5.3.0-legado.4）](https://github.com/mgx0227/htmlunit-rhino-fork)。各缺陷在新引擎上的实测结论见下方「总结」表：标注**仍存在**的项仍需按规避方案编写，其余可以放心使用现代 ES6+ 写法。
 
 ---
 
@@ -385,18 +387,22 @@ java.log(msg);
 
 ## 总结
 
-| 缺陷 | 严重程度 | 规避方案 |
-|------|----------|----------|
-| const 变量不能释放 | 中 | 使用 let 或外部声明 |
-| const 可被重新赋值 | 高 | 使用 Object.freeze |
-| let 变量提升问题 | 中 | 顶部声明变量 |
-| for...in 顺序不固定 | 低 | 使用 Map |
-| JSON.parse Unicode 异常 | 中 | 手动处理转义 |
-| Array.includes 不存在 | 低 | 使用 indexOf |
-| Promise 微任务异常 | 高 | 使用 setTimeout |
-| 模板字符串嵌套错误 | 低 | 避免嵌套 |
+| 缺陷 | 旧引擎严重程度 | 规避方案 | htmlunit-core-js 实测（2026-11-14） |
+|------|----------|----------|----------|
+| const 变量不能释放 | 中 | 使用 let 或外部声明 | 循环内 `const` 未报错；内存是否累积无法用脚本返回值判定，未复测 |
+| const 可被重新赋值 | 高 | 使用 Object.freeze | **仍存在**：`const c = 1; c = 2` 不抛错，读到 2 |
+| let 变量提升问题 | 中 | 顶部声明变量 | **仍存在**：`typeof y` 先于 `let y` 返回 `undefined`，未抛 TDZ 错误 |
+| for...in 顺序不固定 | 低 | 使用 Map | 未见问题：`{b,2,a,1}` 遍历为 `12ba`（整数键升序 + 其余插入序，符合 ES2015+） |
+| JSON.parse Unicode 异常 | 中 | 手动处理转义 | 已修复：`JSON.parse("\u4e2d")` 正常得到 0x4E2D |
+| Array.includes 不存在 | 低 | 使用 indexOf | 已修复：`[1,2].includes(2)` 返回 `true` |
+| Promise 微任务异常 | 高 | 使用 setTimeout | 未见问题：同步代码先于 `.then` 执行（`sp` 顺序正确） |
+| 模板字符串嵌套错误 | 低 | 避免嵌套 | 已修复：`` `x${`y${a}z`}w` `` 得到 `xy1zw` |
+
+> 附加实测：可选链 `?.` 与空值合并 `??` 可用（`({a:{b:2}})?.a?.b ?? 0` → `2`，`null ?? 5` → `5`）。
+
+> 实测方式：注入一个 JS 单文件书源，让 `search()` 把每项自检结果拼成书名返回，在 R8 release 包的搜索结果列表里直接读取（2026-11-14）。
 
 ---
 
-*文档更新时间：2025-06-24*  
-*适用版本：Legado Max (Rhino 引擎)*
+*文档更新时间：2026-11-14（引擎切换后复测）*
+*适用版本：Legado Max（正文缺陷部分对应旧引擎 Mozilla Rhino 1.8.1；「实测」列对应 htmlunit-core-js 5.3.0-legado.4）*

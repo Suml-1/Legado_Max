@@ -134,6 +134,7 @@ https://gedoor.github.io/Disclaimer
 > * cn.wanghaomiao:JsoupXpath
 > * com.jayway.jsonpath:json-path
 > * com.github.gedoor:rhino-android
+> * org.htmlunit:htmlunit-core-js (HtmlUnit fork of Rhino, Legado custom build)
 > * com.squareup.okhttp3:okhttp
 > * com.github.bumptech.glide:glide
 > * org.nanohttpd:nanohttpd

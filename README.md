@@ -156,6 +156,7 @@ https://gedoor.github.io/Disclaimer
 > - cn.wanghaomiao:JsoupXpath
 > - com.jayway.jsonpath:json-path
 > - com.github.gedoor:rhino-android
+> - org.htmlunit:htmlunit-core-js（Rhino 的 HtmlUnit 分支，Legado 定制构建）
 > - com.squareup.okhttp3:okhttp
 > - com.github.bumptech.glide:glide
 > - org.nanohttpd:nanohttpd

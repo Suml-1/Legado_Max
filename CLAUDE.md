@@ -39,8 +39,8 @@ MVVM pattern with AndroidViewModel + ViewBinding + Coroutines.
 
 - **Coroutine helper**: `BaseViewModel.execute()` wraps `Coroutine.async()`. Use this instead of raw `viewModelScope.launch`.
 - **Event bus**: `LiveEventBus` for cross-component events. Subscribe via `observeEvent<T>(key) { ... }` in `observeLiveBus()`.
-- **Database**: Room (`AppDatabase` v100), singleton at `appDb`. DAOs in `data/`, entities in `data/entities/`. Uses KSP (not kapt).
-- **Book source rules**: Rhino JS engine (`:modules:rhino` module) evaluates user-defined rules. The `analyzeRule` package in `model/` handles rule parsing.
+- **Database**: Room (`AppDatabase` v101), singleton at `appDb`. DAOs in `data/`, entities in `data/entities/`. Uses KSP (not kapt).
+- **Book source rules**: HtmlUnit core-js (Rhino fork, `:modules:rhino` module) evaluates user-defined rules. Declarative rules are parsed by `model/analyzeRule/`; 单文件 JS 书源（`book_sources.mainJs`）run through `model/jsSource/`.
 - **Singletons in model/**: `ReadBook`, `CacheBook`, `AudioPlay` manage global reading state.
 - **Config packages**: `TopBarConfig` and `BubblePackageManager` store configs as file system directories (JSON + assets like wallpapers/icons), not SharedPreferences. `NavigationBarConfig` uses SharedPreferences. `ApplicationThemeManager` combines all sub-configs into exportable/importable theme packages (zip).
 
@@ -49,7 +49,7 @@ MVVM pattern with AndroidViewModel + ViewBinding + Coroutines.
 The project has three library modules in `modules/`:
 
 - `modules/book` — fork of epublib (EPUB parsing), package `me.ag2s.epublib`
-- `modules/rhino` — fork of Mozilla Rhino JS engine, package `com.script`. Evaluates user-defined book source rules at runtime.
+- `modules/rhino` — wraps HtmlUnit core-js (the HtmlUnit fork of Rhino; engine classes live in `org.htmlunit.corejs.javascript`), module package `com.script`. Evaluates user-defined book source rules at runtime. Release builds must keep `org.htmlunit.corejs.javascript.**` (see `modules/rhino/consumer-rules.pro`); update that rule whenever the engine artifact/package changes, otherwise R8 minification breaks every script at runtime while debug builds keep working.
 - `modules/web` — Vue 3 frontend for the embedded HTTP/WebSocket server (see above)
 
 ### Source Layout

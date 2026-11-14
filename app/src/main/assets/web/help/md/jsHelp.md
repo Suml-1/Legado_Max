@@ -2,7 +2,7 @@
 
 > 阅读使用[HtmlUnit Rhino 分支（htmlunit-core-js 5.3.0-legado.4）](https://github.com/mgx0227/htmlunit-rhino-fork) 作为JavaScript引擎以便于[调用Java类和方法](https://m.jb51.net/article/92138.htm)，查看[ECMAScript兼容性表格](https://mozilla.github.io/rhino/compat/engines.html)　
 
-> [Rhino运行时](https://github.com/mozilla/rhino/blob/master/rhino/src/main/java/org/mozilla/javascript/ScriptRuntime.java)懒加载导入的Java类和方法
+> [Rhino运行时](https://github.com/mozilla/rhino/blob/master/rhino/src/main/java/org/mozilla/javascript/ScriptRuntime.java)懒加载导入的Java类和方法（本分支引擎包名为 `org.htmlunit.corejs.javascript`，下表及链接沿用上游 `org/mozilla/javascript` 的类名）
 
 | 构造函数         | 函数                        | 对象                      | 调用类                                                                                                                                       | 简要说明                  |
 | ------------ | ------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
