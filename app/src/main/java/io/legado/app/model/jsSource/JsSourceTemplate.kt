@@ -1,42 +1,45 @@
 package io.legado.app.model.jsSource
 
+import splitties.init.appCtx
+
 /**
  * 「新建 JS 书源」编辑器里的初始模板。
  *
- * 只放最小可运行骨架：`config` 必填字段 + 五个入口函数签名，
- * 让用户直接在一个能通过导入校验的脚本上改，而不是从空白文件猜格式。
+ * 模板正文维护在 `assets/js_source_template.js`（唯一来源，改动只动 asset），
+ * 内容覆盖：绑定与 java.* 清单、引擎已知坑、config 常用字段、五个入口函数、
+ * 登录界面 v2 与空作用域沙箱的说明。
  */
 object JsSourceTemplate {
 
-    val NEW_SOURCE = """
-        // 单文件 JS 书源：config 提供书源信息，函数提供抓取逻辑
-        // 内置 CryptoJS（MD5/SHA/AES 等），可直接使用 java.ajax 发起请求
-        var config = {
-            bookSourceUrl: "https://example.com/js",
-            bookSourceName: "新的JS书源",
-            bookSourceGroup: "JS",
-            bookSourceType: 0,
-            enabled: true,
-            enabledExplore: false
-        };
+    val NEW_SOURCE: String by lazy {
+        runCatching {
+            appCtx.assets.open("js_source_template.js").use { input ->
+                input.readBytes().toString(Charsets.UTF_8)
+            }
+        }.getOrDefault(MINIMAL_FALLBACK)
+    }
 
-        function search(key, page) {
-            var body = java.ajax("https://example.com/search?q=" + encodeURIComponent(key));
-            // 解析 body 后返回书籍数组：name/author/bookUrl/kind/intro
-            return [];
-        }
+    /** 资源读取异常时的最小可运行骨架，保证「新建」流程不中断 */
+    private const val MINIMAL_FALLBACK = """var config = {
+    bookSourceUrl: "https://example.com/js",
+    bookSourceName: "新的JS书源",
+    bookSourceGroup: "JS",
+    bookSourceType: 0,
+};
 
-        function getBookInfo(book) {
-            return {};
-        }
+function search(key, page) {
+    return [];
+}
 
-        function getChapters(book) {
-            // 返回章节数组：title/url
-            return [];
-        }
+function getBookInfo(book) {
+    return {};
+}
 
-        function getContent(chapter, book, nextChapterUrl) {
-            return java.ajax(chapter.url);
-        }
-    """.trimIndent()
+function getChapters(book) {
+    return [];
+}
+
+function getContent(chapter, book, nextChapterUrl) {
+    return java.ajax(chapter.url);
+}"""
 }
