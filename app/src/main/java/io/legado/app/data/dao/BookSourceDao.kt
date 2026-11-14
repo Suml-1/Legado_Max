@@ -261,6 +261,16 @@ interface BookSourceDao {
     @Query("select * from book_sources where bookSourceUrl = :key")
     fun getBookSource(key: String): BookSource?
 
+    /**
+     * 只判断是否有主脚本（JS 单文件书源），避免把几十上百 KB 的 mainJs 读进内存。
+     * 书源不存在时返回 null。
+     */
+    @Query(
+        "select case when (mainJs is not null and trim(mainJs) <> '') then 1 else 0 end " +
+            "from book_sources where bookSourceUrl = :key"
+    )
+    fun hasMainJs(key: String): Int?
+
     @Query("select * from book_sources_part where bookSourceUrl = :key")
     fun getBookSourcePart(key: String): BookSourcePart?
 

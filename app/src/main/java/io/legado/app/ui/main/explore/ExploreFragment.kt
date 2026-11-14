@@ -42,7 +42,7 @@ import io.legado.app.ui.book.explore.compose.EXPLORE_LAYOUT_WATERFALL
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.group.GroupSelectDialog
 import io.legado.app.ui.book.search.SearchActivity
-import io.legado.app.ui.book.source.edit.BookSourceEditActivity
+import io.legado.app.ui.book.source.edit.BookSourceEditLauncher
 import io.legado.app.ui.book.source.manage.BookSourceSort
 import io.legado.app.ui.blockrule.BlockRuleConfigDialog
 import io.legado.app.ui.login.SourceLoginActivity
@@ -623,8 +623,8 @@ class ExploreFragment() :
     }
 
     private fun editSource(sourceUrl: String) {
-        startActivity<BookSourceEditActivity> {
-            putExtra("sourceUrl", sourceUrl)
+        lifecycleScope.launch {
+            BookSourceEditLauncher.open(requireContext(), sourceUrl)
         }
     }
 

@@ -15,7 +15,7 @@ import io.legado.app.data.appDb
 import io.legado.app.lib.theme.EInkRender
 import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.model.webBook.SourceSearchRecord
-import io.legado.app.ui.book.source.edit.BookSourceEditActivity
+import io.legado.app.ui.book.source.edit.BookSourceEditLauncher
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
@@ -53,16 +53,15 @@ class SearchSourceStatusDialog : BottomSheetDialogFragment() {
     }
 
     private fun openBookSourceEdit(sourceUrl: String) {
+        val context = context ?: return
         lifecycleScope.launch {
             val exists = withContext(Dispatchers.IO) {
                 appDb.bookSourceDao.getBookSource(sourceUrl) != null
             }
             if (exists) {
-                requireContext().startActivity<BookSourceEditActivity> {
-                    putExtra("sourceUrl", sourceUrl)
-                }
+                BookSourceEditLauncher.open(context, sourceUrl)
             } else {
-                requireContext().toastOnUi("书源不存在或已被删除")
+                context.toastOnUi("书源不存在或已被删除")
             }
         }
     }

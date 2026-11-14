@@ -38,6 +38,7 @@ import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.source.debug.BookSourceDebugActivity
 import io.legado.app.ui.book.source.usedapi.SourceUsedApiActivity
 import io.legado.app.ui.code.CodeEditActivity
+import io.legado.app.utils.StartActivityContract
 import io.legado.app.ui.code.CodeEditLauncher
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.login.SourceLoginActivity
@@ -115,6 +116,19 @@ class BookSourceEditActivity :
     // 避免后者误触发调用方（详情页/换源对话框/阅读页）的刷新逻辑。
     private var initialSource: BookSource? = null
 
+    /**
+     * JS 书源兜底重定向。
+     *
+     * 本页不渲染任何内容，只把代码编辑页的结果（RESULT_OK / 取消）原样转给调用方，
+     * 保证详情页、阅读页、换源对话框等依赖 ActivityResult 的入口行为不变。
+     */
+    private val jsSourceEditRedirect = registerForActivityResult(
+        StartActivityContract(CodeEditActivity::class.java),
+    ) { result ->
+        setResult(result.resultCode, result.data)
+        finish()
+    }
+
     // 二维码扫描结果回调：用于从二维码导入书源
     private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
         it ?: return@registerForActivityResult
@@ -143,6 +157,8 @@ class BookSourceEditActivity :
      * 初始化视图、加载数据、绑定书源
      */
     override fun onActivityCreated(savedInstanceState: Bundle?) {
+        // JS 单文件书源没有规则字段可填：任何入口进来都直接转到代码编辑页
+        if (savedInstanceState == null && redirectToJsEditorIfNeeded(intent)) return
         softKeyboardTool.attachToWindow(window)
         initView()
         viewModel.initData(intent) {
@@ -170,9 +186,27 @@ class BookSourceEditActivity :
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        // singleTask 复用时同样要拦住 JS 源：直接转代码编辑页
+        if (redirectToJsEditorIfNeeded(intent)) return
         if (viewModel.bookSource != null) {
             locateFieldFromIntent(intent)
         }
+    }
+
+    /**
+     * JS 单文件书源（mainJs 非空）一律转代码编辑页。
+     *
+     * @return true 表示已重定向，本页不要再做任何初始化
+     */
+    private fun redirectToJsEditorIfNeeded(sourceIntent: Intent): Boolean {
+        val sourceUrl = sourceIntent.getStringExtra(BookSourceEditLauncher.EXTRA_SOURCE_URL)
+            ?: return false
+        if (sourceUrl.isBlank()) return false
+        if (!BookSourceEditLauncher.isJsSource(sourceUrl)) return false
+        jsSourceEditRedirect.launch {
+            putExtra(CodeEditActivity.EXTRA_JS_SOURCE_URL, sourceUrl)
+        }
+        return true
     }
 
     /**

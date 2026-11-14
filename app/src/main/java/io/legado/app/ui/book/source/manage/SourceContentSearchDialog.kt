@@ -3,6 +3,7 @@ package io.legado.app.ui.book.source.manage
 import androidx.fragment.app.viewModels
 import com.google.gson.JsonObject
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
+import io.legado.app.ui.book.source.edit.BookSourceEditLauncher
 import io.legado.app.ui.source.BaseContentSearchDialog
 import io.legado.app.ui.source.ContentSearchEngine
 import io.legado.app.ui.source.ContentSearchType
@@ -161,6 +162,11 @@ class SourceContentSearchDialog : BaseContentSearchDialog() {
     }
 
     override fun navigateToEdit(sourceUrl: String, tabKey: String?, fieldKey: String?) {
+        if (BookSourceEditLauncher.isJsSource(sourceUrl)) {
+            // JS 源没有规则字段，tab/字段定位无意义，直接进代码编辑页
+            startActivity(BookSourceEditLauncher.jsEditIntent(requireContext(), sourceUrl))
+            return
+        }
         startActivity<BookSourceEditActivity> {
             putExtra("sourceUrl", sourceUrl)
             if (!tabKey.isNullOrBlank()) {

@@ -45,6 +45,7 @@ import io.legado.app.ui.association.ImportUrlDialogHelper
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.source.debug.BookSourceDebugActivity
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
+import io.legado.app.ui.book.source.edit.BookSourceEditLauncher
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.config.CheckSourceConfig
 import io.legado.app.ui.file.HandleFileContract
@@ -816,18 +817,7 @@ class BookSourceActivity :
      */
     override fun edit(bookSource: BookSourcePart) {
         lifecycleScope.launch {
-            val source = withContext(IO) {
-                appDb.bookSourceDao.getBookSource(bookSource.bookSourceUrl)
-            }
-            if (source?.mainJs.isNullOrBlank()) {
-                startActivity<BookSourceEditActivity> {
-                    putExtra("sourceUrl", bookSource.bookSourceUrl)
-                }
-            } else {
-                startActivity<CodeEditActivity> {
-                    putExtra(CodeEditActivity.EXTRA_JS_SOURCE_URL, bookSource.bookSourceUrl)
-                }
-            }
+            BookSourceEditLauncher.open(this@BookSourceActivity, bookSource.bookSourceUrl)
         }
     }
 
