@@ -1844,6 +1844,32 @@ class TextChapterLayout(
             } else {
                 0f
             }
+            // 行首落在九宫格气泡段里（续行行首）：行首没有邻字可推（computeNeighborPush 的
+            // widthAdd 落在上一行末字上，对本行无效），强制策略的左角会溢出正文列左边界被裁掉。
+            // 参考 MD3 分支：把行内容整体右移左角宽——两端对齐把右移量同步补进 desiredWidth
+            // （行尾仍落在正文列右边界，行内容被压缩让位）、自然排列超出时由 exceed 压回。
+            // 预留量 = min(左角厚, 一个字宽) + 手动左间距，与绘制层强制外扩口径一致；
+            // 智能策略行首只外扩 0.1em 最小兜底量（不随预留变大）、严格策略不外扩，都不需要预留；
+            // 段首行（lineStart == 0）的行首匹配由 lineStartAdd / indentAdd 机制负责，不在这里重复算
+            val wrapStartBleed = if (!isTitle && lineStart > 0) {
+                val startStyle = charStyles?.getOrNull(lineStart)
+                if (startStyle?.bgImage?.isNotEmpty() == true &&
+                    startStyle.bgBleedMode == HighlightRule.BLEED_FORCE
+                ) {
+                    TextLine.getBgBitmap(startStyle.bgImage)?.let { bitmap ->
+                        TextLine.nineSliceSideWidth(
+                            bitmap,
+                            startStyle.npLeft,
+                            startStyle.npRight,
+                            textPaint.textSize,
+                        )[0] + (startStyle.bgSpacingLeft * textPaint.textSize).coerceAtLeast(0f)
+                    } ?: 0f
+                } else {
+                    0f
+                }
+            } else {
+                0f
+            }
             when (lineIndex) {
                 0 if layout.lineCount > 1 && !isTitle && isFirstLine -> {
                     // 多行的第一行 非标题
@@ -1872,8 +1898,9 @@ class TextChapterLayout(
                             else -> lineStartExtra
                         }
                     } else {
-                        // 单行正文段落同样可能吃到行首匹配的整行右移
-                        if (lineIndex == 0) lineStartExtra else 0f
+                        // 单行正文段落同样可能吃到行首匹配的整行右移；
+                        // 行首落在气泡段内时整体右移 wrapStartBleed 让出左角（下方两个分支共用）
+                        (if (lineIndex == 0) lineStartExtra else 0f) + wrapStartBleed
                     }
                     if (!isTitle && textFullJustify && endSqueezeNeeded) {
                         // 末行右端放不下段末外扩：走两端对齐的压缩分布。addCharsToLineMiddle 的
@@ -1914,12 +1941,15 @@ class TextChapterLayout(
                         // 中间行；续段（被图片分割出的残段）首行没有缩进、同样可能吃到行首匹配的
                         // 整行右移，desiredWidth 同步补上右移量、命中字距一并补上，
                         // 让行尾仍落在正文列右边界（留白已参与自然换行，不允许再压负 residual）；
-                        // 行末落在气泡段内时再补预留量，这次是刻意的负 residual（行末没有邻字可推）
+                        // 行首/行末落在气泡段内时再补各自的预留量（行首右移让出左角、行末压缩让出
+                        // 右角），都是刻意的负 residual（行首/行末没有邻字可推）
                         addCharsToLineMiddle(
                             book, absStartX, textLine, words, textPaint,
-                            desiredWidth + lineStartExtra + lineMatchSpacing, lineStartExtra,
+                            desiredWidth + lineStartExtra + wrapStartBleed + lineMatchSpacing,
+                            lineStartExtra + wrapStartBleed,
                             widths, srcList, clickList, charStyles, lineStart,
-                            clampNegativeResidual = lineMatchSpacing > 0f && wrapEndBleed <= 0f,
+                            clampNegativeResidual = lineMatchSpacing > 0f &&
+                                wrapEndBleed <= 0f && wrapStartBleed <= 0f,
                             wrapEndBleed = wrapEndBleed,
                         )
                     }

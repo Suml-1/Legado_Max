@@ -159,7 +159,8 @@
   - 最终 Canvas 绘制层。
   - 负责连续区间合并、背景色/背景图绘制、下划线绘制、背景图缓存、背景图清理。
   - 九宫格背景（`bgImageFit == 3`）由 `drawNineSlice(...)` 绘制：目标矩形 = 匹配区 + 自动外扩（严格/智能/强制三档）+ 手动四边间距，四角保持原始比例、边条与中段拉伸。切分比例（`npLeft/npTop/npRight/npBottom`）与四角厚度的换算口径同时供排版期 `computeNeighborPush`（强制策略推开邻字）使用，两处必须同源。
-  - **行末气泡角预留**（2026-11-14，参考 MD3 分支）：匹配段顶到行末（延续到下一行）时，行末没有邻字可推（`computeNeighborPush` 的 widthAdd 会落到下一行首字上，对本行无效）、也没有段末压缩可借，角装饰会溢出正文列右边界被裁掉。排版期在 `setTypeText` 行循环里对这类行计算 `wrapEndBleed`（= `nineSliceSideWidth` 按字号夹过的右角厚 + 手动右间距，与绘制层外扩口径同源；严格策略不外扩不预留），两端对齐按负 residual 压缩行宽、自然排列由 `exceed(extraRightMargin)` 压回，行尾落在正文列右边界内，行末照常画出完整角装饰。段末行走 `endBleed` 分支、标题走 `titleEndExtra`，互不重复。
+  - **行末/行首气泡角预留**（2026-11-14，参考 MD3 分支）：匹配段顶到行末（延续到下一行）时，行末没有邻字可推（`computeNeighborPush` 的 widthAdd 会落到下一行首字上，对本行无效）、也没有段末压缩可借，角装饰会溢出正文列右边界被裁掉。排版期在 `setTypeText` 行循环里对这类行计算 `wrapEndBleed`（= `nineSliceSideWidth` 按字号夹过的右角厚 + 手动右间距，与绘制层外扩口径同源；严格策略不外扩不预留），两端对齐按负 residual 压缩行宽、自然排列由 `exceed(extraRightMargin)` 压回，行尾落在正文列右边界内，行末照常画出完整角装饰。段末行走 `endBleed` 分支、标题走 `titleEndExtra`，互不重复。
+  - **行首镜像预留**：续行行首（`lineStart > 0`）落在气泡段里时同理计算 `wrapStartBleed`（左角厚 + 手动左间距），行内容整体右移让出左角，两端对齐把右移量同步补进 desiredWidth（行尾仍落在正文列右边界）、自然排列超出时由 exceed 压回。只对强制策略预留（智能策略行首只外扩 0.1em 固定兜底量、严格不外扩）；段首行（`lineStart == 0`）的行首匹配由 `lineStartAdd` / `indentAdd` 机制负责，不在这里重复算。
 
 ## 默认预置规则
 
