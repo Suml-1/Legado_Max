@@ -451,6 +451,10 @@
     <string name="sort_url">Sort url(sortUrl)</string>
     <string name="login_url">Log in url(loginUrl)</string>
     <string name="login_ui">Login UI(loginUi)</string>
+    <string name="login_ui_v2_render_error">Login UI failed to load. loginUi(state) must return {rows:[...]}. See logs.</string>
+    <string name="login_ui_v2_action_error">Login action failed: %1$s</string>
+    <string name="login_ui_v2_invalid_action">loginAction returned an invalid command object</string>
+    <string name="login_ui_v2_save_error">Failed to save login info</string>
     <string name="login_check_js">Login check js(loginCheckJs)</string>
     <string name="comment">Source comment(sourceComment)</string>
     <string name="r_search_url">Search url(url)</string>

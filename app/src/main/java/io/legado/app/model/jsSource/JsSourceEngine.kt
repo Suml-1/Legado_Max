@@ -152,6 +152,17 @@ class JsSourceEngine(
 
     fun callFunctionIfExists(name: String, args: List<Pair<String, Any?>>): String? = callOptionalFunction(name, args).value
 
+    /**
+     * 执行一段自定义表达式（表达式里用 [bindings] 的键当变量名）。
+     *
+     * 用于登录 UI v2 这类「函数存在与否由脚本决定、参数必须是 JS 对象」的场景：
+     * 直接传 JSON 字符串再在 JS 侧 `JSON.parse`，避免依赖 Kotlin Map 的宿主包装语义。
+     */
+    internal fun callExpression(expression: String, bindings: List<Pair<String, Any?>>): String? {
+        val scope = buildScope(bindings)
+        return normalizeJsResult(compile(expression).eval(scope, coroutineContext), coroutineContext)
+    }
+
     internal fun callOptionalFunction(
         name: String,
         args: List<Pair<String, Any?>>,

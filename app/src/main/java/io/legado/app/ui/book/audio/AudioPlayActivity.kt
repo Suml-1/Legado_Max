@@ -62,6 +62,7 @@ import io.legado.app.lib.theme.ThemeStore.Companion.accentColor
 import io.legado.app.ui.book.audio.SliderPopup.Companion.SPEED
 import io.legado.app.ui.book.audio.SliderPopup.Companion.TIMER
 import io.legado.app.model.SourceCallBack
+import io.legado.app.model.login.isLoginUiV2
 import io.legado.app.utils.gone
 
 /**
@@ -129,7 +130,8 @@ class AudioPlayActivity :
     }
 
     override fun onMenuOpened(featureId: Int, menu: Menu): Boolean {
-        menu.findItem(R.id.menu_login)?.isVisible = !AudioPlay.bookSource?.loginUrl.isNullOrBlank()
+        menu.findItem(R.id.menu_login)?.isVisible =
+            AudioPlay.bookSource?.let { !it.loginUrl.isNullOrBlank() || it.isLoginUiV2() } ?: false
         menu.findItem(R.id.menu_wake_lock)?.isChecked = AppConfig.audioPlayUseWakeLock
         menu.findItem(R.id.menu_audio_play_cache)?.isChecked = AppConfig.audioPlayCacheEnabled
         menu.findItem(R.id.menu_audio_cache)?.icon?.setTintMutate(primaryTextColor)

@@ -37,6 +37,7 @@ import io.legado.app.lib.theme.primaryColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
+import io.legado.app.model.login.isLoginUiV2
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.widget.seekbar.SeekBarChangeListener
 import io.legado.app.utils.ColorUtils
@@ -506,7 +507,9 @@ class ReadMenu @JvmOverloads constructor(
         //书源操作
         tvSourceAction.onClick {
             sourceMenu.menu.findItem(R.id.menu_login).isVisible =
-                !ReadBook.bookSource?.loginUrl.isNullOrEmpty()
+                ReadBook.bookSource?.let {
+                    !it.loginUrl.isNullOrEmpty() || it.isLoginUiV2()
+                } ?: false
             sourceMenu.menu.findItem(R.id.menu_chapter_pay).isVisible =
                 !ReadBook.bookSource?.loginUrl.isNullOrEmpty()
                         && ReadBook.curTextChapter?.isVip == true

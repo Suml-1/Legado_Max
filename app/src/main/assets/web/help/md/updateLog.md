@@ -27,6 +27,7 @@
 **2026/11/14**
 ### 这几天关于js引擎和js书源的提交直接参考了[NG版本](https://github.com/joestar817/legado_NG)
 
+- feat(登录界面 v2): 支持 JS 源用 `loginUi(state)` / `loginAction(action, state, form)` 驱动登录界面，无 `loginUrl` 也能显示登录入口（`book_sources_part` 视图同步识别，数据库 v102）；番茄直连等 NGJS 格式书源恢复「刷新设备 / 开启段评 / 关闭段评」等入口
 - fix(正式包): 修复 R8 版本下所有 JS 规则/JS 书源报 `ScriptException: NullPointerException` —— rhino 模块的 consumer rules 仍在保留旧包名 `org.mozilla.javascript.**`，未随引擎切换改为 `org.htmlunit.corejs.javascript.**`，导致 release 包把 Rhino 核心类混淆/裁剪
 - feat(JS书源): 列表中点击 JS 书源直接进入代码编辑页，保存时校验脚本并写库；普通书源仍进规则编辑页
 - fix(详情页): JS 书源补回 `durChapterTitle`/`totalChapterNum`/`latestChapterTitle`，目录不再显示「目录：null」；目录懒加载（Flow）分支也支持 JS 源

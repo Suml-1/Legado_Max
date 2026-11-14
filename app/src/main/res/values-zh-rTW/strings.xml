@@ -423,6 +423,10 @@
     <string name="sort_url">分類Url(sortUrl)</string>
     <string name="login_url">登入URL(loginUrl)</string>
     <string name="login_ui">登入UI(loginUi)</string>
+    <string name="login_ui_v2_render_error">登入介面載入失敗，loginUi(state) 必須回傳 {rows:[...]}，詳情見日誌</string>
+    <string name="login_ui_v2_action_error">登入操作失敗：%1$s</string>
+    <string name="login_ui_v2_invalid_action">loginAction 回傳了無效的指令物件</string>
+    <string name="login_ui_v2_save_error">登入資訊儲存失敗</string>
     <string name="login_check_js">登入檢查JS(loginCheckJs)</string>
     <string name="comment">源注釋(sourceComment)</string>
     <string name="r_search_url">搜尋地址(url)</string>

@@ -419,6 +419,10 @@
     <string name="cache_rate_invalid">格式不正確，請填寫純數字（如 1500）或次數/毫秒（如 20/60000）</string>
     <string name="login_url">登錄 URL(loginUrl)</string>
     <string name="login_ui">登錄UI(loginUi)</string>
+    <string name="login_ui_v2_render_error">登錄介面載入失敗，loginUi(state) 必須回傳 {rows:[...]}，詳情見日誌</string>
+    <string name="login_ui_v2_action_error">登錄操作失敗：%1$s</string>
+    <string name="login_ui_v2_invalid_action">loginAction 回傳了無效的指令物件</string>
+    <string name="login_ui_v2_save_error">登錄資訊儲存失敗</string>
     <string name="login_check_js">登錄檢查JS(loginCheckJs)</string>
     <string name="comment">源注釋(sourceComment)</string>
     <string name="r_search_url">搜索地址 (url)</string>

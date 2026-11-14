@@ -21,7 +21,7 @@ object DatabaseMigrations {
             migration_35_36, migration_36_37, migration_37_38, migration_38_39,
             migration_39_40, migration_40_41, migration_41_42, migration_42_43,
             migration_95_96, migration_96_97, migration_97_98, migration_98_99,
-            migration_99_100
+            migration_99_100, migration_101_102
         )
     }
 
@@ -676,6 +676,29 @@ object DatabaseMigrations {
                     android.util.Log.e("DatabaseMigrations", "99→100: 添加 homepageModules 列失败", e)
                 }
             }
+        }
+    }
+
+    /**
+     * 101 -> 102: `book_sources_part` 视图的 hasLoginUrl 语义扩展为「可登录」——
+     * JS 单文件书源用 loginUi/loginAction 函数做登录界面 v2 时没有 loginUrl，
+     * 旧表达式会让书源列表/发现页不显示「登录」入口。
+     *
+     * 视图定义变了必须重建（Room 不会自动迁移视图）。
+     */
+    private val migration_101_102 = object : Migration(101, 102) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("DROP VIEW IF EXISTS `book_sources_part`")
+            db.execSQL(
+                """CREATE VIEW `book_sources_part` AS select bookSourceUrl, bookSourceName, bookSourceGroup, customOrder, enabled, enabledExplore,
+    ((loginUrl is not null and trim(loginUrl) <> '')
+        or (instr(ifnull(loginUi, ''), '"version":2') > 0)
+        or (instr(ifnull(mainJs, ''), 'loginUi') > 0 and instr(ifnull(mainJs, ''), 'loginAction') > 0))
+        hasLoginUrl,
+    lastUpdateTime, respondTime, weight,
+    (exploreUrl is not null and trim(exploreUrl) <> '') hasExploreUrl, eventListener, bookSourceType
+    from book_sources"""
+            )
         }
     }
 

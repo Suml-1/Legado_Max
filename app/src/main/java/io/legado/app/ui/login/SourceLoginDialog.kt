@@ -54,12 +54,19 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatSpinner
 import io.legado.app.data.entities.rule.RowUi.Type
+import io.legado.app.model.login.LoginUiV2
+import io.legado.app.model.login.evalLoginActionV2
+import io.legado.app.model.login.evalLoginUiV2
+import io.legado.app.model.login.isLoginUiV2
 import io.legado.app.ui.widget.text.TextInputLayout
 import io.legado.app.utils.buildMainHandler
+import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.indexOf
 import io.legado.app.utils.setSelectionSafely
+import kotlinx.coroutines.delay
 
-class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
+class SourceLoginDialog :
+    BaseDialogFragment(R.layout.dialog_login, true),
     SourceLoginJsExtensions.Callback {
 
     private val binding by viewBinding(DialogLoginBinding::bind)
@@ -70,12 +77,18 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     private var rowUiName = arrayListOf<String>()
     private var hasChange = false
     private var loginUrl: String? = null
+
+    // 登录界面 v2（loginUi(state)/loginAction(...)）状态
+    private var isV2 = false
+    private var stateJson = "{}"
+    private var v2ActionRunning = false
+    private val v2Countdowns = hashMapOf<String, Int>()
     private val sourceLoginJsExtensions by lazy {
         SourceLoginJsExtensions(
             activity as AppCompatActivity,
             viewModel.source,
             viewModel.bookType,
-            this
+            this,
         )
     }
 
@@ -87,7 +100,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     override fun upUiData(data: Map<String, Any?>?) {
         try {
-            activity?.runOnUiThread { // 在主线程中更新 UI
+            activity?.runOnUiThread {
+                // 在主线程中更新 UI
                 handleUpUiData(data)
             }
         } catch (e: Exception) {
@@ -103,6 +117,10 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     private fun handleReUiView(deltaUp: Boolean) {
         val source = viewModel.source ?: return
+        if (isV2) {
+            renderV2()
+            return
+        }
         val loginUiStr = source.loginUi ?: return
         val codeStr = loginUiStr.let {
             when {
@@ -146,12 +164,12 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                                 rowView.text = rowUi.viewName ?: rowUi.name
                             }
                             Type.toggle -> {
-                                val char = default ?: run{
+                                val char = default ?: run {
                                     val chars = rowUi.chars?.filterNotNull() ?: listOf("chars is null")
                                     chars.getOrNull(0) ?: ""
                                 }
                                 newLoginInfo[rowUi.name] = char
-                                val name =  rowUi.viewName ?: rowUi.name
+                                val name = rowUi.viewName ?: rowUi.name
                                 val left = rowUi.style?.layout_justifySelf != "right"
                                 rowView.text = if (left) char + name else name + char
                             }
@@ -159,9 +177,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     }
 
                     is LinearLayout -> {
-                        val chars = rowUi.chars?.filterNotNull() ?: listOf("chars","is null")
+                        val chars = rowUi.chars?.filterNotNull() ?: listOf("chars", "is null")
                         val index = chars.indexOf(default)
-                        newLoginInfo[rowUi.name] = default ?: run{
+                        newLoginInfo[rowUi.name] = default ?: run {
                             chars.getOrNull(0) ?: ""
                         }
                         rowView.findViewById<AppCompatSpinner>(R.id.sp_type)?.setSelectionSafely(index)
@@ -192,12 +210,12 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                             }
 
                             Type.toggle -> {
-                                val char = value ?: run{
+                                val char = value ?: run {
                                     val chars = rowUi.chars?.filterNotNull() ?: listOf("chars is null")
                                     chars.getOrNull(0) ?: ""
                                 }
                                 loginInfo[rowUi.name] = char
-                                val name =  rowUi.viewName ?: rowUi.name
+                                val name = rowUi.viewName ?: rowUi.name
                                 val left = rowUi.style?.layout_justifySelf != "right"
                                 rowView.text = if (left) char + name else name + char
                             }
@@ -205,7 +223,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     }
 
                     is LinearLayout -> {
-                        val items = rowUi.chars?.filterNotNull() ?: listOf("chars","is null")
+                        val items = rowUi.chars?.filterNotNull() ?: listOf("chars", "is null")
                         val index = items.indexOf(value)
                         rowView.findViewById<AppCompatSpinner>(R.id.sp_type)?.setSelectionSafely(index)
                     }
@@ -241,11 +259,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
     }
 
-    fun loginUi(json: String?): List<RowUi>? {
-        return GSON.fromJsonArray<RowUi>(json).onFailure {
-            AppLog.put("loginUi json parse err:" + it.localizedMessage, it)
-        }.getOrNull()
-    }
+    fun loginUi(json: String?): List<RowUi>? = GSON.fromJsonArray<RowUi>(json).onFailure {
+        AppLog.put("loginUi json parse err:" + it.localizedMessage, it)
+    }.getOrNull()
 
     @SuppressLint("SetTextI18n", "ClickableViewAccessibility")
     private fun rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?, deltaUp: Boolean) {
@@ -291,7 +307,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 Type.text -> ItemSourceEditBinding.inflate(
                     layoutInflater,
                     binding.root,
-                    false
+                    false,
                 ).let {
                     val editText = it.editText
                     binding.flexbox.addView(it.root, insertIndex)
@@ -317,7 +333,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                             } else {
                                 it.textInputLayout.hint = n
                             }
-                        }.onError{ _ ->
+                        }.onError { _ ->
                             it.textInputLayout.hint = "err"
                         }
                     }
@@ -349,7 +365,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 Type.password -> ItemSourceEditBinding.inflate(
                     layoutInflater,
                     binding.root,
-                    false
+                    false,
                 ).let {
                     val editText = it.editText
                     binding.flexbox.addView(it.root, insertIndex)
@@ -375,7 +391,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                             } else {
                                 it.textInputLayout.hint = n
                             }
-                        }.onError{ _ ->
+                        }.onError { _ ->
                             it.textInputLayout.hint = "err"
                         }
                     }
@@ -409,7 +425,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 Type.select -> ItemSelectorSingleBinding.inflate(
                     layoutInflater,
                     binding.root,
-                    false
+                    false,
                 ).let {
                     if (viewName == null) {
                         it.spName.text = name
@@ -425,15 +441,15 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                             } else {
                                 it.spName.text = n
                             }
-                        }.onError{ _ ->
+                        }.onError { _ ->
                             it.spName.text = "err"
                         }
                     }
-                    val chars = rowUi.chars?.filterNotNull() ?: listOf("chars","is null")
+                    val chars = rowUi.chars?.filterNotNull() ?: listOf("chars", "is null")
                     val adapter = ArrayAdapter(
                         requireContext(),
                         R.layout.item_text_common,
-                        chars
+                        chars,
                     )
                     adapter.setDropDownViewResource(R.layout.item_spinner_dropdown)
                     val selector = it.spType
@@ -451,7 +467,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     selector.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                         var isInitializing = true
                         override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                            if (isInitializing) { //忽略初始化选择
+                            if (isInitializing) { // 忽略初始化选择
                                 isInitializing = false
                                 return
                             }
@@ -478,7 +494,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 Type.button -> ItemFilletTextBinding.inflate(
                     layoutInflater,
                     binding.root,
-                    false
+                    false,
                 ).let {
                     binding.flexbox.addView(it.root, insertIndex)
                     rowUi.style().apply {
@@ -503,16 +519,17 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                             if (n.isNullOrEmpty()) {
                                 it.textView.text = "null"
                             } else {
-                                rowUi.viewName = n //在回调handleUIDataUpdate用
+                                rowUi.viewName = n // 在回调handleUIDataUpdate用
                                 it.textView.text = n
                             }
-                        }.onError{ _ ->
+                        }.onError { _ ->
                             it.textView.text = "err"
                         }
                     }
                     it.textView.setPadding(16.dpToPx())
                     var downTime = 0L
-                    it.root.setOnClickListener { //无障碍点击
+                    it.root.setOnClickListener {
+                        // 无障碍点击
                         handleButtonClick(source, action, name, false)
                     }
                     it.root.setOnTouchListener { view, event ->
@@ -538,10 +555,22 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     }
                 }
 
+                Type.label -> ItemFilletTextBinding.inflate(
+                    layoutInflater,
+                    binding.root,
+                    false,
+                ).let {
+                    binding.flexbox.addView(it.root, insertIndex)
+                    rowUi.style().apply { apply(it.root) }
+                    it.root.id = index + 1000
+                    it.textView.text = viewName ?: name
+                    it.textView.setPadding(16.dpToPx())
+                }
+
                 Type.toggle -> ItemFilletTextBinding.inflate(
                     layoutInflater,
                     binding.root,
-                    false
+                    false,
                 ).let {
                     var newName = name
                     var left = true
@@ -579,11 +608,11 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                             if (n.isNullOrEmpty()) {
                                 it.textView.text = char + "null"
                             } else {
-                                rowUi.viewName = n //存放新名字，在回调handleUIDataUpdate时用
-                                newName = n //下面切换时用
+                                rowUi.viewName = n // 存放新名字，在回调handleUIDataUpdate时用
+                                newName = n // 下面切换时用
                                 it.textView.text = if (left) char + n else n + char
                             }
-                        }.onError{ _ ->
+                        }.onError { _ ->
                             it.textView.text = char + "err"
                         }
                     }
@@ -667,7 +696,13 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         val source = viewModel.source ?: return
+        isV2 = source.isLoginUiV2()
         loginUrl = source.getLoginJs()
+        setupToolBar(source)
+        if (isV2) {
+            renderV2()
+            return
+        }
         val loginUiStr = source.loginUi ?: return
         val codeStr = loginUiStr.let {
             when {
@@ -688,13 +723,159 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             rowUis = loginUi(loginUiStr)
             buttonUi(source, rowUis)
         }
+    }
+
+    private fun setupToolBar(source: BaseSource) {
         binding.toolBar.setBackgroundColor(primaryColor)
         binding.toolBar.title = getString(R.string.login_source, source.getTag())
         binding.toolBar.inflateMenu(R.menu.source_login)
         binding.toolBar.menu.applyTint(requireContext())
     }
 
+    /**
+     * 渲染一帧 v2 登录界面。
+     *
+     * 脚本返回 `{rows:[...]}`；行里的 `key` 是表单键、`name` 是显示名，这里统一归一化成
+     * `name = key` + `viewName = 显示名`，让 v1 的渲染/取值逻辑原样复用。
+     */
+    private fun renderV2(candidateState: String = stateJson) {
+        val source = viewModel.source ?: return
+        lifecycleScope.launch {
+            val result = withContext(IO) {
+                runCatching {
+                    LoginUiV2.parseRender(source.evalLoginUiV2(candidateState))
+                        ?: error("loginUi(state) 返回值不是 {rows:[...]}")
+                }
+            }
+            val newRows = result.getOrNull()
+            if (newRows == null) {
+                AppLog.put("登录 UI v2 渲染失败", result.exceptionOrNull())
+                if (rowUis.isNullOrEmpty()) {
+                    viewModel.loginInfo.clear()
+                    rowUis = listOf(
+                        RowUi(
+                            name = getString(R.string.login_ui_v2_render_error),
+                            type = Type.label,
+                        ),
+                    )
+                    buttonUi(source, rowUis)
+                } else {
+                    context?.toastOnUi(R.string.login_ui_v2_render_error)
+                }
+                return@launch
+            }
+            stateJson = candidateState
+            val stored = storedLoginInfo()
+            viewModel.loginInfo.clear()
+            newRows.forEach { row ->
+                val key = row.key ?: return@forEach
+                if (row.type == Type.text ||
+                    row.type == Type.password ||
+                    row.type == Type.select ||
+                    row.type == Type.toggle
+                ) {
+                    val choices = row.choices()
+                    val resolved = LoginUiV2.resolveFieldValue(row.value, null, stored[key])
+                        ?: row.default
+                        ?: choices.firstOrNull()
+                        ?: ""
+                    viewModel.loginInfo[key] = if (row.type == Type.toggle && choices.isNotEmpty()) {
+                        resolved.takeIf { it in choices } ?: choices.first()
+                    } else {
+                        resolved
+                    }
+                }
+            }
+            rowUis = newRows.map(::normalizeV2Row)
+            buttonUi(source, rowUis)
+        }
+    }
+
+    private fun normalizeV2Row(row: RowUi): RowUi {
+        val key = row.key
+        if (key.isNullOrBlank()) return row
+        return row.copy(
+            name = key,
+            viewName = row.viewName ?: row.name,
+            chars = row.chars ?: row.options,
+        )
+    }
+
+    private fun storedLoginInfo(): Map<String, String> = viewModel.source?.getLoginInfo()
+        ?.let { GSON.fromJsonObject<Map<String, String>>(it).getOrNull() }
+        .orEmpty()
+
+    private fun dispatchV2(action: String, countdownSeconds: Int? = null) {
+        if (v2ActionRunning) return
+        if ((v2Countdowns[action] ?: 0) > 0) return
+        val source = viewModel.source ?: return
+        val formJson = GSON.toJson(getLoginData(rowUis))
+        v2ActionRunning = true
+        lifecycleScope.launch {
+            val result = withContext(IO) {
+                runCatching { source.evalLoginActionV2(action, stateJson, formJson) }
+            }
+            v2ActionRunning = false
+            result.exceptionOrNull()?.let { error ->
+                AppLog.put("登录 UI v2 动作 $action 执行出错", error)
+                context?.toastOnUi(
+                    getString(
+                        R.string.login_ui_v2_action_error,
+                        error.localizedMessage ?: error.toString(),
+                    ),
+                )
+                return@launch
+            }
+            val command = LoginUiV2.parseActionResult(result.getOrNull())
+            if (command.malformed) {
+                AppLog.put("登录 UI v2 动作 $action 返回无效命令")
+                context?.toastOnUi(R.string.login_ui_v2_invalid_action)
+                return@launch
+            }
+            command.unknownKeys.forEach {
+                AppLog.put("登录 UI v2 动作 $action 返回未知命令 $it，已忽略")
+            }
+            command.loginJson?.let { loginJson ->
+                if (!withContext(IO) { source.putLoginInfo(loginJson) }) {
+                    context?.toastOnUi(R.string.login_ui_v2_save_error)
+                    return@launch
+                }
+            }
+            if (command.close) {
+                oKToClose = true
+                dismissAllowingStateLoss()
+                return@launch
+            }
+            command.error?.values?.firstOrNull()?.let { message ->
+                context?.toastOnUi(getString(R.string.login_ui_v2_action_error, message))
+            }
+            if (command.error.isNullOrEmpty()) {
+                countdownSeconds?.let { startCountdown(action, it) }
+            }
+            command.stateJson?.let { renderV2(it) }
+        }
+    }
+
+    private fun startCountdown(action: String, seconds: Int) {
+        if (seconds <= 0) return
+        v2Countdowns[action] = seconds
+        lifecycleScope.launch {
+            for (left in seconds downTo 1) {
+                v2Countdowns[action] = left
+                delay(1000L)
+            }
+            v2Countdowns.remove(action)
+        }
+    }
+
     private fun handleButtonClick(source: BaseSource, action: String?, name: String, isLongClick: Boolean) {
+        if (isV2) {
+            if (action != null) {
+                val countdown = rowUis?.firstOrNull { it.name == name }?.countdown
+                dispatchV2(action, countdown)
+            }
+            return
+        }
         lifecycleScope.launch(IO) {
             if (action.isAbsUrl()) {
                 context?.openUrl(action!!)
@@ -727,7 +908,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 Type.text, Type.password -> {
                     val rowView = binding.root.findViewById<View>(index + 1000)
                     ItemSourceEditBinding.bind(rowView).editText.text.let {
-                        loginData[rowUi.name] = it?.toString() ?: rowUi.default ?: "" //没文本的时候存空字符串,而不是删除loginInfo
+                        loginData[rowUi.name] = it?.toString() ?: rowUi.default ?: "" // 没文本的时候存空字符串,而不是删除loginInfo
                     }
                 }
             }
@@ -770,7 +951,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     }
 
     override fun onDismiss(dialog: DialogInterface) {
-        if (!oKToClose && hasChange) {
+        if (!oKToClose && hasChange && !isV2) {
             val loginInfo = viewModel.loginInfo
             if (loginInfo.isEmpty()) {
                 viewModel.source?.removeLoginInfo()
@@ -784,5 +965,4 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         super.onDismiss(dialog)
         activity?.finish()
     }
-
 }

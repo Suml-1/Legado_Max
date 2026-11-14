@@ -10,6 +10,7 @@ import io.legado.app.constant.BookSourceType
 import io.legado.app.data.entities.BookSource
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.model.SharedJsScope
+import io.legado.app.model.login.LoginUiV2
 import io.legado.app.utils.GSON
 import kotlinx.coroutines.CancellationException
 import org.htmlunit.corejs.javascript.Function
@@ -123,6 +124,20 @@ object JsSourceConfig {
             ScriptableObject.getProperty(scope, "explore") !is Function
         ) {
             throw NoStackTraceException(appCtx.getString(R.string.js_source_error_explore_function))
+        }
+        // 登录界面 v2：脚本声明 loginUi(state)/loginAction(...) 时，落一个持久标记给界面判断
+        if (ScriptableObject.getProperty(scope, "loginUi") is Function) {
+            if (!source.loginUi.isNullOrBlank()) {
+                throw NoStackTraceException(
+                    appCtx.getString(R.string.js_source_error_config_invalid, "loginUi"),
+                )
+            }
+            if (ScriptableObject.getProperty(scope, "loginAction") !is Function) {
+                throw NoStackTraceException(
+                    appCtx.getString(R.string.js_source_error_function_required, "loginAction"),
+                )
+            }
+            source.loginUi = LoginUiV2.MARKER
         }
         source.mainJs = text
         return source

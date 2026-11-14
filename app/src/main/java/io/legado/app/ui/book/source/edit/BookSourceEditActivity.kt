@@ -64,6 +64,7 @@ import io.legado.app.utils.showHelp
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import io.legado.app.model.debug.ToastContext
+import io.legado.app.model.login.isLoginUiV2
 import io.legado.app.model.debug.ToastSourceType
 import io.legado.app.model.debug.ToastRuleType
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -197,7 +198,8 @@ class BookSourceEditActivity :
      * 菜单打开前动态调整菜单项可见性
      */
     override fun onMenuOpened(featureId: Int, menu: Menu): Boolean {
-        menu.findItem(R.id.menu_login)?.isVisible = !getSource().loginUrl.isNullOrBlank()
+        menu.findItem(R.id.menu_login)?.isVisible =
+            !getSource().loginUrl.isNullOrBlank() || getSource().isLoginUiV2()
         // 只有单文件 JS 书源才有可编辑的 mainJs 脚本
         menu.findItem(R.id.menu_edit_js)?.isVisible = !getSource().mainJs.isNullOrBlank()
         menu.findItem(R.id.menu_auto_complete)?.isChecked = viewModel.autoComplete

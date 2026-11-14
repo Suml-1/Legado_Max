@@ -90,6 +90,7 @@ import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.search.SearchAdapter
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.model.SourceCallBack
+import io.legado.app.model.login.isLoginUiV2
 import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.readRecord.BookReadRecordActivity
@@ -375,7 +376,7 @@ class BookInfoActivity :
         menu.findItem(R.id.menu_split_long_chapter)?.isChecked =
             viewModel.bookData.value?.getSplitLongChapter() ?: true
         menu.findItem(R.id.menu_login)?.isVisible =
-            !viewModel.bookSource?.loginUrl.isNullOrBlank()
+            viewModel.bookSource?.let { !it.loginUrl.isNullOrBlank() || it.isLoginUiV2() } ?: false
         menu.findItem(R.id.menu_set_source_variable)?.isVisible =
             viewModel.bookSource != null
         menu.findItem(R.id.menu_set_book_variable)?.isVisible =
@@ -908,7 +909,7 @@ class BookInfoActivity :
                 )
                 binding.tvLasted.text = getString(
                     R.string.lasted_show,
-                    book?.latestChapterTitle.orEmpty()
+                    book?.latestChapterTitle.orEmpty(),
                 )
             }
 
