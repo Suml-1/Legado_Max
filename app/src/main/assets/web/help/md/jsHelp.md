@@ -759,6 +759,35 @@ var out = java.getQuickJsSandbox().evalString("(function(){ return (BigInt(1) <<
 标题会按书源的替换规则/简繁设置处理。`getBookInfo` 也可以直接给出
 `latestChapterTitle`、`durChapterTitle`、`totalChapterNum`，脚本给了就优先用脚本的值。
 
+### 登录界面（loginUi v2）
+
+单文件 JS 书源可以不给 `loginUrl`/`loginUi` 数据，改为在脚本里声明两个函数，由阅读负责渲染登录对话框：
+
+```js
+function loginUi(state) {
+  // state 是上一次 loginAction 返回的 state（首次为 {}）
+  return { rows: [
+    { name: "刷新设备", type: "button", action: "refreshDevice" },
+    { name: (state.reviewEnabled ? "✓ " : "") + "开启段评", type: "button", action: "enableReview" },
+    { name: (!state.reviewEnabled ? "✓ " : "") + "关闭段评", type: "button", action: "disableReview" }
+  ]}
+}
+function loginAction(action, state, form) {
+  if (action === "disableReview") {
+    source.put("fq_paracomment", "off")
+    return { state: { reviewEnabled: false } }
+  }
+  return { state: { reviewEnabled: true } }
+}
+```
+
+* `rows` 元素沿用登录界面行结构：`name` 显示名、`type` 取 `text`/`password`/`select`/`toggle`/`button`/`label`；
+  输入行用 `key` 做表单键（v2 必需），候选项用 `options`（或 `chars`），`countdown` 给按钮冷却秒数。
+* `loginAction` 返回值可选字段：`state`（回传后重新渲染）、`error`（`{字段: 提示}`）、`login`（保存为登录信息）、
+  `close`（关闭对话框）。
+* 脚本里同时声明 `loginUi` 函数和 `config.loginUi` 数据时导入会失败（只能二选一），且必须配对声明 `loginAction`。
+* 无 `loginUrl` 的 v2 源也会显示登录入口（详情页/阅读页/听书页/书源列表）。
+
 ### 调试与限制
 
 * 书源调试页可以对 JS 源跑完整链路（搜索 → 详情 → 目录 → 正文），日志里能看到每个函数 return 的 JSON。
