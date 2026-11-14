@@ -2288,7 +2288,6 @@
 
     <!-- 精準管理：定時任務 -->
     <string name="auto_task_service">定時任務</string>
-    <string name="auto_task_service_desc">在背景定時執行任務</string>
     <string name="auto_task_manage">定時任務管理</string>
     <string name="auto_task_manage_desc">管理定時任務</string>
     <string name="auto_task_add">新增任務</string>

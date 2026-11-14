@@ -4,6 +4,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/menu_auto_task_service"
+        android:checkable="true"
+        android:title="@string/auto_task_service"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/menu_add"
         android:icon="@drawable/ic_add"
         android:title="@string/auto_task_add"

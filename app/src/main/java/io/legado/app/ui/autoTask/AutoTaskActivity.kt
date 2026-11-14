@@ -12,11 +12,13 @@ import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.databinding.ActivityAutoTaskBinding
 import io.legado.app.databinding.DialogEditTextBinding
+import io.legado.app.constant.PreferKey
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.model.AutoTask
 import io.legado.app.model.AutoTaskRule
+import io.legado.app.service.AutoTaskService
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.widget.SelectActionBar
 import io.legado.app.ui.widget.recycler.DragSelectTouchHelper
@@ -24,7 +26,9 @@ import io.legado.app.ui.widget.recycler.ItemTouchCallback
 import io.legado.app.utils.ACache
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.CronSchedule
+import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.isAbsUrl
+import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.splitNotBlank
@@ -101,8 +105,24 @@ class AutoTaskActivity : VMBaseActivity<ActivityAutoTaskBinding, AutoTaskViewMod
         return true
     }
 
+    override fun onMenuOpened(featureId: Int, menu: Menu): Boolean {
+        menu.findItem(R.id.menu_auto_task_service)?.isChecked =
+            getPrefBoolean(PreferKey.autoTaskService)
+        return super.onMenuOpened(featureId, menu)
+    }
+
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
+            R.id.menu_auto_task_service -> {
+                val enable = !item.isChecked
+                item.isChecked = enable
+                putPrefBoolean(PreferKey.autoTaskService, enable)
+                if (enable) {
+                    AutoTaskService.start(this)
+                } else {
+                    AutoTaskService.stop(this)
+                }
+            }
             R.id.menu_add -> startActivity(AutoTaskEditActivity.startIntent(this))
             R.id.menu_import_local -> importDoc.launch {
                 mode = HandleFileContract.FILE
