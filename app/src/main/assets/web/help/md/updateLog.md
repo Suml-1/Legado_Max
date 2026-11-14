@@ -27,7 +27,7 @@
 **2026/11/14**
 ### 这几天关于js引擎和js书源的提交直接参考了[NG版本](https://github.com/joestar817/legado_NG)
 
-- feat(书源编辑): 新增「书源编辑长代码截断」开关（我的-其他设置，默认关闭）：超长字段默认直接显示全文，开启后超过 1000 字符的字段改为只读预览，避免超大文本排版卡顿
+- feat(书源编辑): 新增「源编辑长代码截断」开关（我的-其他设置，默认关闭）：书源与订阅源编辑页的超长字段默认直接显示全文，开启后超过 1000 字符的字段改为只读预览，避免超大文本排版卡顿
 - feat(登录界面 v2): 支持 JS 源用 `loginUi(state)` / `loginAction(action, state, form)` 驱动登录界面，无 `loginUrl` 也能显示登录入口（`book_sources_part` 视图同步识别，数据库 v102）；番茄直连等 NGJS 格式书源恢复「刷新设备 / 开启段评 / 关闭段评」等入口
 - fix(正式包): 修复 R8 版本下所有 JS 规则/JS 书源报 `ScriptException: NullPointerException` —— rhino 模块的 consumer rules 仍在保留旧包名 `org.mozilla.javascript.**`，未随引擎切换改为 `org.htmlunit.corejs.javascript.**`，导致 release 包把 Rhino 核心类混淆/裁剪
 - feat(JS书源): 列表中点击 JS 书源直接进入代码编辑页，保存时校验脚本并写库；普通书源仍进规则编辑页

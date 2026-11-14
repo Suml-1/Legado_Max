@@ -203,6 +203,13 @@ class BookSourceEditActivity :
         val truncateEnabled = AppConfig.sourceEditTruncateLongText
         if (truncateOnLastResume != null && truncateOnLastResume != truncateEnabled) {
             adapter.notifyDataSetChanged()
+            // 重 bind 会把 tag3 清空但 bind 流程不触发高亮，双层 post 等布局完成后
+            // 给可见字段恢复语法高亮（与 scrollToEntity 的双层 post 手法一致）
+            binding.recyclerView.post {
+                binding.recyclerView.post {
+                    adapter.highlightVisibleItems()
+                }
+            }
         }
         truncateOnLastResume = truncateEnabled
     }

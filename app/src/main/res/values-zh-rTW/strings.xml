@@ -1219,8 +1219,8 @@
     <string name="source_edit_text_max_line">源編輯框最大行數</string>
     <string name="source_edit_max_line_summary">%s，設定行數小於螢幕可顯示的最大行數可以更方便的滑動到其他的欄位進行編輯</string>
     <string name="source_edit_preview_truncated">內容過長（%1$d 字元），已截斷顯示，點擊全螢幕編輯</string>
-    <string name="source_edit_truncate_long_text">書源編輯長代碼截斷</string>
-    <string name="source_edit_truncate_long_text_summary">預設關閉，超長欄位直接顯示全文；開啟後超過 1000 字元的欄位改為唯讀預覽，可避免超大文字排版卡頓</string>
+    <string name="source_edit_truncate_long_text">源編輯長代碼截斷</string>
+    <string name="source_edit_truncate_long_text_summary">預設關閉，書源/訂閱源編輯頁超長欄位直接顯示全文；開啟後超過 1000 字元的欄位改為唯讀預覽，可避免超大文字排版卡頓</string>
     <string name="restore_last_book_process">是否復原到跳轉前的閱讀進度？</string>
     <string name="search_scope">搜尋範圍</string>
     <string name="toggle_search_scope">切換</string>
