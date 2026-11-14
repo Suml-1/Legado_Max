@@ -2765,6 +2765,7 @@ Night: %5$s / %6$s / %7$s / %8$s</string>
 
     <!-- Precise manage: auto task -->
     <string name="auto_task_service">Auto task</string>
+    <string name="auto_task_service_desc">Run scheduled tasks in background</string>
     <string name="auto_task_manage">Auto task manager</string>
     <string name="auto_task_manage_desc">Manage scheduled tasks</string>
     <string name="auto_task_add">Add task</string>

@@ -4,8 +4,11 @@ import android.os.Bundle
 import android.view.View
 import androidx.preference.Preference
 import io.legado.app.R
+import io.legado.app.constant.PreferKey
+import io.legado.app.lib.prefs.SwitchPreference
 import io.legado.app.lib.prefs.fragment.PreferenceFragment
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.service.AutoTaskService
 import io.legado.app.ui.autoTask.AutoTaskActivity
 import io.legado.app.ui.book.storage.StorageManageActivity
 import io.legado.app.ui.download.DownloadManageActivity
@@ -27,6 +30,15 @@ class PreciseManageFragment : PreferenceFragment() {
         super.onViewCreated(view, savedInstanceState)
         activity?.setTitle(R.string.precise_manage)
         listView.setEdgeEffectColor(primaryColor)
+        findPreference<SwitchPreference>(PreferKey.autoTaskService)?.setOnPreferenceChangeListener { _, newValue ->
+            val enable = newValue as? Boolean ?: false
+            if (enable) {
+                AutoTaskService.start(requireContext())
+            } else {
+                AutoTaskService.stop(requireContext())
+            }
+            true
+        }
     }
 
     override fun onPreferenceTreeClick(preference: Preference): Boolean {

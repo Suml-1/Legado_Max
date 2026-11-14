@@ -2749,6 +2749,7 @@
 
     <!-- 精准管理：定时任务 -->
     <string name="auto_task_service">定时任务</string>
+    <string name="auto_task_service_desc">在后台定时执行任务</string>
     <string name="auto_task_manage">定时任务管理</string>
     <string name="auto_task_manage_desc">管理定时任务</string>
     <string name="auto_task_add">添加任务</string>

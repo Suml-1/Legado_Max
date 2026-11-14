@@ -87,7 +87,13 @@ class AutoTaskActivity : VMBaseActivity<ActivityAutoTaskBinding, AutoTaskViewMod
 
     override fun onResume() {
         super.onResume()
+        adapter.upResumed(true)
         viewModel.refresh()
+    }
+
+    override fun onPause() {
+        adapter.upResumed(false)
+        super.onPause()
     }
 
     override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
@@ -110,6 +116,7 @@ class AutoTaskActivity : VMBaseActivity<ActivityAutoTaskBinding, AutoTaskViewMod
 
     private fun initView() = binding.run {
         recyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this@AutoTaskActivity)
+        recyclerView.adapter = adapter
         dragSelectTouchHelper.attachToRecyclerView(recyclerView)
         ItemTouchHelper(itemTouchCallback).attachToRecyclerView(recyclerView)
     }
