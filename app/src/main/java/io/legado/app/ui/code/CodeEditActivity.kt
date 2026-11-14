@@ -35,6 +35,7 @@ import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.model.jsSource.JsSourceUpsert
 import io.legado.app.ui.about.AppLogDialog
+import io.legado.app.ui.book.source.debug.BookSourceDebugActivity
 import io.legado.app.ui.book.source.manage.SourceContentSearchDialog
 import io.legado.app.ui.code.config.ChangeThemeDialog
 import io.legado.app.ui.code.config.SettingsDialog
@@ -44,6 +45,7 @@ import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.showHelp
+import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.launch
@@ -76,6 +78,7 @@ class CodeEditActivity :
     private val editorSearcher: EditorSearcher by lazy { editor.searcher }
     private var searchOptions: SearchOptions? = null
     private var menuSaveBtn: MenuItem? = null
+    private var menuDebugBtn: MenuItem? = null
 
     private val isDark
         get() = AppConfig.editTemeAuto && ThemeConfig.isDarkTheme()
@@ -99,6 +102,7 @@ class CodeEditActivity :
                 setText(viewModel.initialText)
                 editable = viewModel.writable
                 menuSaveBtn?.isVisible = viewModel.writable
+                menuDebugBtn?.isVisible = viewModel.jsSourceUrl != null
                 requestFocus()
                 postDelayed({
                     val pos = cursor.indexer.getCharPosition(viewModel.cursorPosition)
@@ -229,6 +233,34 @@ class CodeEditActivity :
     }
 
     /**
+     * 调试当前 JS 书源（仅 jsSourceUrl 模式下可见）。
+     *
+     * 先把编辑器当前内容写库（校验不过会提示原因并留在编辑页），再打开
+     * [BookSourceDebugActivity]（与书源编辑页的调试入口同款流程）。
+     * 调试读的是库里已保存的脚本，所以有未保存改动时必须先落库。
+     */
+    private fun debugJsSource() {
+        val sourceUrl = viewModel.jsSourceUrl ?: return
+        val script = editor.text.toString()
+        lifecycleScope.launch {
+            runCatching { JsSourceUpsert.save(script, sourceUrl) }
+                .onSuccess {
+                    viewModel.initialText = script
+                    startActivity<BookSourceDebugActivity> {
+                        putExtra("key", it.bookSourceUrl)
+                    }
+                }
+                .onFailure {
+                    toastOnUi(
+                        getString(R.string.js_source_save_failed)
+                            .format(it.localizedMessage.orEmpty())
+                    )
+                    AppLog.put("JS书源调试保存失败:${it.localizedMessage}", it)
+                }
+        }
+    }
+
+    /**
      * 更新编辑器设置
      * @param fontSize 字体大小
      * @param autoComplete 是否启用自动补全
@@ -286,6 +318,9 @@ class CodeEditActivity :
         menuInflater.inflate(R.menu.code_edit_activity, menu)
         menuSaveBtn = menu.findItem(R.id.menu_save).apply {
             isVisible = viewModel.writable
+        }
+        menuDebugBtn = menu.findItem(R.id.menu_debug).apply {
+            isVisible = viewModel.jsSourceUrl != null
         }
         return super.onCompatCreateOptionsMenu(menu)
     }
@@ -439,6 +474,7 @@ class CodeEditActivity :
         when (item.itemId) {
             R.id.menu_search -> search()
             R.id.menu_save -> save(false)
+            R.id.menu_debug -> debugJsSource()
             R.id.menu_format_code -> viewModel.formatCode(editor)
             R.id.menu_change_theme -> showDialogFragment(ChangeThemeDialog())
             R.id.menu_grammar -> showGrammarSelectDialog()
