@@ -739,6 +739,10 @@ CryptoJS.AES.encrypt("text", key, { mode: CryptoJS.mode.ECB }).toString();
 
 `CryptoJS.lib.WordArray.random` 已接到宿主的 `SecureRandom`，可直接用于随机数。
 
+> **CryptoJS 的可用范围**：单文件 JS 书源（本节）的脚本、书源/订阅源 `登录URL` 里的 JS **始终内置**，无需引入；
+> 声明式书源/订阅源的规则 JS（`@js:`、`<js></js>`、URL/POST 里的 JS）只有在该源填写了 `jsLib`（内容非空即可）时才有内置 CryptoJS——`jsLib` 共享作用域构建时会自动装入，不填 `jsLib` 的源规则里没有；
+> `<useweb>` 网页只注入 `java`/`source`/`cache` 和 `jsLib` 脚本本身，**不含 CryptoJS**，需要时请把 cryptojs 代码并入 `jsLib` 自行带上。
+
 需要大量 64 位 / BigInt 运算（例如协议签名）时，可以把纯 JS 函数丢进沙箱单独执行：
 
 ```js
