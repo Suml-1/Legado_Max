@@ -64,9 +64,6 @@ jsoup = "1.16.2"
 #noinspection GradleDependency,NewerVersionAvailable
 commonsText = "1.13.1"
 
-# 新版本使用了 Android 8 以下无法编译的 VarHandle.compareAndExchange 方法
-#noinspection GradleDependency
-rhino = "1.8.1"
 # 与 NG 分支 JS 单文件书源参考实现保持一致的 HtmlUnit Rhino 兼容分支（含 NestedScriptScope /
 # LEGADO_DYNAMIC_EVAL_REALM 等 Legado 专用补丁），产物离线存放于 third_party/maven
 htmlunitCoreJs = "5.3.0-legado.4-android21.1"
@@ -233,7 +230,6 @@ kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref =
 liveeventbus = { module = "com.github.michaellee123:LiveEventBus", version.ref = "liveeventbus" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 
-mozilla-rhino = { module = "org.mozilla:rhino", version.ref = "rhino" }
 htmlunit-core-js = { module = "org.htmlunit:htmlunit-core-js", version.ref = "htmlunitCoreJs" }
 
 renderscript-intrinsics-replacement-toolkit = { module = "com.github.TomasValenta:renderscript-intrinsics-replacement-toolkit", version = "8eaa829ddd" }
