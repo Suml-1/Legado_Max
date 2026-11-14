@@ -2762,4 +2762,39 @@ Night: %5$s / %6$s / %7$s / %8$s</string>
     <string name="js_source_sandbox_output_too_large">Sandbox output is too large</string>
     <string name="js_source_archive_too_large">Archive data is too large</string>
     <string name="js_source_archive_entry_invalid">Invalid archive entry name</string>
+
+    <!-- Precise manage: auto task -->
+    <string name="auto_task_service">Auto task</string>
+    <string name="auto_task_manage">Auto task manager</string>
+    <string name="auto_task_manage_desc">Manage scheduled tasks</string>
+    <string name="auto_task_add">Add task</string>
+    <string name="auto_task_edit">Edit task</string>
+    <string name="auto_task_delete">Delete task</string>
+    <string name="auto_task_debug">Task debug</string>
+    <string name="import_auto_task">Import auto tasks</string>
+    <string name="auto_task_batch_cron">Change schedule</string>
+    <string name="auto_task_name_required">Name is required</string>
+    <string name="auto_task_not_run">Not run yet</string>
+    <string name="auto_task_last_run">Last run: %1$s</string>
+    <string name="auto_task_last_error">Last error: %1$s</string>
+    <string name="auto_task_item_summary">Cron: %1$s | %2$s</string>
+    <string name="auto_task_running">Running: %1$s</string>
+    <string name="auto_task_running_state">Running</string>
+    <string name="auto_task_no_task">No tasks</string>
+    <string name="auto_task_no_enabled">No enabled tasks</string>
+    <string name="auto_task_script_empty">Auto task script is empty</string>
+    <string name="auto_task_failed">Auto task failed: %1$s</string>
+    <string name="auto_task_cron">Cron (min hour day month week)</string>
+    <string name="auto_task_cron_invalid">Invalid cron expression</string>
+    <string name="auto_task_comment">Script comment</string>
+    <string name="auto_task_script">Script</string>
+    <string name="auto_task_header">Headers (JSON)</string>
+    <string name="auto_task_jslib">JS lib</string>
+    <string name="auto_task_concurrent_rate">Concurrent rate</string>
+    <string name="auto_task_cookie_jar">Cookie jar</string>
+    <string name="auto_task_notify_title">Task notification</string>
+    <string name="auto_task_notify_content">%1$s</string>
+    <string name="auto_task_book_update_title">%1$s updated</string>
+    <string name="auto_task_book_update_content">New chapters: %1$d  Latest: %2$s</string>
+    <string name="auto_task_book_update_content_count">New chapters: %1$d</string>
 </resources>

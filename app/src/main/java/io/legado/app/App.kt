@@ -58,6 +58,8 @@ import io.legado.app.help.source.SourceRecycleBinHelp
 import io.legado.app.help.storage.Backup
 import io.legado.app.lib.theme.ThemeTransition
 import io.legado.app.model.BookCover
+import io.legado.app.service.AutoTaskScheduler
+import io.legado.app.service.AutoTaskService
 import io.legado.app.utils.ChineseUtils
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.defaultSharedPreferences
@@ -152,6 +154,11 @@ class App : Application() {
             }
             // 调整排序序号
             SourceHelp.adjustSortNumber()
+            // 定时任务：进程启动后对账布防，旧系统上恢复常驻服务
+            AutoTaskScheduler.onAppReady(this@App)
+            if (!AutoTaskScheduler.usesAlarms() && getPrefBoolean(PreferKey.autoTaskService)) {
+                AutoTaskService.start(appCtx)
+            }
             // 同步阅读记录
             if (AppConfig.syncBookProgress) {
                 AppWebDav.downloadAllBookProgress()

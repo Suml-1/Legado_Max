@@ -204,6 +204,15 @@ object Debug {
     }
 
     /**
+     * 只注册调试目标、不走任何规则的调试会话（定时任务脚本试运行用）
+     */
+    fun startSimpleDebug(sourceUrl: String) {
+        cancelDebug()
+        debugSource = sourceUrl
+        startTime = System.currentTimeMillis()
+    }
+
+    /**
      * 当前源是否处于本地调试会话：本地调试下流水线不发网络请求，规则直跑
      */
     fun isLocalDebug(sourceUrl: String?): Boolean {

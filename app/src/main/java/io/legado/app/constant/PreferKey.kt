@@ -219,6 +219,7 @@ object PreferKey {
     const val ttsTimer = "ttsTimer"
     const val noAnimScrollPage = "noAnimScrollPage"
     const val webDavDeviceName = "webDavDeviceName"
+    const val autoTaskService = "autoTaskService"
     const val webServiceWakeLock = "webServiceWakeLock"
     const val webServiceToken = "webServiceToken"
     const val webServiceAuthEnabled = "webServiceAuthEnabled"

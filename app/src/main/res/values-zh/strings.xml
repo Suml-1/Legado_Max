@@ -2746,4 +2746,39 @@
     <string name="js_source_sandbox_output_too_large">沙箱返回值过大</string>
     <string name="js_source_archive_too_large">压缩包数据过大</string>
     <string name="js_source_archive_entry_invalid">压缩包条目名不合法</string>
+
+    <!-- 精准管理：定时任务 -->
+    <string name="auto_task_service">定时任务</string>
+    <string name="auto_task_manage">定时任务管理</string>
+    <string name="auto_task_manage_desc">管理定时任务</string>
+    <string name="auto_task_add">添加任务</string>
+    <string name="auto_task_edit">编辑任务</string>
+    <string name="auto_task_delete">删除任务</string>
+    <string name="auto_task_debug">调试任务</string>
+    <string name="import_auto_task">导入定时任务</string>
+    <string name="auto_task_batch_cron">批量修改Cron</string>
+    <string name="auto_task_name_required">名称不能为空</string>
+    <string name="auto_task_not_run">未运行</string>
+    <string name="auto_task_last_run">上次运行：%1$s</string>
+    <string name="auto_task_last_error">上次错误：%1$s</string>
+    <string name="auto_task_item_summary">Cron：%1$s | %2$s</string>
+    <string name="auto_task_running">正在执行：%1$s</string>
+    <string name="auto_task_running_state">运行中</string>
+    <string name="auto_task_no_task">暂无任务</string>
+    <string name="auto_task_no_enabled">没有启用的任务</string>
+    <string name="auto_task_script_empty">定时任务脚本为空</string>
+    <string name="auto_task_failed">定时任务执行失败：%1$s</string>
+    <string name="auto_task_cron">Cron 表达式（分 时 日 月 周）</string>
+    <string name="auto_task_cron_invalid">Cron 表达式无效</string>
+    <string name="auto_task_comment">脚本备注</string>
+    <string name="auto_task_script">脚本</string>
+    <string name="auto_task_header">请求头 (JSON)</string>
+    <string name="auto_task_jslib">JS 库</string>
+    <string name="auto_task_concurrent_rate">并发速率</string>
+    <string name="auto_task_cookie_jar">Cookie 容器</string>
+    <string name="auto_task_notify_title">任务通知</string>
+    <string name="auto_task_notify_content">%1$s</string>
+    <string name="auto_task_book_update_title">%1$s 有更新</string>
+    <string name="auto_task_book_update_content">新章节：%1$d  最新：%2$s</string>
+    <string name="auto_task_book_update_content_count">新章节：%1$d</string>
 </resources>

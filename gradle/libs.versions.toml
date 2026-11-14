@@ -78,6 +78,7 @@ webkit = "1.14.0"
 activity = "1.13.0"
 lifecycle = "2.10.0"
 room = "2.8.4"
+work = "2.10.1"
 #noinspection GradleDependency
 recyclerview = "1.4.0"
 #noinspection GradleDependency
@@ -136,6 +137,7 @@ hutool-crypto = { module = "cn.hutool:hutool-crypto", version.ref = "hutool" }
 libarchive = { module = "me.zhanghai.android.libarchive:library", version.ref = "libarchive" }
 lifecycle-common-java8 = { module = "androidx.lifecycle:lifecycle-common-java8", version.ref = "lifecycle" }
 lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "lifecycle" }
+androidx-work = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 
 lyricViewx = { module = "com.github.Moriafly:LyricViewX", version.ref = "lyricViewx" }
 

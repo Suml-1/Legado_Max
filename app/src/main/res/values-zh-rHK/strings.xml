@@ -2228,4 +2228,39 @@
     <string name="js_source_sandbox_output_too_large">沙箱返回值過大</string>
     <string name="js_source_archive_too_large">壓縮包數據過大</string>
     <string name="js_source_archive_entry_invalid">壓縮包條目名不合法</string>
+
+    <!-- 精準管理：定時任務 -->
+    <string name="auto_task_service">定時任務</string>
+    <string name="auto_task_manage">定時任務管理</string>
+    <string name="auto_task_manage_desc">管理定時任務</string>
+    <string name="auto_task_add">新增任務</string>
+    <string name="auto_task_edit">編輯任務</string>
+    <string name="auto_task_delete">刪除任務</string>
+    <string name="auto_task_debug">調試任務</string>
+    <string name="import_auto_task">導入定時任務</string>
+    <string name="auto_task_batch_cron">批次修改 Cron</string>
+    <string name="auto_task_name_required">名稱不能為空</string>
+    <string name="auto_task_not_run">未執行</string>
+    <string name="auto_task_last_run">上次執行：%1$s</string>
+    <string name="auto_task_last_error">上次錯誤：%1$s</string>
+    <string name="auto_task_item_summary">Cron：%1$s | %2$s</string>
+    <string name="auto_task_running">正在執行：%1$s</string>
+    <string name="auto_task_running_state">執行中</string>
+    <string name="auto_task_no_task">暫無任務</string>
+    <string name="auto_task_no_enabled">沒有啟用的任務</string>
+    <string name="auto_task_script_empty">定時任務腳本為空</string>
+    <string name="auto_task_failed">定時任務執行失敗：%1$s</string>
+    <string name="auto_task_cron">Cron 表達式（分 時 日 月 週）</string>
+    <string name="auto_task_cron_invalid">Cron 表達式無效</string>
+    <string name="auto_task_comment">腳本備註</string>
+    <string name="auto_task_script">腳本</string>
+    <string name="auto_task_header">請求頭 (JSON)</string>
+    <string name="auto_task_jslib">JS 函式庫</string>
+    <string name="auto_task_concurrent_rate">並發速率</string>
+    <string name="auto_task_cookie_jar">Cookie 容器</string>
+    <string name="auto_task_notify_title">任務通知</string>
+    <string name="auto_task_notify_content">%1$s</string>
+    <string name="auto_task_book_update_title">%1$s 有更新</string>
+    <string name="auto_task_book_update_content">新章節：%1$d  最新：%2$s</string>
+    <string name="auto_task_book_update_content_count">新章節：%1$d</string>
 </resources>

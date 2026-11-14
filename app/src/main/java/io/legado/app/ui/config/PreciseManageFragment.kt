@@ -6,6 +6,7 @@ import androidx.preference.Preference
 import io.legado.app.R
 import io.legado.app.lib.prefs.fragment.PreferenceFragment
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.ui.autoTask.AutoTaskActivity
 import io.legado.app.ui.book.storage.StorageManageActivity
 import io.legado.app.ui.download.DownloadManageActivity
 import io.legado.app.ui.file.FileManageActivity
@@ -34,6 +35,7 @@ class PreciseManageFragment : PreferenceFragment() {
             "storageManage" -> startActivity<StorageManageActivity>()
             "downloadManage" -> startActivity<DownloadManageActivity>()
             "moduleStatus" -> startActivity<ModuleStatusActivity>()
+            "autoTaskManage" -> startActivity<AutoTaskActivity>()
             "fileManage" -> startActivity<FileManageActivity>()
             "sourceRecycleBin" -> startActivity<SourceRecycleBinActivity>()
             "permissionManage" -> startActivity<PermissionManageActivity>()

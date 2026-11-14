@@ -9,6 +9,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import io.legado.app.data.dao.AutoTaskRuleDao
 import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.BookGroupDao
@@ -70,6 +71,7 @@ import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.entities.UploadHistory
 import io.legado.app.data.entities.UrlRecord
 import io.legado.app.help.DefaultData
+import io.legado.app.model.AutoTaskRule
 import splitties.init.appCtx
 import java.util.Locale
 
@@ -83,7 +85,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 102,
+    version = 103,
     exportSchema = true,
     entities = [
         Book::class, BookGroup::class, BookSource::class, BookChapter::class,
@@ -95,6 +97,7 @@ val appDb by lazy {
         UrlRecord::class, DirectLinkUploadRule::class, UploadHistory::class,
         CoverGalleryGroup::class, CoverGalleryImage::class, SourceRecycleBin::class,
         HomepageModule::class, HomepageCustomSet::class,
+        AutoTaskRule::class,
     ],
     views = [BookSourcePart::class],
     autoMigrations = [
@@ -152,6 +155,8 @@ val appDb by lazy {
         AutoMigration(from = 94, to = 95),
         // 101：book_sources 新增可空列 mainJs（单文件 JS 书源主脚本），自动迁移
         AutoMigration(from = 100, to = 101),
+        // 103：auto_task_rules 定时任务规则表，自动迁移
+        AutoMigration(from = 102, to = 103),
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -184,6 +189,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val coverGalleryDao: CoverGalleryDao
     abstract val homepageModuleDao: HomepageModuleDao
     abstract val homepageCustomSetDao: HomepageCustomSetDao
+    abstract val autoTaskRuleDao: AutoTaskRuleDao
 
     companion object {
 
