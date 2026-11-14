@@ -1129,6 +1129,17 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefInt(PreferKey.sourceEditMaxLine, value)
         }
 
+    /**
+     * 书源编辑页超长字段截断预览开关，默认关闭。
+     * 默认直接显示全文，方便直接查看/编辑；开启后才启用截断预览（只读），
+     * 代价是超大文本字段的 Tab 切换会退回全文排版，可能卡顿。
+     */
+    var sourceEditTruncateLongText: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.sourceEditTruncateLongText, false)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.sourceEditTruncateLongText, value)
+        }
+
     var audioPlayUseWakeLock: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.audioPlayWakeLock)
         set(value) {

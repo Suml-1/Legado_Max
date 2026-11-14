@@ -34,9 +34,12 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         /**
          * 是否进入截断预览（只读）态。判定入口唯一：Adapter 绑定与 Activity 定位
          * （是否回填全文/是否获焦）必须用同一份判断，避免两处阈值判断不同步。
+         * 开关关闭（默认）时始终返回 false，超长字段直接显示全文；
+         * 开关打开后才按字符数阈值截断，以避开超大文本排版卡顿。
          */
         fun isPreview(entity: EditEntity): Boolean =
-            (entity.value?.length ?: 0) > PREVIEW_MAX_CHARS
+            AppConfig.sourceEditTruncateLongText &&
+                (entity.value?.length ?: 0) > PREVIEW_MAX_CHARS
     }
 
     // P2: 当用户设置 maxLine >= 999（即不限行数）时，在列表中 clamp 为 30 行，
@@ -155,6 +158,8 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         // P1: 记录上次绑定的 key 与 value，用于判断是否需要跳过 setText
         private var lastBoundKey: String? = null
         private var lastBoundValue: String? = null
+        // 记录上次绑定的预览态：截断开关翻转后同一字段要在"截断文本 ↔ 全文"间重设，不能沿用 unchanged 跳过
+        private var lastBoundNeedPreview: Boolean? = null
         // 可编辑态的文字颜色（state list）与解析后的具体颜色。
         // 预览态会禁用控件，禁用态色板可能把文字压暗，这里回填可编辑态颜色，
         // 保证只读预览与其余字段观感一致（只是不能编辑，不是"坏掉了"）
@@ -192,8 +197,11 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                 editText.setTag(R.id.tag2, null)
             }
             // P1: key/value 未变化时跳过 setText，避免无谓的全文重排版。
-            // 预览态由 value 长度推导，value 相同则预览态必然相同，无需单独比较
-            val unchanged = editEntity.key == lastBoundKey && fullValue == lastBoundValue
+            // 预览态翻转（截断开关在"其他设置"里被切换后返回）时必须重设文本
+            val stateChanged = lastBoundNeedPreview != null && lastBoundNeedPreview != needPreview
+            lastBoundNeedPreview = needPreview
+            val unchanged = !stateChanged &&
+                editEntity.key == lastBoundKey && fullValue == lastBoundValue
             lastBoundKey = editEntity.key
             lastBoundValue = fullValue
             textInputLayout.hint = editEntity.hint

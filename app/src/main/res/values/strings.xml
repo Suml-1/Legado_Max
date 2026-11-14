@@ -1441,6 +1441,8 @@
     <string name="source_edit_text_max_line">Maximum number of rows in the source edit box</string>
     <string name="source_edit_max_line_summary">%s,Setting the number of rows less than the maximum number of rows that can be displayed on the screen makes it easier to slide to other fields for editing.</string>
     <string name="source_edit_preview_truncated">Content too long (%1$d chars), truncated. Tap to edit in fullscreen</string>
+    <string name="source_edit_truncate_long_text">Truncate long code in source editor</string>
+    <string name="source_edit_truncate_long_text_summary">Off by default, long fields show the full text. When enabled, fields over 1000 characters show a read-only preview, avoiding layout lag with very large texts</string>
     <string name="restore_last_book_process">Whether to return to the reading progress before the jump？</string>
     <string name="search_scope">Search scope</string>
     <string name="toggle_search_scope">Handover</string>

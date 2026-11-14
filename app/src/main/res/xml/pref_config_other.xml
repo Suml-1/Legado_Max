@@ -191,6 +191,14 @@
             android:key="sourceEditMaxLine"
             android:title="@string/source_edit_text_max_line" />
 
+        <!-- 书源编辑长代码截断：默认关闭直接显示全文，开启后超长字段只读截断预览 -->
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="false"
+            android:key="sourceEditTruncateLongText"
+            android:summary="@string/source_edit_truncate_long_text_summary"
+            android:title="@string/source_edit_truncate_long_text"
+            app:iconSpaceReserved="false" />
+
         <io.legado.app.lib.prefs.Preference
             android:key="checkSource"
             android:title="@string/check_source_config" />

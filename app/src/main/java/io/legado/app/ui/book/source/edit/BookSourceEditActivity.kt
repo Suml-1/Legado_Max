@@ -194,6 +194,23 @@ class BookSourceEditActivity :
     }
 
     /**
+     * 长代码截断开关在"其他设置"里切换后，回到本页时刷新列表让超长字段
+     * 在"截断预览 ↔ 全文"间切换。仅对比开关值、变化时整体重 bind：
+     * bind 的 unchanged 优化会跳过未受影响字段，成本可忽略。
+     */
+    override fun onResume() {
+        super.onResume()
+        val truncateEnabled = AppConfig.sourceEditTruncateLongText
+        if (truncateOnLastResume != null && truncateOnLastResume != truncateEnabled) {
+            adapter.notifyDataSetChanged()
+        }
+        truncateOnLastResume = truncateEnabled
+    }
+
+    // 上次可见时的截断开关值；null 表示尚未走过 onResume，不参与比较
+    private var truncateOnLastResume: Boolean? = null
+
+    /**
      * JS 单文件书源（mainJs 非空）一律转代码编辑页。
      *
      * @return true 表示已重定向，本页不要再做任何初始化
