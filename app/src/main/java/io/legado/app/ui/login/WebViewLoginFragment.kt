@@ -15,9 +15,13 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.fragment.app.activityViewModels
+import androidx.webkit.ProfileStore
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import io.legado.app.R
 import io.legado.app.base.BaseFragment
 import io.legado.app.constant.AppConst
+import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.databinding.FragmentWebViewLoginBinding
 import io.legado.app.help.http.CookieStore
@@ -25,6 +29,8 @@ import io.legado.app.help.webView.PooledWebView
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.gone
+import io.legado.app.utils.isTaskSourceKey
+import io.legado.app.utils.taskWebViewProfileName
 import io.legado.app.utils.longSnackbar
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.snackbar
@@ -38,6 +44,9 @@ class WebViewLoginFragment : BaseFragment(R.layout.fragment_web_view_login) {
     private val viewModel by activityViewModels<SourceLoginViewModel>()
     private var pooledWebView: PooledWebView? = null
     private var currentWebView: WebView? = null
+
+    /** 定时任务源使用专属 WebView profile：不入 WebViewPool，销毁时直接 destroy */
+    private var taskOwnedWebView: WebView? = null
 
     private var checking = false
 
@@ -69,9 +78,33 @@ class WebViewLoginFragment : BaseFragment(R.layout.fragment_web_view_login) {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun initWebView(source: BaseSource) {
-        val webView = WebViewPool.acquire(requireContext()).let {
-            pooledWebView = it
-            it.realWebView
+        val sourceKey = source.getKey()
+        val taskProfile = if (isTaskSourceKey(sourceKey) &&
+            WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
+        ) {
+            taskWebViewProfileName(sourceKey)
+        } else {
+            null
+        }
+        val webView = if (taskProfile != null) {
+            runCatching {
+                ProfileStore.getInstance().getOrCreateProfile(taskProfile)
+                WebView(requireContext()).also { created ->
+                    WebViewCompat.setProfile(created, taskProfile)
+                    taskOwnedWebView = created
+                }
+            }.getOrElse {
+                AppLog.put("任务 WebView profile 绑定失败，回退默认配置", it)
+                null
+            } ?: WebViewPool.acquire(requireContext()).let {
+                pooledWebView = it
+                it.realWebView
+            }
+        } else {
+            WebViewPool.acquire(requireContext()).let {
+                pooledWebView = it
+                it.realWebView
+            }
         }
         webView.onResume()
         binding.webViewContainer.addView(webView)
@@ -84,7 +117,11 @@ class WebViewLoginFragment : BaseFragment(R.layout.fragment_web_view_login) {
                 userAgentString = it
             }
         }
-        val cookieManager = CookieManager.getInstance()
+        val cookieManager = if (taskProfile != null && taskOwnedWebView != null) {
+            WebViewCompat.getProfile(taskOwnedWebView!!).cookieManager
+        } else {
+            CookieManager.getInstance()
+        }
         webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 val cookie = cookieManager.getCookie(url)
@@ -159,6 +196,9 @@ class WebViewLoginFragment : BaseFragment(R.layout.fragment_web_view_login) {
         super.onDestroy()
         pooledWebView?.let { WebViewPool.release(it) }
         pooledWebView = null
+        // 任务专属 WebView 不入池，直接销毁，避免 profile 绑定残留到其它源
+        taskOwnedWebView?.destroy()
+        taskOwnedWebView = null
         currentWebView = null
     }
 

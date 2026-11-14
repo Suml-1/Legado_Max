@@ -206,6 +206,48 @@ object SharedJsScope {
     }
 
     /**
+     * 构建一次性隔离作用域：不进 [scopeMap] 缓存，全局对象与常规书源请求共享的那份
+     * 作用域完全独立。定时任务等并行后台 worker 专用——worker 脚本对内置对象/原型、
+     * 作用域变量的篡改只影响本次执行，不会污染书源/订阅源请求共用的共享作用域。
+     */
+    fun createIsolatedScope(
+        jsLib: String?,
+        coroutineContext: CoroutineContext?,
+    ): ScriptBindings {
+        val scope = RhinoScriptEngine.run {
+            getRuntimeScope(ScriptBindings())
+        }
+        installCryptoJs(scope, coroutineContext)
+        if (!jsLib.isNullOrBlank()) {
+            val bundle = JsLibraryBundle.parse(jsLib)
+            if (bundle != null) {
+                bundle.scripts.forEach { script ->
+                    RhinoScriptEngine.eval(script, scope, coroutineContext)
+                }
+            } else if (jsLib.isJsonObject()) {
+                val jsMap: Map<String, String> = GSON.fromJson(
+                    jsLib,
+                    TypeToken.getParameterized(
+                        Map::class.java,
+                        String::class.java,
+                        String::class.java
+                    ).type
+                )
+                jsMap.values.forEach { value ->
+                    if (value.isAbsUrl()) {
+                        evalLegacyUrlFragment(value, scope, coroutineContext)
+                    }
+                }
+            } else {
+                RhinoScriptEngine.eval(jsLib, scope, coroutineContext)
+            }
+        }
+        // 与常规共享作用域一致：阻止隐性全局变量创建
+        scope.globalThis.preventExtensions()
+        return scope
+    }
+
+    /**
      * 只做「下载 + 拼装」，返回可直接塞给 WebView / eval 的 JS 字符串，
      * 不构建作用域，也不进 [scopeMap] 缓存。
      */

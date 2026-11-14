@@ -15,7 +15,10 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.crypto.SymmetricCryptoAndroid
 import io.legado.app.help.http.CookieStore
 import io.legado.app.help.source.clearExploreKindsCache
+import io.legado.app.help.http.TaskCookieStore
 import io.legado.app.help.source.getShareScope
+import io.legado.app.model.AutoTask
+import io.legado.app.model.SharedJsScope
 import io.legado.app.model.SharedJsScope.remove
 import io.legado.app.utils.GSON
 import io.legado.app.utils.GSONStrict
@@ -340,15 +343,42 @@ interface BaseSource : JsExtensions {
      */
     @Throws(Exception::class)
     fun evalJS(jsStr: String, bindingsConfig: ScriptBindings.() -> Unit = {}): Any? {
+        return evalJSInternal(jsStr, bindingsConfig, isolateSharedScope = false)
+    }
+
+    /**
+     * 在一次性隔离作用域里执行 JS：作用域不进共享缓存，脚本对全局环境（内置对象原型、
+     * 作用域变量）的篡改只影响本次执行，不会污染书源/订阅源请求共用的共享作用域。
+     * 定时任务等并行后台 worker 专用。
+     */
+    @Throws(Exception::class)
+    fun evalJSInIsolatedScope(jsStr: String, bindingsConfig: ScriptBindings.() -> Unit = {}): Any? {
+        return evalJSInternal(jsStr, bindingsConfig, isolateSharedScope = true)
+    }
+
+    private fun evalJSInternal(
+        jsStr: String,
+        bindingsConfig: ScriptBindings.() -> Unit,
+        isolateSharedScope: Boolean,
+    ): Any? {
         val bindings = buildScriptBindings { bindings ->
             bindings["java"] = this
             bindings["source"] = this
             bindings["baseUrl"] = getKey()
-            bindings["cookie"] = CookieStore
+            // 定时任务（虚拟源 key 为 auto_task:{任务id}）且开启 cookie 容器时，
+            // cookie 按任务作用域隔离，不与书源/订阅源共享的全局域名 cookie 互相污染
+            val taskScope = getKey().takeIf {
+                it.startsWith("${AutoTask.SOURCE_KEY}:") && enabledCookieJar == true
+            }
+            bindings["cookie"] = taskScope?.let { TaskCookieStore(it) } ?: CookieStore
             bindings["cache"] = CacheManager
             bindings.apply(bindingsConfig)
         }
-        val sharedScope = getShareScope()
+        val sharedScope = if (isolateSharedScope) {
+            SharedJsScope.createIsolatedScope(jsLib, null)
+        } else {
+            getShareScope()
+        }
         val scope = if (sharedScope == null) {
             RhinoScriptEngine.getRuntimeScope(bindings)
         } else {

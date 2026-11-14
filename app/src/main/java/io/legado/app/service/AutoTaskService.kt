@@ -614,7 +614,8 @@ class AutoTaskService : BaseService() {
             }
 
             val source = AutoTask.buildSource(task)
-            val result = source.evalJS(script)
+            // 隔离作用域执行：任务脚本篡改全局环境不会污染书源/订阅源请求共用的共享作用域
+            val result = source.evalJSInIsolatedScope(script)
             trace.stage(task.id, "actions")
             diagnostic("task.stage", "batch=${trace.id} ${trace.taskSummary(task.id)}")
             val logLines = mutableListOf<String>()

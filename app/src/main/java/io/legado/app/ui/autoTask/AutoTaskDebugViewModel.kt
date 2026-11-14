@@ -43,7 +43,7 @@ class AutoTaskDebugViewModel(application: Application) : BaseViewModel(applicati
                 return@execute
             }
             runCatching {
-                val result = source.evalJS(script)
+                val result = source.evalJSInIsolatedScope(script)
                 AutoTaskProtocol.handle(result, context, rule.name) { msg ->
                     Debug.log(source.getKey(), msg, showTime = false)
                 }

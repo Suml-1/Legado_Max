@@ -5,8 +5,10 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
 import io.legado.app.help.CacheManager
+import io.legado.app.help.http.TaskCookieStore
 import io.legado.app.service.AutoTaskService
 import io.legado.app.utils.GSON
+import io.legado.app.utils.deleteTaskWebViewProfile
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.mergeFilteredOrder
@@ -168,7 +170,17 @@ object AutoTask {
 
     @Synchronized
     fun delete(vararg ids: String) {
-        ids.forEach { appDb.autoTaskRuleDao.delete(it) }
+        ids.forEach { id ->
+            appDb.autoTaskRuleDao.delete(id)
+            // 清理虚拟源名下的运行时残留：任务作用域 cookie、登录信息、自定义变量、专属 WebView profile
+            val key = "${SOURCE_KEY}:$id"
+            runCatching {
+                TaskCookieStore.removeScopeCookies(key)
+                CacheManager.delete("userInfo_$key")
+                CacheManager.delete("sourceVariable_$key")
+            }
+            deleteTaskWebViewProfile(key)
+        }
         refreshSchedule()
     }
 
