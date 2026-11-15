@@ -3,6 +3,7 @@ package io.legado.app.ui.main.bookshelf.style1.books
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -15,10 +16,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
@@ -49,13 +51,16 @@ import kotlin.math.abs
 /** 浅米白底（参考款书架背景） */
 private val ShelfBackground = Color(0xFFF5F3EF)
 
+/** 书脊奶白 */
+private val SpineColor = Color(0xFFFBFAF7)
+
 private fun lerp(start: Float, stop: Float, fraction: Float) =
     start + (stop - start) * fraction
 
 /**
- * 横向封面轮播书架：一排封面卡片，居中本放大清晰，两侧缩小变淡；滑动带居中吸附。
- * 封面走现成封面组件（本地图集 → 联网 → 缓存 → 默认兜底），点书进入阅读，长按保留。
- * 信息条可在顶部或底部显示，跟随真正居中的那本。
+ * 横向立体书架：一排白色书脊，只有吸附到正中间的那本把彩色封面朝前翻出；
+ * 两侧书脊沿距离变窄、变淡。封面走现成封面组件（本地图集 → 联网 → 缓存 → 默认兜底）。
+ * 点书进入阅读，长按保留；信息条可置顶 / 置底，跟随居中本。
  */
 @Composable
 internal fun Bookshelf3DShelfContent(
@@ -101,9 +106,11 @@ internal fun Bookshelf3DShelfContent(
     val coverW = 132.dp
     val coverH = coverW * 166 / 118
     val coverWpx = with(density) { coverW.toPx() }
-    val spacingDp = 16.dp
+    val spineW = 36.dp
+    val spineWBasePx = with(density) { spineW.toPx() }
+    val spacingDp = 10.dp
     val spacingPx = with(density) { spacingDp.toPx() }
-    val maxDistance = coverWpx + with(density) { 100.dp.toPx() }
+    val maxDistance = coverWpx + with(density) { 120.dp.toPx() }
 
     Column(modifier = modifier.fillMaxSize().background(ShelfBackground)) {
         if (infoBarTop) {
@@ -138,19 +145,32 @@ internal fun Bookshelf3DShelfContent(
                     abs(index - centerIndex) * (coverWpx + spacingPx)
                 }
                 val normalized = (distance / maxDistance).coerceIn(0f, 1f)
-                val targetScale = lerp(1f, 0.82f, normalized)
-                val targetAlpha = lerp(1f, 0.45f, normalized)
+                val isCenter = index == centerIndex
 
-                BookCoverCard(
-                    index = index,
-                    bookItem = bookItem,
-                    coverW = coverW,
-                    coverH = coverH,
-                    scale = targetScale,
-                    alpha = targetAlpha,
-                    onClick = { onBookClick(bookItem) },
-                    onLongClick = { onBookLongClick(bookItem) },
-                )
+                if (isCenter) {
+                    BookCoverFace(
+                        index = index,
+                        bookItem = bookItem,
+                        coverW = coverW,
+                        coverH = coverH,
+                        onClick = { onBookClick(bookItem) },
+                        onLongClick = { onBookLongClick(bookItem) },
+                    )
+                } else {
+                    val spineWidth = with(density) {
+                        lerp(spineWBasePx, spineWBasePx * 0.72f, normalized).toDp()
+                    }
+                    val spineAlpha = lerp(0.95f, 0.35f, normalized)
+                    SpineFace(
+                        index = index,
+                        bookItem = bookItem,
+                        spineW = spineWidth,
+                        spineH = coverH,
+                        alpha = spineAlpha,
+                        onClick = { onBookClick(bookItem) },
+                        onLongClick = { onBookLongClick(bookItem) },
+                    )
+                }
             }
         }
         if (!infoBarTop) {
@@ -165,38 +185,23 @@ internal fun Bookshelf3DShelfContent(
     }
 }
 
+/** 居中聚焦本：彩色封面 */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun BookCoverCard(
+private fun BookCoverFace(
     index: Int,
     bookItem: BookshelfBookItem,
     coverW: Dp,
     coverH: Dp,
-    scale: Float,
-    alpha: Float,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
     val display = bookItem.display
-    val densityLocal = LocalDensity.current
-    val scaleAnimated by animateFloatAsState(
-        targetValue = scale, spring(0.7f, 300f), label = "cardScale",
-    )
-    val alphaAnimated by animateFloatAsState(
-        targetValue = alpha, spring(0.7f, 300f), label = "cardAlpha",
-    )
-
     Box(
         modifier = Modifier
             .width(coverW)
             .height(coverH)
-            .graphicsLayer {
-                scaleX = scaleAnimated
-                scaleY = scaleAnimated
-                this.alpha = alphaAnimated
-                cameraDistance = 12f * densityLocal.density
-            }
-            .shadow(14.dp, RoundedCornerShape(4.dp), ambientColor = Color.Black.copy(0.45f), spotColor = Color.Black.copy(0.45f))
+            .shadow(16.dp, RoundedCornerShape(4.dp), ambientColor = Color.Black.copy(0.4f), spotColor = Color.Black.copy(0.4f))
             .clip(RoundedCornerShape(4.dp))
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
@@ -209,80 +214,71 @@ private fun BookCoverCard(
             sourceOrigin = display.origin,
             contentDescription = display.name,
         )
-        // 左侧书脊条
-        Box(
-            modifier = Modifier
-                .width(14.dp)
-                .fillMaxHeight()
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(Color.Black.copy(0.55f), Color.Black.copy(0.20f), Color.Transparent)
-                    )
-                )
-        )
-        // 右侧暗边
-        Box(
-            modifier = Modifier
-                .width(6.dp)
-                .fillMaxHeight()
-                .align(Alignment.CenterEnd)
-                .background(
-                    Brush.horizontalGradient(listOf(Color.Transparent, Color.Black.copy(0.35f)))
-                )
-        )
-        // 顶部高光
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(24.dp)
-                .background(Brush.verticalGradient(listOf(Color.White.copy(0.20f), Color.Transparent)))
-        )
-        // 底部书名作者遮罩
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.42f)
-                .align(Alignment.BottomCenter)
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.75f))))
-        )
+    }
+}
+
+/** 非居中本：白色书脊（编号 + 竖排书名 + 底部圆点） */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SpineFace(
+    index: Int,
+    bookItem: BookshelfBookItem,
+    spineW: Dp,
+    spineH: Dp,
+    alpha: Float,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    val display = bookItem.display
+    val alphaAnimated by animateFloatAsState(
+        targetValue = alpha, spring(0.7f, 300f), label = "spineAlpha",
+    )
+    val titleChars = display.name.filter { !it.isWhitespace() }.take(14)
+
+    Box(
+        modifier = Modifier
+            .width(spineW)
+            .height(spineH)
+            .graphicsLayer { this.alpha = alphaAnimated }
+            .clip(RoundedCornerShape(2.dp))
+            .background(SpineColor)
+            .border(0.5.dp, Color.Black.copy(0.08f), RoundedCornerShape(2.dp))
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+    ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomStart)
-                .padding(10.dp),
-        ) {
-            Text(
-                text = display.name,
-                color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                lineHeight = 15.sp,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (!display.author.isNullOrBlank()) {
-                Text(
-                    text = display.author,
-                    color = Color.White.copy(0.7f),
-                    fontSize = 9.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-        // 编号角标
-        Box(
-            modifier = Modifier
-                .padding(6.dp)
-                .align(Alignment.TopStart)
-                .background(Color.Black.copy(0.55f), RoundedCornerShape(3.dp))
-                .padding(horizontal = 5.dp, vertical = 2.dp),
+            modifier = Modifier.fillMaxSize().padding(vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
                 text = "NO.%03d".format(index + 1),
-                color = Color.White.copy(0.85f),
+                color = Color(0xFF9A9A9A),
                 fontSize = 8.sp,
                 fontWeight = FontWeight.Medium,
+            )
+            // 竖排书名
+            Column(
+                modifier = Modifier.fillMaxHeight().weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                titleChars.forEach { ch ->
+                    Text(
+                        text = ch.toString(),
+                        color = Color(0xFF333333),
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip,
+                    )
+                }
+            }
+            // 底部空心圆点
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .border(1.dp, Color(0xFF888888), CircleShape)
+                    .background(SpineColor, CircleShape),
             )
         }
     }
