@@ -51,6 +51,7 @@ internal fun BookshelfShelfContent(
             modifier = modifier,
             shelfItems = shelfItems,
             bottomPaddingPx = bottomPaddingPx,
+            marginPx = displayConfig.marginPx,
             onScrollBackwardChange = onScrollBackwardChange,
             onBookClick = onBookClick,
             onBookLongClick = onBookLongClick,

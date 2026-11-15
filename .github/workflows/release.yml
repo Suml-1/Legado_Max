@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        product: [ appS, appMax, appLegacy ]   # 打三个包：共存版、测试版、兼容版
+        product: [ appMax ]   # 试验阶段只打测试版，需要共存版/兼容版时再加回
       fail-fast: false
       max-parallel: 4
     outputs:
