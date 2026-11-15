@@ -302,15 +302,6 @@
                 android:textSize="14sp"
                 tools:ignore="TouchTargetSizeCheck" />
 
-            <io.legado.app.lib.theme.view.ThemeSwitch
-                android:id="@+id/sw_threed_auto_open"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingVertical="8dp"
-                android:text="@string/bookshelf_3d_auto_open"
-                android:textSize="14sp"
-                tools:ignore="TouchTargetSizeCheck" />
-
         </LinearLayout>
 
         <!-- 排序选项 -->

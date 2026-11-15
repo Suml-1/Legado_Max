@@ -229,7 +229,6 @@ abstract class BaseBookshelfFragment(layoutId: Int) :
                         sbThreedHeight.progress = AppConfig.bookshelf3dHeight
                         sbThreedSpacing.progress = AppConfig.bookshelf3dSpacing
                         swThreedInfoBarTop.isChecked = AppConfig.bookshelf3dInfoBarTop
-                        swThreedAutoOpen.isChecked = AppConfig.bookshelf3dAutoOpen
                         swBookshelfThreed.setOnCheckedChangeListener { _, checked ->
                             llThreedOptions.visibility = if (checked) View.VISIBLE else View.GONE
                         }
@@ -357,10 +356,6 @@ abstract class BaseBookshelfFragment(layoutId: Int) :
                     }
                     if (AppConfig.bookshelf3dInfoBarTop != swThreedInfoBarTop.isChecked) {
                         AppConfig.bookshelf3dInfoBarTop = swThreedInfoBarTop.isChecked
-                        refreshBookshelf = true
-                    }
-                    if (AppConfig.bookshelf3dAutoOpen != swThreedAutoOpen.isChecked) {
-                        AppConfig.bookshelf3dAutoOpen = swThreedAutoOpen.isChecked
                         refreshBookshelf = true
                     }
                     // 保存"显示更多信息"相关配置
