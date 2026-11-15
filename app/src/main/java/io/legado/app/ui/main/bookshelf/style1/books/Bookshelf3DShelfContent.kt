@@ -29,7 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RoundedCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -126,7 +126,7 @@ private fun BookSpine(
         targetValue = if (lifted) 1.07f else 1f,
         label = "spineScale",
     )
-    val rotationY by animateFloatAsState(
+    val spinY by animateFloatAsState(
         targetValue = if (lifted) -14f else 0f,
         label = "spineRotationY",
     )
@@ -139,7 +139,7 @@ private fun BookSpine(
                 shadowElevation = elevation
                 scaleX = scale
                 scaleY = scale
-                rotationY = rotationY
+                rotationY = spinY
                 cameraDistance = 12f * density
             }
             .clip(
