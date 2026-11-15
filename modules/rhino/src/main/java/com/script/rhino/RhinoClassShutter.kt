@@ -55,7 +55,11 @@ object RhinoClassShutter : ClassShutter {
      * 新增条目必须同时提供现有书源证据和默认拒绝回归测试。
      */
     private val bookSourceDirectClassImports = setOf(
-        "io.legado.app.help.http.StrResponse"
+        "io.legado.app.help.http.StrResponse",
+        // 2026-11-15 用户反馈：请求头规则里「new Packages.…BookSource() + typeof
+        // emptySource.loginUi」是各分支书源生态探测 loginUi v2 能力的事实标准写法；
+        // BookSource 为全默认参数纯数据类，构造无安全面。
+        "io.legado.app.data.entities.BookSource",
     )
 
     private val bookSourceProtectedClassNames = setOf(

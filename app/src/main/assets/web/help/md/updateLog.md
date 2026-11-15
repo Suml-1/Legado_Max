@@ -26,6 +26,7 @@
 
 **2026/11/15**
 
+- fix(书源规则): 修复部分源「执行请求头规则出错：JavaPackage io.legado.app.data.entities.BookSource 不是函数」——书源类访问白名单放行 `BookSource`，各分支书源生态探测 loginUi v2 的 `new Packages.…BookSource()` 写法恢复可用；其他 app 内部类维持默认拒绝不变
 - fix(定时任务): 修复登录界面 v2 加载失败——v2 函数的承载源改为与 LegadoT 一致：loginUrl 字段的登录 JS 优先（任务虚拟源即此形态），JS 书源仍走 mainJs；「v2 标记 + 脚本无 loginUi/loginAction 函数」且 loginUrl 是网页时回退网页登录；任务虚拟源把脚本挂到 mainJs 供登录相关判定使用。修复「源社区」等任务的登录 UI 加载不出来
 - fix(定时任务): 任务 cookie 补 `getKey(url, key)` 方法（任务脚本常用，缺失会导致登录/签到 JS 抛错被吞、表现为「点登录没反应」）；v2 登录界面的输入框标签不再显示字面 "null"——v2 行的显示名是静态文本，不再被当成 JS 表达式求值（与 LegadoT 表现一致）
 - fix(定时任务): 修复任务无法登录——登录解析漏了 autoTask 分支，任务虚拟源解析不到直接报「未找到书源」退出；补上后编辑页/列表行的登录入口同时认 loginUrl 与 loginUi（含 v2 表单）

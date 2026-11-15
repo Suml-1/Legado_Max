@@ -84,12 +84,16 @@ Packages.android.util.Base64
 Packages.android.text.TextUtils
 ```
 
-### 4. Legado 内部类（部分可用）
+### 4. Legado 内部类
+
+书源规则执行期间，`io.legado.app.*` 内部类**默认拒绝**，仅以下经过兼容审计的类可直接构造/引用（用于源侧能力探测与响应包装）：
 
 ```javascript
-Packages.io.legado.app.api.ReturnData
-Packages.io.legado.app.data.entities.Book
-Packages.io.legado.app.data.entities.BookChapter
+Packages.io.legado.app.data.entities.BookSource   // ✅ 可 new（探测 loginUi v2 等能力）
+Packages.io.legado.app.help.http.StrResponse      // ✅ 可引用
+Packages.io.legado.app.api.ReturnData             // ❌ 书源规则执行期不可用
+Packages.io.legado.app.data.entities.Book         // ❌ 书源规则执行期不可用
+Packages.io.legado.app.data.entities.BookChapter  // ❌ 书源规则执行期不可用
 ```
 
 ## 被屏蔽的 Packages（不可使用）
