@@ -9,6 +9,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -103,16 +104,24 @@ internal fun Bookshelf3DShelfContent(
         }
     }
 
-    val coverW = 132.dp
-    val coverH = coverW * 166 / 118
-    val coverWpx = with(density) { coverW.toPx() }
-    val spineW = 36.dp
-    val spineWBasePx = with(density) { spineW.toPx() }
-    val spacingDp = 10.dp
-    val spacingPx = with(density) { spacingDp.toPx() }
-    val maxDistance = coverWpx + with(density) { 120.dp.toPx() }
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize().background(ShelfBackground),
+    ) {
+        val maxCoverH = maxHeight * 0.72f
+        var coverW = (maxWidth * 0.46f).coerceIn(150.dp, 200.dp)
+        var coverH = coverW * 166 / 118
+        if (coverH > maxCoverH) {
+            coverH = maxCoverH
+            coverW = coverH * 118 / 166
+        }
+        val coverWpx = with(density) { coverW.toPx() }
+        val spineW = coverW * 0.27f
+        val spineWBasePx = with(density) { spineW.toPx() }
+        val spacingDp = 10.dp
+        val spacingPx = with(density) { spacingDp.toPx() }
+        val maxDistance = coverWpx + with(density) { 120.dp.toPx() }
 
-    Column(modifier = modifier.fillMaxSize().background(ShelfBackground)) {
+        Column(modifier = Modifier.fillMaxSize()) {
         if (infoBarTop) {
             CurrentBookBar(
                 bookItem = shelfItems.getOrNull(centerIndex),
@@ -182,6 +191,7 @@ internal fun Bookshelf3DShelfContent(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+        }
     }
 }
 
@@ -233,7 +243,7 @@ private fun SpineFace(
     val alphaAnimated by animateFloatAsState(
         targetValue = alpha, spring(0.7f, 300f), label = "spineAlpha",
     )
-    val titleChars = display.name.filter { !it.isWhitespace() }.take(14)
+    val titleChars = display.name.filter { !it.isWhitespace() }.take(18)
 
     Box(
         modifier = Modifier
@@ -266,8 +276,8 @@ private fun SpineFace(
                     Text(
                         text = ch.toString(),
                         color = Color(0xFF333333),
-                        fontSize = 11.sp,
-                        lineHeight = 14.sp,
+                        fontSize = 10.5.sp,
+                        lineHeight = 13.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
                     )
