@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RotatedBox
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -90,8 +89,8 @@ internal fun Bookshelf3DShelfContent(
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         // 几何：书脊宽 / 封面宽 / 书高，按屏宽自适应后乘档位系数
-        val spineW = (maxWidth * 0.043).coerceIn(14.dp, 18.dp) * widthFactor
-        val coverW = (maxWidth * 0.32).coerceIn(100.dp, 128.dp)
+        val spineW = (maxWidth * 0.043f).coerceIn(14.dp, 18.dp) * widthFactor
+        val coverW = (maxWidth * 0.32f).coerceIn(100.dp, 128.dp)
         val bookH = (((coverW - 20.dp) * 166 / 118) + 54.dp) * heightFactor
         val itemW = spineW + coverW
 
@@ -259,29 +258,15 @@ private fun SpineTitle(
         verticalArrangement = Arrangement.Center,
     ) {
         runs.take(7).forEach { run ->
-            if (isLatinRun(run)) {
-                RotatedBox(quarterTurns = 1) {
-                    Text(
-                        text = run,
-                        color = textColor,
-                        fontSize = 9.sp,
-                        lineHeight = 10.sp,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            } else {
-                Text(
-                    text = run,
-                    color = textColor,
-                    fontSize = 10.sp,
-                    lineHeight = 12.sp,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+            Text(
+                text = run,
+                color = textColor,
+                fontSize = if (isLatinRun(run)) 9.sp else 10.sp,
+                lineHeight = 12.sp,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
         if (runs.size > 7) {
             Text("…", color = textColor, fontSize = 10.sp)
