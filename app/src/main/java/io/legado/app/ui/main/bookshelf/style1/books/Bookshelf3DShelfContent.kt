@@ -123,7 +123,7 @@ internal fun Bookshelf3DShelfContent(
         val coverWpx = with(density) { coverW.toPx() }
         val spineW = coverW * 0.27f
         val spineWBasePx = with(density) { spineW.toPx() }
-        val spacingDp = 4.dp + (spacingLevel - 1) / 9f * 24.dp
+        val spacingDp = 4.dp + 24.dp * ((spacingLevel - 1) / 9f)
         val spacingPx = with(density) { spacingDp.toPx() }
         val maxDistance = coverWpx + with(density) { 120.dp.toPx() }
 
