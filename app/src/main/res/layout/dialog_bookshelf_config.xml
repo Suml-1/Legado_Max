@@ -253,6 +253,17 @@
             app:layout_constraintTop_toBottomOf="@+id/sw_show_bookshelf_fast_scroller"
             tools:ignore="TouchTargetSizeCheck" />
 
+        <!-- 3D 立本书架开关（性能不足时自动回退普通书架） -->
+        <io.legado.app.lib.theme.view.ThemeSwitch
+            android:id="@+id/sw_bookshelf_threed"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingVertical="8dp"
+            android:text="@string/bookshelf_3d"
+            android:textSize="14sp"
+            app:layout_constraintTop_toBottomOf="@+id/sw_show_bookshelf_tag_bar"
+            tools:ignore="TouchTargetSizeCheck" />
+
         <!-- 排序选项 -->
         <LinearLayout
             android:id="@+id/ll_sort"
@@ -260,7 +271,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:layout_marginTop="12dp"
-            app:layout_constraintTop_toBottomOf="@id/sw_show_bookshelf_tag_bar">
+            app:layout_constraintTop_toBottomOf="@id/sw_bookshelf_threed">
 
             <io.legado.app.ui.widget.text.AccentTextView
                 android:layout_width="match_parent"

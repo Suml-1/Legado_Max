@@ -46,8 +46,15 @@ internal fun BookshelfShelfContent(
     onBookLongClick: (BookshelfBookItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (displayConfig.isGrid) {
-        BookshelfGridContent(
+    when {
+        displayConfig.is3DMode -> Bookshelf3DShelfContent(
+            modifier = modifier,
+            shelfItems = shelfItems,
+            onScrollBackwardChange = onScrollBackwardChange,
+            onBookClick = onBookClick,
+            onBookLongClick = onBookLongClick,
+        )
+        displayConfig.isGrid -> BookshelfGridContent(
             modifier = modifier,
             shelfItems = shelfItems,
             displayConfig = displayConfig,
@@ -58,8 +65,7 @@ internal fun BookshelfShelfContent(
             onBookClick = onBookClick,
             onBookLongClick = onBookLongClick,
         )
-    } else {
-        BookshelfListContent(
+        else -> BookshelfListContent(
             modifier = modifier,
             shelfItems = shelfItems,
             displayConfig = displayConfig,

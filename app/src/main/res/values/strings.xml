@@ -723,6 +723,7 @@
     <string name="smart_tag_rule_cannot_update_desc">Auto update disabled</string>
 
     <string name="show_bookshelf_tag_bar">Show tag bar</string>
+    <string name="bookshelf_3d">3D bookshelf</string>
     <string name="group_edit">Group editing</string>
     <string name="move_to_group">Move to group</string>
     <string name="add_group">Add to Groups</string>

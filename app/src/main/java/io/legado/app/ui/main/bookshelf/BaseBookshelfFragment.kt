@@ -222,6 +222,7 @@ abstract class BaseBookshelfFragment(layoutId: Int) :
                         swShowWaitUpBooks.isChecked = AppConfig.showWaitUpCount
                         swShowBookshelfFastScroller.isChecked = AppConfig.showBookshelfFastScroller
                         swShowBookshelfTagBar.isChecked = AppConfig.showBookshelfTagBar
+                        swBookshelfThreed.isChecked = AppConfig.bookshelf3D
                         // 初始化"显示更多信息"相关开关状态
                         llShowMoreInfo.visibility = if (bookLayout == 0) View.VISIBLE else View.GONE
                         swShowMoreInfo.isChecked = AppConfig.showMoreInfoInList
@@ -327,6 +328,10 @@ abstract class BaseBookshelfFragment(layoutId: Int) :
                     if (AppConfig.showBookshelfTagBar != swShowBookshelfTagBar.isChecked) {
                         AppConfig.showBookshelfTagBar = swShowBookshelfTagBar.isChecked
                         postEvent(EventBus.BOOKSHELF_REFRESH, "")
+                    }
+                    if (AppConfig.bookshelf3D != swBookshelfThreed.isChecked) {
+                        AppConfig.bookshelf3D = swBookshelfThreed.isChecked
+                        refreshBookshelf = true
                     }
                     // 保存"显示更多信息"相关配置
                     if (AppConfig.showMoreInfoInList != swShowMoreInfo.isChecked) {

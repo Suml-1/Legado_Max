@@ -722,6 +722,7 @@
     <string name="smart_tag_rule_cannot_update_desc">已关闭自动更新</string>
 
     <string name="show_bookshelf_tag_bar">显示标签栏</string>
+    <string name="bookshelf_3d">3D 立本书架</string>
     <string name="group_edit">编辑分组</string>
     <string name="move_to_group">移入分组</string>
     <string name="add_group">添加分组</string>

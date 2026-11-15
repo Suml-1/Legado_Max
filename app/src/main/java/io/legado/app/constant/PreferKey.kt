@@ -65,6 +65,9 @@ object PreferKey {
     const val bookshelfSort = "bookshelfSort"
     const val folderLayout = "folderLayout"
     const val bookLayout = "bookLayout"
+
+    // 3D 立本书架开关（默认值按设备性能自动判断，用户可手动覆盖）
+    const val bookshelf3D = "bookshelf3D"
     const val showMoreInfoInList = "showMoreInfoInList"
     const val showIntroInList = "showIntroInList"
     const val showCategoryInfoInList = "showCategoryInfoInList"

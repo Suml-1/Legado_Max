@@ -1,5 +1,7 @@
 package io.legado.app.help.config
 
+import android.app.ActivityManager
+import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import io.legado.app.BuildConfig
@@ -392,6 +394,31 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         set(value) {
             appCtx.putPrefInt(PreferKey.bookLayout, value)
         }
+
+    /**
+     * 3D 立本书架开关。
+     * 首次未手动设置时按设备性能自动判断：核心数 ≥ 4、运行内存 ≥ 2.5GB 且非墨水屏才默认开启；
+     * 入门设备与墨水屏默认关闭。用户可在书架配置里手动覆盖，渲染层仍会对低端设备强制回退普通书架。
+     */
+    var bookshelf3D: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.bookshelf3D, !isLowEndDevice())
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.bookshelf3D, value)
+        }
+
+    /** 是否为入门级设备（不适合 3D 书架）：核心数不足 / 内存偏小 / 墨水屏 */
+    private fun isLowEndDevice(): Boolean {
+        if (isEInkMode) return true
+        if (Runtime.getRuntime().availableProcessors() < 4) return true
+        val activityManager = appCtx.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val memoryInfo = ActivityManager.MemoryInfo()
+        activityManager?.getMemoryInfo(memoryInfo)
+        val totalGb = memoryInfo.totalMem / 1024.0 / 1024.0 / 1024.0
+        return totalGb < 2.5
+    }
+
+    /** 当前设备是否可以启用 3D 书架：开关开启且性能达标（低端机 / 墨水屏强制回退普通书架） */
+    fun canUse3DBookshelf(): Boolean = bookshelf3D && !isLowEndDevice()
 
     var showMoreInfoInList: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.showMoreInfoInList, false)

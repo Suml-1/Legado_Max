@@ -36,10 +36,14 @@ data class BookshelfDisplayConfig(
     val showBookName: Int,
     val marginPx: Int,
     val fastScrollerEnabled: Boolean,
+    val bookshelf3D: Boolean,
 ) {
 
     /** 书籍是否网格布局（列数 ≥ 2） */
     val isGrid: Boolean get() = bookLayout >= 2
+
+    /** 是否启用 3D 立本书架（开关开启且设备性能达标） */
+    val is3DMode: Boolean get() = bookshelf3D
 
     /** 是否紧凑列表 */
     val isCompactList: Boolean get() = bookLayout == 1
@@ -83,6 +87,7 @@ data class BookshelfDisplayConfig(
             showBookName = AppConfig.showBookname,
             marginPx = AppConfig.bookshelfMargin,
             fastScrollerEnabled = AppConfig.showBookshelfFastScroller,
+            bookshelf3D = AppConfig.canUse3DBookshelf(),
         )
     }
 }
