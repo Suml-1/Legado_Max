@@ -448,6 +448,13 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.bookshelf3dInfoBarTop, value)
         }
 
+    /** 3D 书架是否居中自动翻开封面（false 为手动点击书脊才弹出封面） */
+    var bookshelf3dAutoOpen: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.bookshelf3dAutoOpen, true)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.bookshelf3dAutoOpen, value)
+        }
+
     var showMoreInfoInList: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.showMoreInfoInList, false)
         set(value) {
