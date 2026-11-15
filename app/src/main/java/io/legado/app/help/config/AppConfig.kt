@@ -441,6 +441,13 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefInt(PreferKey.bookshelf3dSpacing, value)
         }
 
+    /** 3D 书架当前书信息条是否显示在顶部（false 为底部） */
+    var bookshelf3dInfoBarTop: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.bookshelf3dInfoBarTop, false)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.bookshelf3dInfoBarTop, value)
+        }
+
     var showMoreInfoInList: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.showMoreInfoInList, false)
         set(value) {

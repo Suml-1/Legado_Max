@@ -727,6 +727,7 @@
     <string name="bookshelf_3d_width">Book spine width</string>
     <string name="bookshelf_3d_height">Book height</string>
     <string name="bookshelf_3d_spacing">Row spacing</string>
+    <string name="bookshelf_3d_info_bar_top">Show info bar at top</string>
     <string name="group_edit">Group editing</string>
     <string name="move_to_group">Move to group</string>
     <string name="add_group">Add to Groups</string>

@@ -293,6 +293,15 @@
                 app:max="3"
                 app:title="@string/bookshelf_3d_spacing" />
 
+            <io.legado.app.lib.theme.view.ThemeSwitch
+                android:id="@+id/sw_threed_info_bar_top"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingVertical="8dp"
+                android:text="@string/bookshelf_3d_info_bar_top"
+                android:textSize="14sp"
+                tools:ignore="TouchTargetSizeCheck" />
+
         </LinearLayout>
 
         <!-- 排序选项 -->

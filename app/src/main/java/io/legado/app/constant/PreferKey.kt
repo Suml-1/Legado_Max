@@ -72,6 +72,7 @@ object PreferKey {
     const val bookshelf3dWidth = "bookshelf3dWidth"
     const val bookshelf3dHeight = "bookshelf3dHeight"
     const val bookshelf3dSpacing = "bookshelf3dSpacing"
+    const val bookshelf3dInfoBarTop = "bookshelf3dInfoBarTop"
     const val showMoreInfoInList = "showMoreInfoInList"
     const val showIntroInList = "showIntroInList"
     const val showCategoryInfoInList = "showCategoryInfoInList"
