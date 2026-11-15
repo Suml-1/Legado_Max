@@ -49,9 +49,6 @@ import io.legado.app.ui.main.bookshelf.compose.BookshelfBookItem
 import io.legado.app.ui.widget.components.AppBookCover
 import kotlin.math.abs
 
-/** 浅米白底（参考款书架背景） */
-private val ShelfBackground = Color(0xFFF5F3EF)
-
 /** 书脊奶白 */
 private val SpineColor = Color(0xFFFBFAF7)
 
@@ -105,7 +102,7 @@ internal fun Bookshelf3DShelfContent(
     }
 
     BoxWithConstraints(
-        modifier = modifier.fillMaxSize().background(ShelfBackground),
+        modifier = modifier.fillMaxSize(),
     ) {
         val widthLevel = AppConfig.bookshelf3dWidth.coerceIn(1, 10)
         val heightLevel = AppConfig.bookshelf3dHeight.coerceIn(1, 10)
@@ -113,13 +110,14 @@ internal fun Bookshelf3DShelfContent(
 
         // 宽度：档位 1 最窄 → 10 最宽，按屏宽线性拉伸，不卡区间
         val widthFraction = 0.22f + (widthLevel - 1) / 9f * 0.50f
-        // 高度：档位 1 矮 → 10 高（细长），按书架可用高度线性拉伸
-        val heightFraction = 0.45f + (heightLevel - 1) / 9f * 0.50f
+        // 高度：档位 1 矮 → 10 高（细长）；基准用扣除信息条与底栏后的安全高度，避免压到底部导航
+        val safeMaxH = maxHeight * 0.80f
+        val heightFraction = 0.50f + (heightLevel - 1) / 9f * 0.45f
         var coverW = maxWidth * widthFraction
-        var coverH = maxHeight * heightFraction
-        // 仅防溢出兜底：不小于可读尺寸、不超出屏幕
+        var coverH = safeMaxH * heightFraction
+        // 仅防溢出兜底：不小于可读尺寸、不超出书架安全区
         coverW = coverW.coerceIn(60.dp, maxWidth)
-        coverH = coverH.coerceIn(100.dp, maxHeight)
+        coverH = coverH.coerceIn(120.dp, safeMaxH)
         val coverWpx = with(density) { coverW.toPx() }
         val spineW = coverW * 0.27f
         val spineWBasePx = with(density) { spineW.toPx() }
