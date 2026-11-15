@@ -123,7 +123,8 @@ internal fun Bookshelf3DShelfContent(
             flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
             contentPadding = PaddingValues(
                 horizontal = with(density) {
-                    (listState.layoutInfo.viewportEndOffset / 2f - coverWpx / 2f).toDp()
+                    val viewportW = listState.layoutInfo.viewportEndOffset.toFloat()
+                    ((viewportW - coverWpx) / 2f).coerceAtLeast(0f).toDp()
                 },
             ),
         ) {
