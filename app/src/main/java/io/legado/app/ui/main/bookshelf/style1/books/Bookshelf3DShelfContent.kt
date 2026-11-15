@@ -251,7 +251,7 @@ private fun BookVolume(
         targetValue = if (opened) -14f else 0f,
         label = "volumeLiftY",
     )
-    val alpha = 0.75f + 0.25f * weight
+    val bodyAlpha = 0.75f + 0.25f * weight
     val railYpx = with(densityLocal) { railY.toPx() }
     val spineWpx = with(densityLocal) { spineW.toPx() }
     val coverDepthXpx = with(densityLocal) { coverW.toPx() * DepthX }
@@ -268,7 +268,7 @@ private fun BookVolume(
                 scaleX = scale
                 scaleY = scale
                 translationY = railYpx + liftY + liftUp
-                this.alpha = alpha
+                this.alpha = bodyAlpha
                 cameraDistance = 12f * densityLocal.density
             }
             .combinedClickable(
