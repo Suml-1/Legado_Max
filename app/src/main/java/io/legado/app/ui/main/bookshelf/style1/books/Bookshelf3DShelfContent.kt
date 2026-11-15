@@ -107,17 +107,23 @@ internal fun Bookshelf3DShelfContent(
     BoxWithConstraints(
         modifier = modifier.fillMaxSize().background(ShelfBackground),
     ) {
-        val maxCoverH = maxHeight * 0.72f
-        var coverW = (maxWidth * 0.46f).coerceIn(150.dp, 200.dp)
-        var coverH = coverW * 166 / 118
-        if (coverH > maxCoverH) {
-            coverH = maxCoverH
-            coverW = coverH * 118 / 166
-        }
+        val widthLevel = AppConfig.bookshelf3dWidth.coerceIn(1, 10)
+        val heightLevel = AppConfig.bookshelf3dHeight.coerceIn(1, 10)
+        val spacingLevel = AppConfig.bookshelf3dSpacing.coerceIn(1, 10)
+
+        // 宽度：档位 1 最窄 → 10 最宽，按屏宽线性拉伸，不卡区间
+        val widthFraction = 0.22f + (widthLevel - 1) / 9f * 0.50f
+        // 高度：档位 1 矮 → 10 高（细长），按书架可用高度线性拉伸
+        val heightFraction = 0.45f + (heightLevel - 1) / 9f * 0.50f
+        var coverW = maxWidth * widthFraction
+        var coverH = maxHeight * heightFraction
+        // 仅防溢出兜底：不小于可读尺寸、不超出屏幕
+        coverW = coverW.coerceIn(60.dp, maxWidth)
+        coverH = coverH.coerceIn(100.dp, maxHeight)
         val coverWpx = with(density) { coverW.toPx() }
         val spineW = coverW * 0.27f
         val spineWBasePx = with(density) { spineW.toPx() }
-        val spacingDp = 10.dp
+        val spacingDp = 4.dp + (spacingLevel - 1) / 9f * 24.dp
         val spacingPx = with(density) { spacingDp.toPx() }
         val maxDistance = coverWpx + with(density) { 120.dp.toPx() }
 

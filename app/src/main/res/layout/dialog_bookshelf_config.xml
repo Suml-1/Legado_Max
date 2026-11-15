@@ -276,21 +276,21 @@
                 android:id="@+id/sb_threed_width"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:max="3"
+                app:max="10"
                 app:title="@string/bookshelf_3d_width" />
 
             <io.legado.app.ui.widget.DetailSeekBar
                 android:id="@+id/sb_threed_height"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:max="3"
+                app:max="10"
                 app:title="@string/bookshelf_3d_height" />
 
             <io.legado.app.ui.widget.DetailSeekBar
                 android:id="@+id/sb_threed_spacing"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:max="3"
+                app:max="10"
                 app:title="@string/bookshelf_3d_spacing" />
 
             <io.legado.app.lib.theme.view.ThemeSwitch
