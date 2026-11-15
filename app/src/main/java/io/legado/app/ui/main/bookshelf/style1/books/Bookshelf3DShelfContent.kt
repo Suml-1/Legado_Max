@@ -10,15 +10,15 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RotatedBox
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -33,32 +33,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.main.bookshelf.compose.BookshelfBookItem
 import io.legado.app.ui.widget.components.AppBookCover
 
-/** 层板厚度 */
-private val BoardHeight = 10.dp
-
-/** 层板左右内缩 */
-private val BoardSidePadding = 6.dp
-
-/** 层板下方投影高度 */
-private val BoardShadowHeight = 5.dp
-
-/** 书脊侧边厚度条宽度 */
-private val SpineEdge = 4.dp
-
 /**
- * 3D 立本多层书架。
+ * 横向 3D 立本书架（参考 Wenku8_Flutter 的立体书架）。
  *
- * 书一本本立在木质层板上，纵向滚动；每排本数按屏幕宽度与书脊宽度档位自适应。
- * 书脊宽窄、书籍高矮、层间距都可取自书架设置档位。底部内边距让出主导航栏，
- * 内容不会顶到屏幕最下方被按钮压住。书名交给封面组件自身处理（无封面时它才画竖排书名），
- * 外层不再重复叠字。点击时书本上浮、放大并轻微翻转，模拟取出。
- * 低端设备 / 墨水屏已在配置层回退到普通列表或网格。
+ * 每本书由「窄书脊 + 封面」两块板组成：书脊上竖排书名，封面放书籍封面；
+ * 几何尺寸按屏幕宽度自适应。横向滑动，中间一本聚焦放大、两侧沿轨道略低、缩小变淡。
+ * 点击书本沿纵深上浮、放大并轻微翻转，模拟取出。低端设备 / 墨水屏已在配置层回退普通书架。
  */
 @Composable
 internal fun Bookshelf3DShelfContent(
@@ -81,205 +70,253 @@ internal fun Bookshelf3DShelfContent(
     }
 
     val density = LocalDensity.current
-    val targetSpine = when (AppConfig.bookshelf3dWidth) {
-        1 -> 44.dp
-        3 -> 70.dp
-        else -> 56.dp
+
+    // 档位微调系数（设置里的宽窄 / 高矮 / 间距三档）
+    val widthFactor = when (AppConfig.bookshelf3dWidth) {
+        1 -> 0.90f
+        3 -> 1.10f
+        else -> 1.00f
     }
-    val spineHeight = when (AppConfig.bookshelf3dHeight) {
-        1 -> 150.dp
-        3 -> 200.dp
-        else -> 176.dp
+    val heightFactor = when (AppConfig.bookshelf3dHeight) {
+        1 -> 0.88f
+        3 -> 1.12f
+        else -> 1.00f
     }
-    val bookGap = when (AppConfig.bookshelf3dSpacing) {
+    val pitchGap = when (AppConfig.bookshelf3dSpacing) {
         1 -> 6.dp
         3 -> 10.dp
         else -> 8.dp
     }
-    val layerGap = when (AppConfig.bookshelf3dSpacing) {
-        1 -> 12.dp
-        3 -> 22.dp
-        else -> 16.dp
-    }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val availableWidth = maxWidth - 24.dp
-        val columns = ((availableWidth + bookGap) / (targetSpine + bookGap)).toInt()
-            .coerceIn(3, 6)
-        val groups = remember(shelfItems, columns) { shelfItems.chunked(columns) }
+        // 几何：书脊宽 / 封面宽 / 书高，按屏宽自适应后乘档位系数
+        val spineW = (maxWidth * 0.043).coerceIn(14.dp, 18.dp) * widthFactor
+        val coverW = (maxWidth * 0.32).coerceIn(100.dp, 128.dp)
+        val bookH = (((coverW - 20.dp) * 166 / 118) + 54.dp) * heightFactor
+        val itemW = spineW + coverW
 
-        LazyColumn(
+        val itemWpx = with(density) { itemW.toPx() }
+        val containerCenterPx = with(density) { maxWidth.toPx() / 2f }
+        val scrollX = listState.firstVisibleItemIndex * itemWpx +
+            listState.firstVisibleItemScrollOffset
+
+        LazyRow(
             state = listState,
             modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.spacedBy(pitchGap),
             contentPadding = PaddingValues(
-                start = 12.dp,
-                end = 12.dp,
+                start = with(density) { (containerCenterPx - itemWpx / 2f).toDp() },
+                end = with(density) { (containerCenterPx - itemWpx / 2f).toDp() },
                 top = 8.dp,
                 bottom = with(density) { (marginPx + bottomPaddingPx).toDp() },
             ),
-            verticalArrangement = Arrangement.spacedBy(layerGap),
         ) {
-            items(items = groups, key = { it.first().key }) { group ->
-                ShelfRow(
-                    group = group,
-                    spineHeight = spineHeight,
-                    bookGap = bookGap,
-                    onBookClick = onBookClick,
-                    onBookLongClick = onBookLongClick,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ShelfRow(
-    group: List<BookshelfBookItem>,
-    spineHeight: Dp,
-    bookGap: Dp,
-    onBookClick: (BookshelfBookItem) -> Unit,
-    onBookLongClick: (BookshelfBookItem) -> Unit,
-) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(bookGap),
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            group.forEach { bookItem ->
-                BookSpine(
+            itemsIndexed(items = shelfItems, key = { _, it -> it.key }) { index, bookItem ->
+                val itemCenterX = index * itemWpx + itemWpx / 2f
+                val factor = ((itemCenterX - scrollX - containerCenterPx)
+                    .let { if (it < 0) -it else it } / containerCenterPx)
+                    .coerceIn(0f, 1f)
+                BookVolume(
                     bookItem = bookItem,
-                    spineHeight = spineHeight,
+                    spineW = spineW,
+                    coverW = coverW,
+                    bookH = bookH,
+                    focusFactor = factor,
                     onClick = onBookClick,
                     onLongClick = onBookLongClick,
-                    modifier = Modifier.weight(1f),
                 )
             }
-        }
-        // 木质层板 + 下方投影
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = BoardSidePadding)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(BoardHeight)
-                    .clip(RoundedCornerShape(bottomStart = 2.dp, bottomEnd = 2.dp))
-                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f))
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(BoardShadowHeight)
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 4.dp)
-                    .clip(RoundedCornerShape(bottomStart = 3.dp, bottomEnd = 3.dp))
-                    .background(Color.Black.copy(alpha = 0.10f))
-            )
         }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun BookSpine(
+private fun BookVolume(
     bookItem: BookshelfBookItem,
-    spineHeight: Dp,
+    spineW: Dp,
+    coverW: Dp,
+    bookH: Dp,
+    focusFactor: Float,
     onClick: (BookshelfBookItem) -> Unit,
     onLongClick: (BookshelfBookItem) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val display = bookItem.display
     var lifted by remember { mutableStateOf(false) }
     val elevation by animateFloatAsState(
         targetValue = if (lifted) 20f else 5f,
-        label = "spineElevation",
+        label = "volumeElevation",
     )
     val scale by animateFloatAsState(
-        targetValue = if (lifted) 1.06f else 1f,
-        label = "spineScale",
+        targetValue = if (lifted) 1.07f else 1f - focusFactor * 0.16f,
+        label = "volumeScale",
     )
     val spinY by animateFloatAsState(
         targetValue = if (lifted) -12f else 0f,
-        label = "spineRotationY",
+        label = "volumeRotationY",
     )
     val liftY by animateFloatAsState(
-        targetValue = if (lifted) -14f else 0f,
-        label = "spineLiftY",
+        targetValue = if (lifted) -16f else focusFactor * 18f,
+        label = "volumeLiftY",
     )
-    // 按书籍身份派生轻微高矮错落，底部对齐层板，显得是一排真实的书
-    val hash = (bookItem.key.hashCode() and 0x7fffffff)
-    val heightFactor = 0.92f + (hash % 8) * 0.01f
-    val bookHeight = spineHeight * heightFactor
+    val alpha = 1f - focusFactor * 0.35f
     val spineColor = spineColor(bookItem.key)
+    val onSpine = readableOn(spineColor)
 
-    Box(
-        modifier = modifier
-            .height(bookHeight)
+    Row(
+        modifier = Modifier
+            .height(bookH)
             .graphicsLayer {
                 shadowElevation = elevation
                 scaleX = scale
                 scaleY = scale
                 rotationY = spinY
                 translationY = liftY
+                this.alpha = alpha
                 cameraDistance = 12f * density
             }
-            .clip(
-                RoundedCornerShape(
-                    topStart = 3.dp,
-                    topEnd = 3.dp,
-                    bottomEnd = 1.dp,
-                    bottomStart = 1.dp,
-                )
-            )
-            .background(spineColor)
             .combinedClickable(
                 onClick = {
                     lifted = true
                     onClick(bookItem)
                 },
                 onLongClick = { onLongClick(bookItem) },
-            )
+            ),
+        verticalAlignment = Alignment.Bottom,
     ) {
-        AppBookCover(
-            modifier = Modifier.fillMaxSize(),
-            name = display.name,
-            author = display.author,
-            coverPath = display.getDisplayCover(),
-            galleryIdentity = display.bookUrl,
-            sourceOrigin = display.origin,
-            contentDescription = display.name,
-        )
-        // 左侧亮边 / 右侧暗边，模拟书脊厚度
+        // 书脊面板：竖排书名 + 侧边明暗厚度
         Box(
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .width(SpineEdge)
+                .width(spineW)
                 .fillMaxSize()
-                .background(Color.White.copy(alpha = 0.16f))
-        )
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 3.dp,
+                        bottomStart = 1.dp,
+                    )
+                )
+                .background(spineColor),
+        ) {
+            SpineTitle(
+                title = display.name,
+                textColor = onSpine,
+                modifier = Modifier.align(Alignment.Center),
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .width(2.dp)
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.26f))
+            )
+        }
+        // 封面面板
         Box(
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .width(SpineEdge)
+                .width(coverW)
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.26f))
-        )
-        // 贴近层板处的接触阴影
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .height(3.dp)
-                .background(Color.Black.copy(alpha = 0.12f))
-        )
+                .clip(
+                    RoundedCornerShape(
+                        topEnd = 3.dp,
+                        bottomEnd = 1.dp,
+                    )
+                ),
+        ) {
+            AppBookCover(
+                modifier = Modifier.fillMaxSize(),
+                name = display.name,
+                author = display.author,
+                coverPath = display.getDisplayCover(),
+                galleryIdentity = display.bookUrl,
+                sourceOrigin = display.origin,
+                contentDescription = display.name,
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .width(2.dp)
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = 0.16f))
+            )
+        }
     }
 }
 
-/** 按书籍身份派生一个柔和的书脊底色（封面缺失时兜底） */
+/**
+ * 书脊竖排书名：中文逐字一行；英文 / 数字连续整词保留不拆（横排旋转）；
+ * 最多取 7 段，超出加省略号；窄书脊上用小字号保证不挤出。
+ */
+@Composable
+private fun SpineTitle(
+    title: String,
+    textColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val runs = remember(title) { spineRuns(title) }
+    Column(
+        modifier = modifier.padding(horizontal = 2.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        runs.take(7).forEach { run ->
+            if (isLatinRun(run)) {
+                RotatedBox(quarterTurns = 1) {
+                    Text(
+                        text = run,
+                        color = textColor,
+                        fontSize = 9.sp,
+                        lineHeight = 10.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            } else {
+                Text(
+                    text = run,
+                    color = textColor,
+                    fontSize = 10.sp,
+                    lineHeight = 12.sp,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        if (runs.size > 7) {
+            Text("…", color = textColor, fontSize = 10.sp)
+        }
+    }
+}
+
+/** 连续 ASCII（英文 / 数字 / 空格）作为整词，其余按单字分段 */
+private fun spineRuns(title: String): List<String> {
+    val runs = mutableListOf<String>()
+    var latin = ""
+    fun flush() {
+        if (latin.trim().isNotBlank()) runs.add(latin.trim())
+        latin = ""
+    }
+    for (ch in title) {
+        if (ch in ' '..'~') latin += ch else {
+            flush()
+            runs.add(ch.toString())
+        }
+    }
+    flush()
+    return runs
+}
+
+private fun isLatinRun(run: String): Boolean = run.all { it in ' '..'~' }
+
+/** 按书籍身份派生柔和书脊底色（封面缺失兜底） */
 private fun spineColor(identity: String): Color {
     val hue = ((identity.hashCode() % 360) + 360) % 360
     return Color.hsl(hue.toFloat(), 0.38f, 0.52f)
+}
+
+/** 按底色亮度选对比色：浅底深字，深底白字 */
+private fun readableOn(background: Color): Color {
+    val luminance = 0.299f * background.red + 0.587f * background.green + 0.114f * background.blue
+    return if (luminance > 0.6f) Color(0xFF262626) else Color.White
 }
