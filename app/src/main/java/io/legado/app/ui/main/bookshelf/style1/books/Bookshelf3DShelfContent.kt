@@ -187,7 +187,7 @@ private fun BookVolume(
     onLongClick: (BookshelfBookItem) -> Unit,
 ) {
     val display = bookItem.display
-    val density = LocalDensity.current
+    val densityLocal = LocalDensity.current
     var lifted by remember { mutableStateOf(false) }
     val elevation by animateFloatAsState(
         targetValue = if (lifted) 20f else 5f,
@@ -206,11 +206,11 @@ private fun BookVolume(
         label = "volumeLiftY",
     )
     val alpha = 0.70f + 0.30f * weight
-    val railYpx = with(density) { railY.toPx() }
+    val railYpx = with(densityLocal) { railY.toPx() }
     val spineColor = spineColor(bookItem.key)
     val onSpine = readableOn(spineColor)
-    val spineWpx = with(density) { spineW.toPx() }
-    val coverDepthPx = with(density) { coverW.toPx() * DepthX }
+    val spineWpx = with(densityLocal) { spineW.toPx() }
+    val coverDepthPx = with(densityLocal) { coverW.toPx() * DepthX }
 
     Box(
         modifier = Modifier
@@ -267,7 +267,7 @@ private fun BookVolume(
                     .fillMaxSize()
                     .graphicsLayer {
                         rotationY = -6f * (1f - weight)
-                        transformOrigin = TransformOrigin.CenterStart
+                        transformOrigin = TransformOrigin(0f, 0.5f)
                     }
                     .clip(
                         RoundedCornerShape(topEnd = 3.dp, bottomEnd = 1.dp)
