@@ -723,6 +723,9 @@
 
     <string name="show_bookshelf_tag_bar">显示标签栏</string>
     <string name="bookshelf_3d">3D 立本书架</string>
+    <string name="bookshelf_3d_width">书脊宽窄</string>
+    <string name="bookshelf_3d_height">书籍高矮</string>
+    <string name="bookshelf_3d_spacing">层间距</string>
     <string name="group_edit">编辑分组</string>
     <string name="move_to_group">移入分组</string>
     <string name="add_group">添加分组</string>

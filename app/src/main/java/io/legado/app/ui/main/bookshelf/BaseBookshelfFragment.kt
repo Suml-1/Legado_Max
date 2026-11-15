@@ -223,6 +223,14 @@ abstract class BaseBookshelfFragment(layoutId: Int) :
                         swShowBookshelfFastScroller.isChecked = AppConfig.showBookshelfFastScroller
                         swShowBookshelfTagBar.isChecked = AppConfig.showBookshelfTagBar
                         swBookshelfThreed.isChecked = AppConfig.bookshelf3D
+                        // 3D 外观档位滑块，仅开启 3D 时可见
+                        llThreedOptions.visibility = if (AppConfig.bookshelf3D) View.VISIBLE else View.GONE
+                        sbThreedWidth.progress = AppConfig.bookshelf3dWidth
+                        sbThreedHeight.progress = AppConfig.bookshelf3dHeight
+                        sbThreedSpacing.progress = AppConfig.bookshelf3dSpacing
+                        swBookshelfThreed.setOnCheckedChangeListener { _, checked ->
+                            llThreedOptions.visibility = if (checked) View.VISIBLE else View.GONE
+                        }
                         // 初始化"显示更多信息"相关开关状态
                         llShowMoreInfo.visibility = if (bookLayout == 0) View.VISIBLE else View.GONE
                         swShowMoreInfo.isChecked = AppConfig.showMoreInfoInList
@@ -331,6 +339,18 @@ abstract class BaseBookshelfFragment(layoutId: Int) :
                     }
                     if (AppConfig.bookshelf3D != swBookshelfThreed.isChecked) {
                         AppConfig.bookshelf3D = swBookshelfThreed.isChecked
+                        refreshBookshelf = true
+                    }
+                    if (AppConfig.bookshelf3dWidth != sbThreedWidth.progress) {
+                        AppConfig.bookshelf3dWidth = sbThreedWidth.progress
+                        refreshBookshelf = true
+                    }
+                    if (AppConfig.bookshelf3dHeight != sbThreedHeight.progress) {
+                        AppConfig.bookshelf3dHeight = sbThreedHeight.progress
+                        refreshBookshelf = true
+                    }
+                    if (AppConfig.bookshelf3dSpacing != sbThreedSpacing.progress) {
+                        AppConfig.bookshelf3dSpacing = sbThreedSpacing.progress
                         refreshBookshelf = true
                     }
                     // 保存"显示更多信息"相关配置

@@ -68,6 +68,10 @@ object PreferKey {
 
     // 3D 立本书架开关（默认值按设备性能自动判断，用户可手动覆盖）
     const val bookshelf3D = "bookshelf3D"
+    // 3D 书架外观档位：书脊宽窄 / 书高矮 / 层间距（1 紧凑 2 标准 3 宽松）
+    const val bookshelf3dWidth = "bookshelf3dWidth"
+    const val bookshelf3dHeight = "bookshelf3dHeight"
+    const val bookshelf3dSpacing = "bookshelf3dSpacing"
     const val showMoreInfoInList = "showMoreInfoInList"
     const val showIntroInList = "showIntroInList"
     const val showCategoryInfoInList = "showCategoryInfoInList"

@@ -420,6 +420,27 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     /** 当前设备是否可以启用 3D 书架：开关开启且性能达标（低端机 / 墨水屏强制回退普通书架） */
     fun canUse3DBookshelf(): Boolean = bookshelf3D && !isLowEndDevice()
 
+    /** 3D 书脊宽窄档位：1 窄 / 2 标准 / 3 宽 */
+    var bookshelf3dWidth: Int
+        get() = appCtx.getPrefInt(PreferKey.bookshelf3dWidth, 2)
+        set(value) {
+            appCtx.putPrefInt(PreferKey.bookshelf3dWidth, value)
+        }
+
+    /** 3D 书籍高矮档位：1 矮 / 2 标准 / 3 高 */
+    var bookshelf3dHeight: Int
+        get() = appCtx.getPrefInt(PreferKey.bookshelf3dHeight, 2)
+        set(value) {
+            appCtx.putPrefInt(PreferKey.bookshelf3dHeight, value)
+        }
+
+    /** 3D 层间距档位：1 紧 / 2 标准 / 3 松 */
+    var bookshelf3dSpacing: Int
+        get() = appCtx.getPrefInt(PreferKey.bookshelf3dSpacing, 2)
+        set(value) {
+            appCtx.putPrefInt(PreferKey.bookshelf3dSpacing, value)
+        }
+
     var showMoreInfoInList: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.showMoreInfoInList, false)
         set(value) {

@@ -724,6 +724,9 @@
 
     <string name="show_bookshelf_tag_bar">Show tag bar</string>
     <string name="bookshelf_3d">3D bookshelf</string>
+    <string name="bookshelf_3d_width">Book spine width</string>
+    <string name="bookshelf_3d_height">Book height</string>
+    <string name="bookshelf_3d_spacing">Row spacing</string>
     <string name="group_edit">Group editing</string>
     <string name="move_to_group">Move to group</string>
     <string name="add_group">Add to Groups</string>

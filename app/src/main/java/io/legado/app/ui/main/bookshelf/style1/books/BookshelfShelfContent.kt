@@ -50,6 +50,7 @@ internal fun BookshelfShelfContent(
         displayConfig.is3DMode -> Bookshelf3DShelfContent(
             modifier = modifier,
             shelfItems = shelfItems,
+            bottomPaddingPx = bottomPaddingPx,
             onScrollBackwardChange = onScrollBackwardChange,
             onBookClick = onBookClick,
             onBookLongClick = onBookLongClick,
