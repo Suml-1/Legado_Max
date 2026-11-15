@@ -59,6 +59,10 @@
 
 # 保持js引擎调用的java类
 -keep class * extends io.legado.app.help.JsExtensions{*;}
+# JS 书源沙箱：Rhino 按方法名反射调用 JsSourceSandbox.evalString/evalStringWithData，
+# 该类不在 JsExtensions 继承链内、上方的 keep 覆盖不到，release 混淆后
+# 脚本调用 java.getQuickJsSandbox().evalString(...) 会报「TypeError: 找不到函数 evalString」
+-keep class io.legado.app.model.jsSource.JsSourceSandbox{*;}
 # 数据类
 -keep class **.data.entities.**{*;}
 # 高亮规则数据类：通过 GSON 持久化到 SharedPreferences 和 highlightRule.json 备份文件，
