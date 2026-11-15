@@ -64,6 +64,15 @@ class TaskCookieStore(private val scope: String) : CookieManagerInterface {
         return CacheManager.get(storageKey(url)) ?: ""
     }
 
+    /**
+     * 取 cookie 字符串里某个键的值（任务脚本常用：`cookie.getKey(url, "BDUSS")`）。
+     * CookieManagerInterface 没有该方法，但 JS 直接调绑定对象的方法，缺失会抛错被吞。
+     */
+    fun getKey(url: String, key: String): String {
+        if (key.isBlank()) return ""
+        return cookieToMap(getCookie(url))[key] ?: ""
+    }
+
     override fun removeCookie(url: String) {
         CacheManager.delete(storageKey(url))
     }

@@ -321,6 +321,9 @@ class SourceLoginDialog :
                     it.root.id = index + 1000
                     if (viewName == null) {
                         it.textInputLayout.hint = name
+                    } else if (isV2) {
+                        // v2 行的 viewName 是静态显示名（normalizeV2Row 放入），不是 JS 表达式
+                        it.textInputLayout.hint = viewName
                     } else if (viewName.length in 3..19 && viewName.first() == '\'' && viewName.last() == '\'') {
                         it.textInputLayout.hint = viewName.substring(1, viewName.length - 1)
                     } else {
@@ -379,6 +382,9 @@ class SourceLoginDialog :
                     it.root.id = index + 1000
                     if (viewName == null) {
                         it.textInputLayout.hint = name
+                    } else if (isV2) {
+                        // v2 行的 viewName 是静态显示名，不是 JS 表达式
+                        it.textInputLayout.hint = viewName
                     } else if (viewName.length in 3..19 && viewName.first() == '\'' && viewName.last() == '\'') {
                         it.textInputLayout.hint = viewName.substring(1, viewName.length - 1)
                     } else {
@@ -429,6 +435,9 @@ class SourceLoginDialog :
                 ).let {
                     if (viewName == null) {
                         it.spName.text = name
+                    } else if (isV2) {
+                        // v2 行的 viewName 是静态显示名，不是 JS 表达式
+                        it.spName.text = viewName
                     } else if (viewName.length in 3..19 && viewName.first() == '\'' && viewName.last() == '\'') {
                         it.spName.text = viewName.substring(1, viewName.length - 1)
                     } else {
