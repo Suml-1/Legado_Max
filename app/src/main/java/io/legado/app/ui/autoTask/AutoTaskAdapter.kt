@@ -212,7 +212,8 @@ class AutoTaskAdapter(context: Context, private val callBack: CallBack) :
     private fun showMenu(view: View, task: AutoTaskRule) {
         val popupMenu = PopupMenu(context, view)
         popupMenu.inflate(R.menu.auto_task_item)
-        popupMenu.menu.findItem(R.id.menu_login).isVisible = !task.loginUrl.isNullOrBlank()
+        popupMenu.menu.findItem(R.id.menu_login).isVisible =
+            !task.loginUrl.isNullOrBlank() || !task.loginUi.isNullOrBlank()
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.menu_login -> context.startActivity<SourceLoginActivity> {

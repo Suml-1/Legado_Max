@@ -123,15 +123,25 @@ class WebViewLoginFragment : BaseFragment(R.layout.fragment_web_view_login) {
             CookieManager.getInstance()
         }
         webView.webViewClient = object : WebViewClient() {
+            // 定时任务的虚拟源 key（auto_task:{id}）不是 URL，按它存 cookie 会落到无效域名桶，
+            // 任务请求读不到；改为按登录页 url 的域名存，任务请求即可携带登录会话
+            private fun cookieStoreKey(url: String?): String {
+                return if (isTaskSourceKey(sourceKey) && !url.isNullOrBlank()) {
+                    url
+                } else {
+                    sourceKey
+                }
+            }
+
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 val cookie = cookieManager.getCookie(url)
-                CookieStore.setCookie(source.getKey(), cookie)
+                CookieStore.setCookie(cookieStoreKey(url), cookie)
                 super.onPageStarted(view, url, favicon)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 val cookie = cookieManager.getCookie(url)
-                CookieStore.setCookie(source.getKey(), cookie)
+                CookieStore.setCookie(cookieStoreKey(url), cookie)
                 if (checking) {
                     activity?.finish()
                 }

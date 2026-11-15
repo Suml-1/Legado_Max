@@ -93,10 +93,11 @@ class AutoTaskEditActivity :
     }
 
     override fun onMenuOpened(featureId: Int, menu: Menu): Boolean {
-        val loginUrl = getFieldValue("loginUrl")
+        val canLogin = getFieldValue("loginUrl").isNotBlank() ||
+            getFieldValue("loginUi").isNotBlank()
         menu.findItem(R.id.menu_login)?.let {
             it.isVisible = true
-            it.isEnabled = loginUrl.isNotBlank()
+            it.isEnabled = canLogin
         }
         return super.onMenuOpened(featureId, menu)
     }
@@ -250,8 +251,7 @@ class AutoTaskEditActivity :
 
     private fun openLogin() {
         val rule = buildTask() ?: return
-        val loginUrl = rule.loginUrl.orEmpty()
-        if (loginUrl.isBlank()) {
+        if (rule.loginUrl.isNullOrBlank() && rule.loginUi.isNullOrBlank()) {
             toastOnUi(getString(R.string.source_no_login))
             return
         }

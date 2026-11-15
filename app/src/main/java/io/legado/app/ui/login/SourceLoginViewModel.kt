@@ -12,6 +12,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.model.AudioPlay
+import io.legado.app.model.AutoTask
 import io.legado.app.model.ReadBook
 import io.legado.app.model.VideoPlay
 import io.legado.app.utils.toastOnUi
@@ -56,6 +57,12 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
                         "bookSource" ->  appDb.bookSourceDao.getBookSource(sourceKey)
                         "rssSource" -> appDb.rssSourceDao.getByKey(sourceKey)
                         "httpTts" -> appDb.httpTTSDao.get(sourceKey.toLong())
+                        "autoTask" -> {
+                            // 定时任务的虚拟源：按任务 id 实时构建，登录信息存 CacheManager（按任务 key 隔离）
+                            AutoTask.getRules().firstOrNull { it.id == sourceKey }?.let {
+                                AutoTask.buildSource(it)
+                            }
+                        }
                         else -> null
                     }
                     val bookUrl = intent.getStringExtra("bookUrl")
