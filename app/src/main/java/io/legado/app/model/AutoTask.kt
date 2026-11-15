@@ -117,6 +117,8 @@ object AutoTask {
             bookSourceUrl = "${SOURCE_KEY}:${task.id}",
             bookSourceName = task.name
         ).apply {
+            // 任务脚本挂到 mainJs：登录界面 v2（loginUi/loginAction 函数）与登录相关判定都从 mainJs 取
+            mainJs = task.script
             jsLib = task.jsLib
             header = task.header
             concurrentRate = task.concurrentRate

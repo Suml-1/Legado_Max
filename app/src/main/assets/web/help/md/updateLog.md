@@ -26,8 +26,8 @@
 
 **2026/11/15**
 
+- fix(定时任务): 修复登录界面 v2 加载失败——v2 函数的承载源改为与 LegadoT 一致：loginUrl 字段的登录 JS 优先（任务虚拟源即此形态），JS 书源仍走 mainJs；「v2 标记 + 脚本无 loginUi/loginAction 函数」且 loginUrl 是网页时回退网页登录；任务虚拟源把脚本挂到 mainJs 供登录相关判定使用。修复「源社区」等任务的登录 UI 加载不出来
 - fix(定时任务): 修复任务无法登录——登录解析漏了 autoTask 分支，任务虚拟源解析不到直接报「未找到书源」退出；补上后编辑页/列表行的登录入口同时认 loginUrl 与 loginUi（含 v2 表单）
-- fix(定时任务): 修复任务 WebView 登录的 cookie 落点——任务虚拟源 key（`auto_task:{id}`）不是 URL，按源 key 存会落进无效域名桶，登录会话永远带不上；改按登录页 url 的域名存，任务请求即可自动携带
 - feat(定时任务): 补齐任务级隔离基建——任务脚本（含调试）改走一次性隔离作用域，脚本篡改全局环境不再污染书源共用的共享作用域；`cookie.getCookie/setCookie` 等按任务分桶持久化（开启 cookie 容器时），与书源的全局域名 cookie 互不可见；任务网页登录绑定专属 WebView profile；删除任务时清理作用域 cookie、登录信息、变量与 profile
 - fix(定时任务): 修复帮助文档在帮助页全乱码（文档文件编码错误）
 
