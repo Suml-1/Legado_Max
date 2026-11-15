@@ -188,12 +188,9 @@ android {
             // proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'cronet-proguard-rules.pro'
         }
     }
-    // ABI 分拆仅用于 Release 发布产物；Debug 本地构建保持单一 universal 包，
-    // 避免按 armeabi-v7a/arm64-v8a/universal 重复打包拖慢日常构建。
-    // 配置缓存已关闭（gradle.properties: unsafe.configuration-cache=false），读取任务名安全。
-    def enableAbiSplits = gradle.startParameter.taskNames.any {
-        it.toLowerCase().contains('release')
-    }
+    // 试验阶段只出一个 universal 全包，不再按 armeabi-v7a/arm64-v8a 拆分，减少打包等待。
+    // 需要分架构发布时再把 enableAbiSplits 改回按 taskName 判断。
+    def enableAbiSplits = false
     logger.lifecycle("ABI splits enabled: {} (tasks: {})", enableAbiSplits, gradle.startParameter.taskNames)
     splits {
         abi {
