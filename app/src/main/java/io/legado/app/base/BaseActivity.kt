@@ -13,6 +13,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.ImageView
 import androidx.activity.addCallback
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
@@ -34,6 +35,9 @@ import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.book.read.config.ReadAloudActivity
 import io.legado.app.ui.widget.ReadAloudMiniBarController
 import io.legado.app.ui.widget.ReadAloudMiniBarHost
+import io.legado.app.ui.design.components.view.NgBackdropSourceLayout
+import io.legado.app.ui.design.theme.NgEffectThemeHostView
+import io.legado.app.ui.design.theme.NgThemeGradientHostView
 import io.legado.app.ui.widget.TitleBar
 import io.legado.app.ui.widget.applyTopBarConfig
 import io.legado.app.ui.widget.topBarContentColor
@@ -70,6 +74,11 @@ abstract class BaseActivity<VB : ViewBinding>(
     protected abstract val binding: VB
     private var readAloudMiniBarController: ReadAloudMiniBarController? = null
 
+    // NG 主题宿主视图（架子已挂入内容根；特效/渐变/海报层的喂图与激活在后续阶段接线）
+    private var ngThemeSceneHost: NgEffectThemeHostView? = null
+    private var ngThemeScenePoster: ImageView? = null
+    private var ngThemeGradientBackground: NgThemeGradientHostView? = null
+
     val isInMultiWindow: Boolean
         @SuppressLint("ObsoleteSdkInt")
         get() {
@@ -96,13 +105,74 @@ abstract class BaseActivity<VB : ViewBinding>(
         return super.onCreateView(parent, name, context, attrs)
     }
 
+    private fun createContentRoot(content: View): View {
+        if (!imageBg) return content
+        val root = FrameLayout(this)
+        val sceneSource = NgBackdropSourceLayout(this).apply {
+            id = R.id.ng_liquid_glass_backdrop_source
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            isClickable = false
+            isFocusable = false
+        }
+        val scenePoster = ImageView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            )
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            isClickable = false
+            isFocusable = false
+            visibility = View.GONE
+        }
+        val gradientBackground = NgThemeGradientHostView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            )
+            scaleType = ImageView.ScaleType.FIT_XY
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            isClickable = false
+            isFocusable = false
+            visibility = View.GONE
+        }
+        val sceneHost = NgEffectThemeHostView(this)
+        sceneSource.addView(gradientBackground)
+        sceneSource.addView(scenePoster)
+        sceneSource.addView(
+            sceneHost,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            ),
+        )
+        root.addView(
+            sceneSource,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            ),
+        )
+        root.addView(
+            content,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            ),
+        )
+        ngThemeScenePoster = scenePoster
+        ngThemeSceneHost = sceneHost
+        ngThemeGradientBackground = gradientBackground
+        return root
+    }
+
     @SuppressLint("ObsoleteSdkInt")
     override fun onCreate(savedInstanceState: Bundle?) {
         window.decorView.disableAutoFill()
         initTheme()
         super.onCreate(savedInstanceState)
         setupSystemBar()
-        setContentView(binding.root)
+        setContentView(createContentRoot(binding.root))
         findViewById<ViewGroup>(android.R.id.content)?.let {
             readAloudMiniBarController = ReadAloudMiniBarController(this, this, it)
         }
