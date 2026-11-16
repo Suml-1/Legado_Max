@@ -2803,4 +2803,24 @@ Night: %5$s / %6$s / %7$s / %8$s</string>
     <string name="auto_task_book_update_title">%1$s updated</string>
     <string name="auto_task_book_update_content">New chapters: %1$d  Latest: %2$s</string>
     <string name="auto_task_book_update_content_count">New chapters: %1$d</string>
+    <string name="ng_form_row_collapsed">Collapsed</string>
+    <string name="ng_form_row_expanded">Expanded</string>
+    <string name="ng_scheme_august">August</string>
+    <string name="ng_scheme_band">Band</string>
+    <string name="ng_scheme_clear_sky">Clear sky</string>
+    <string name="ng_scheme_grass">Grassland</string>
+    <string name="ng_scheme_hidden_sea_order">Hidden Sea Order</string>
+    <string name="ng_scheme_lemon">Lemon</string>
+    <string name="ng_scheme_millennium">Millennium</string>
+    <string name="ng_scheme_monochrome">Black &amp; white</string>
+    <string name="ng_scheme_new_wave">New wave</string>
+    <string name="ng_scheme_spring">Spring</string>
+    <string name="ng_theme_mode_multicolor">Multicolor</string>
+    <string name="ng_theme_mode_soft_gradient">Soft gradient</string>
+    <string name="ng_theme_mode_standard">Custom themes</string>
+    <string name="theme_mode_eink_short">E-Ink</string>
+    <string name="ng_theme_mode_summary">%1$s · %2$s</string>
+    <string name="ng_theme_mode_standard_short">Custom</string>
+    <string name="ng_theme_mode_internal_short">Built-in</string>
+    <string name="ng_theme_mode_effect_theme">Effect themes</string>
 </resources>

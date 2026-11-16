@@ -54,6 +54,9 @@ import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileOutputStream
+import io.legado.app.ui.design.theme.NgThemeGradientDrawable
+import io.legado.app.utils.putPrefBoolean
+import io.legado.app.ui.design.theme.NgMulticolorLightFieldDrawable
 
 @Keep
 object ThemeConfig {
@@ -922,5 +925,153 @@ object ThemeConfig {
             "backgroundImgPath" to backgroundImgPath,
             "backgroundImgBlur" to backgroundImgBlur,
         )
+    }
+
+
+    // ==================== NG 主题移植：托管主题应用 / 渐变与抽屉背景 ====================
+    private const val ASSET_BACKGROUND_PREFIX = "asset://"
+    private const val THEME_MODE_EINK = "3"
+
+    private fun getAssetToFile(assetPath: String): String {
+        val suffix = when {
+            assetPath.contains(".9.png", ignoreCase = true) -> ".9.png"
+            assetPath.endsWith(".png", ignoreCase = true) -> ".png"
+            assetPath.endsWith(".gif", ignoreCase = true) -> ".gif"
+            assetPath.endsWith(".webp", ignoreCase = true) -> ".webp"
+            assetPath.endsWith(".jpg", ignoreCase = true) -> ".jpg"
+            assetPath.endsWith(".jpeg", ignoreCase = true) -> ".jpg"
+            else -> ".png"
+        }
+        return MD5Utils.md5Encode16(assetPath) + suffix
+    }
+
+    private fun cachedBackgroundPath(context: Context, path: String, preferenceKey: String): String {
+        val fileRoot = context.externalFiles
+        return when {
+            path.startsWith("http") -> FileUtils.getPath(fileRoot, preferenceKey, getUrlToFile(path))
+            path.startsWith(ASSET_BACKGROUND_PREFIX) ->
+                FileUtils.getPath(fileRoot, preferenceKey, getAssetToFile(path.removePrefix(ASSET_BACKGROUND_PREFIX)))
+            else -> path
+        }
+    }
+
+    private fun copyAssetBackgroundIfNeed(
+        context: Context,
+        preferenceKey: String,
+        backgroundPath: String,
+        forceRefresh: Boolean = false,
+    ): String {
+        val assetPath = resolveBundledBackgroundAssetPath(backgroundPath.removePrefix(ASSET_BACKGROUND_PREFIX))
+        val canonicalBackgroundPath = "$ASSET_BACKGROUND_PREFIX$assetPath"
+        val filePath = cachedBackgroundPath(context, canonicalBackgroundPath, preferenceKey)
+        val file = File(filePath)
+        if (forceRefresh || !file.exists() || file.length() == 0L) {
+            FileUtils.createFileIfNotExist(filePath)
+            context.assets.open(assetPath).use { inputStream ->
+                FileOutputStream(file).use { outputStream -> inputStream.copyTo(outputStream) }
+            }
+        }
+        return file.absolutePath
+    }
+
+    internal fun drawerBackgroundImagePath(context: Context, isDark: Boolean): String? {
+        val mode = NgThemeModeStore.current(context)
+        if (mode == NgThemePresentationMode.SOFT_GRADIENT ||
+            mode == NgThemePresentationMode.MULTICOLOR ||
+            mode == NgThemePresentationMode.EINK
+        ) return null
+        val preferenceKey = if (isDark) PreferKey.bgImageN else PreferKey.bgImage
+        val path = if (mode == NgThemePresentationMode.EFFECT_THEME) {
+            val theme = NgEffectThemeSelection.current(context)
+            (if (isDark) theme?.darkBackground else theme?.lightBackground)?.path
+        } else context.getPrefString(preferenceKey)
+        if (path.isNullOrBlank()) return null
+        return when {
+            path.startsWith(ASSET_BACKGROUND_PREFIX) ->
+                "file:///android_asset/" + resolveBundledBackgroundAssetPath(path.removePrefix(ASSET_BACKGROUND_PREFIX))
+            path.startsWith("http") -> cachedBackgroundPath(context, path, preferenceKey).takeIf { File(it).isFile }
+            else -> path
+        }
+    }
+
+    fun getGradientBgImage(context: Context): Drawable? = when (NgThemeModeStore.current(context)) {
+        NgThemePresentationMode.SOFT_GRADIENT -> NgThemeGradientDrawable(NgSoftGradientTheme.gradient(context))
+        NgThemePresentationMode.MULTICOLOR -> NgMulticolorLightFieldDrawable()
+        else -> null
+    }
+
+    fun applyThemeMode(context: Context, themeMode: String) {
+        val normalizedMode = normalizeThemeMode(themeMode)
+        AppConfig.themeMode = normalizedMode
+        AppConfig.isEInkMode = normalizedMode == THEME_MODE_EINK
+        context.putPrefString(PreferKey.themeMode, normalizedMode)
+        applyDayNight(context)
+    }
+
+    internal fun applyManagedTheme(
+        context: Context,
+        theme: NgManagedTheme,
+        preparedDrawer: NgPreparedDrawerProfile? = null,
+        renderEffect: Boolean = true,
+    ): Boolean {
+        var drawerSettings = preparedDrawer
+        return runCatching {
+            if (drawerSettings == null) {
+                drawerSettings = theme.drawerProfile?.let { NgDrawerProfileStore.prepare(context, it) }
+            }
+            fun materialize(background: NgThemeBackground, preferenceKey: String): String? {
+                val path = background.path?.takeIf(String::isNotBlank) ?: return null
+                return if (path.startsWith(ASSET_BACKGROUND_PREFIX)) {
+                    copyAssetBackgroundIfNeed(context, preferenceKey, path, forceRefresh = true)
+                } else path
+            }
+            val lightBackground = materialize(theme.lightBackground, PreferKey.bgImage)
+            val darkBackground = materialize(theme.darkBackground, PreferKey.bgImageN)
+            theme.coverProfile?.takeIf { it.applyAlbumSelection }?.albumId?.let { albumId ->
+                require(NgCoverAlbumStore.current(context).albums.any { it.id == albumId }) {
+                    "主题关联的封面图集不存在"
+                }
+            }
+            NgThemeModeStore.selectManagedTheme(context, renderEffect && theme.effect != null)
+            context.putPrefString(PreferKey.dThemeName, theme.name)
+            context.putPrefString(PreferKey.dNThemeName, theme.name)
+            context.putPrefString(PreferKey.bgImage, lightBackground)
+            context.putPrefString(PreferKey.bgImageN, darkBackground)
+            context.putPrefInt(PreferKey.bgImageBlurring, theme.lightBackground.blur)
+            context.putPrefInt(PreferKey.bgImageNBlurring, theme.darkBackground.blur)
+            context.putPrefBoolean(PreferKey.tNavBar, true)
+            theme.barProfile?.normalized()?.let { bars ->
+                bars.useFloatingBottomBar?.let { context.putPrefBoolean(PreferKey.useFloatingBottomBar, it) }
+                bars.floatingBottomBarBottomDistancePx?.let { AppConfig.floatingBottomBarBottomDistancePx = it }
+                bars.floatingBottomBarTransparency?.let { AppConfig.floatingBottomBarTransparency = it }
+                bars.bookshelfTopBarStyle?.let { AppConfig.bookshelfTopBarStyle = BookshelfTopBarStyle.fromValue(it) }
+                bars.bookshelfFloatingDockTopDistancePx?.let { AppConfig.bookshelfFloatingDockTopDistancePx = it }
+                bars.bookshelfFloatingDockTransparency?.let { AppConfig.bookshelfFloatingDockTransparency = it }
+                bars.bookshelfFloatingDockSearchPosition?.let {
+                    AppConfig.bookshelfFloatingDockSearchPosition = BookshelfFloatingDockSearchPosition.fromValue(it)
+                }
+            }
+            NgColorConfigStore.update(context, theme.colors)
+            theme.coverProfile?.let { cover ->
+                if (cover.applyAlbumSelection) {
+                    check(NgCoverAlbumStore.select(context, cover.albumId)) { "无法应用主题封面图集" }
+                }
+                cover.loadOnlyWifi?.let { context.putPrefBoolean(PreferKey.loadCoverOnlyWifi, it) }
+                cover.useDefault?.let { context.putPrefBoolean(PreferKey.useDefaultCover, it) }
+                cover.showName?.let { context.putPrefBoolean(PreferKey.coverShowName, it) }
+                cover.showAuthor?.let { context.putPrefBoolean(PreferKey.coverShowAuthor, it) }
+                cover.showNameDark?.let { context.putPrefBoolean(PreferKey.coverShowNameN, it) }
+                cover.showAuthorDark?.let { context.putPrefBoolean(PreferKey.coverShowAuthorN, it) }
+            }
+            drawerSettings?.let { NgDrawerProfileStore.commit(context, it) }
+            val mode = NgThemeModeStore.standardThemeMode(context)
+            if (AppConfig.isEInkMode || AppConfig.themeMode != mode) applyThemeMode(context, mode)
+            BookCover.upDefaultCover()
+            postEvent(EventBus.RECREATE, "")
+            true
+        }.getOrElse { error ->
+            AppLog.put("设置主题出错\n$error", error, true)
+            false
+        }.also { drawerSettings?.discard() }
     }
 }

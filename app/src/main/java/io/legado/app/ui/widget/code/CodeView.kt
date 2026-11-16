@@ -30,6 +30,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private var highlightWhileTextChanging = true
     private var hasErrors = false
     private var mRemoveErrorsWhenTextChanged = true
+    private var maxHighlightLength = 4096
 
     /**
      * 当为 true 时，mEditorTextWatcher.onTextChanged / afterTextChanged 跳过高亮调度。
@@ -319,6 +320,10 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     fun addSyntaxPattern(pattern: Pattern, @ColorInt Color: Int) {
         mSyntaxPatternMap[pattern] = Color
+    }
+
+    fun setMaxHighlightLength(length: Int) {
+        maxHighlightLength = length
     }
 
     fun removeSyntaxPattern(pattern: Pattern) {

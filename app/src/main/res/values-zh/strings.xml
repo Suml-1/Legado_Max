@@ -2787,4 +2787,24 @@
     <string name="auto_task_book_update_title">%1$s 有更新</string>
     <string name="auto_task_book_update_content">新章节：%1$d  最新：%2$s</string>
     <string name="auto_task_book_update_content_count">新章节：%1$d</string>
+    <string name="ng_form_row_collapsed">已折叠</string>
+    <string name="ng_form_row_expanded">已展开</string>
+    <string name="ng_scheme_august">八月</string>
+    <string name="ng_scheme_band">乐队</string>
+    <string name="ng_scheme_clear_sky">晴空</string>
+    <string name="ng_scheme_grass">草野</string>
+    <string name="ng_scheme_hidden_sea_order">隐海修会</string>
+    <string name="ng_scheme_lemon">柠檬</string>
+    <string name="ng_scheme_millennium">千禧年</string>
+    <string name="ng_scheme_monochrome">黑白</string>
+    <string name="ng_scheme_new_wave">新浪潮</string>
+    <string name="ng_scheme_spring">春</string>
+    <string name="ng_theme_mode_multicolor">多色光场</string>
+    <string name="ng_theme_mode_soft_gradient">柔光渐变</string>
+    <string name="ng_theme_mode_standard">自定义主题</string>
+    <string name="theme_mode_eink_short">墨水</string>
+    <string name="ng_theme_mode_summary">%1$s · %2$s</string>
+    <string name="ng_theme_mode_standard_short">自定义</string>
+    <string name="ng_theme_mode_internal_short">内置</string>
+    <string name="ng_theme_mode_effect_theme">特效主题</string>
 </resources>

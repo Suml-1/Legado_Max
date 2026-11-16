@@ -88,6 +88,8 @@ firebaseBom = "33.2.0"
 
 spotless = "7.0.2"
 
+materialKolor = "4.1.1"
+
 [libraries]
 
 activity-activity = { module = "androidx.activity:activity", version.ref = "activity" }
@@ -231,6 +233,7 @@ kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref =
 #kotlinx-serialization-protobuf = { module = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf", version.ref = "kotlinxSerialization" }
 liveeventbus = { module = "com.github.michaellee123:LiveEventBus", version.ref = "liveeventbus" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
+material-color-utilities = { module = "com.materialkolor:material-color-utilities-android", version.ref = "materialKolor" }
 
 htmlunit-core-js = { module = "org.htmlunit:htmlunit-core-js", version.ref = "htmlunitCoreJs" }
 

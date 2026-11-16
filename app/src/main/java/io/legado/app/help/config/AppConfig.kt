@@ -1402,4 +1402,76 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         set(value) {
             appCtx.putPrefBoolean(PreferKey.forceSoftwareParagraphBubble, value)
         }
+
+    // ==================== NG 主题：书架顶栏 / 浮动底栏 / 浮动坞 ====================
+    val useFloatingBottomBar: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.useFloatingBottomBar, true)
+
+    var floatingBottomBarBottomDistancePx: Int
+        get() = appCtx.getPrefInt(
+            PreferKey.floatingBottomBarBottomDistancePx,
+            FloatingBottomBarConfig.DEFAULT_BOTTOM_DISTANCE_PX
+        )
+        set(value) {
+            appCtx.putPrefInt(PreferKey.floatingBottomBarBottomDistancePx, value)
+        }
+
+    var floatingBottomBarTransparency: Int
+        get() = FloatingBottomBarConfig.normalizeTransparencyPercent(
+            appCtx.getPrefInt(
+                PreferKey.floatingBottomBarTransparency,
+                FloatingBottomBarConfig.DEFAULT_TRANSPARENCY_PERCENT
+            )
+        )
+        set(value) {
+            appCtx.putPrefInt(
+                PreferKey.floatingBottomBarTransparency,
+                FloatingBottomBarConfig.normalizeTransparencyPercent(value)
+            )
+        }
+
+    var bookshelfTopBarStyle: BookshelfTopBarStyle
+        get() = BookshelfTopBarStyle.fromValue(
+            appCtx.getPrefInt(PreferKey.bookshelfTopBarStyle, BookshelfTopBarStyle.DEFAULT.value)
+        )
+        set(value) {
+            appCtx.putPrefInt(PreferKey.bookshelfTopBarStyle, value.value)
+        }
+
+    var bookshelfFloatingDockTopDistancePx: Int
+        get() = appCtx.getPrefInt(
+            PreferKey.bookshelfFloatingDockTopDistancePx,
+            BookshelfFloatingDockConfig.DEFAULT_TOP_DISTANCE_PX
+        )
+        set(value) {
+            appCtx.putPrefInt(PreferKey.bookshelfFloatingDockTopDistancePx, value)
+        }
+
+    var bookshelfFloatingDockTransparency: Int
+        get() = BookshelfFloatingDockConfig.normalizeTransparencyPercent(
+            appCtx.getPrefInt(
+                PreferKey.bookshelfFloatingDockTransparency,
+                BookshelfFloatingDockConfig.DEFAULT_TRANSPARENCY_PERCENT
+            )
+        )
+        set(value) {
+            appCtx.putPrefInt(
+                PreferKey.bookshelfFloatingDockTransparency,
+                BookshelfFloatingDockConfig.normalizeTransparencyPercent(value)
+            )
+        }
+
+    var bookshelfFloatingDockSearchPosition: BookshelfFloatingDockSearchPosition
+        get() = BookshelfFloatingDockSearchPosition.fromValue(
+            appCtx.getPrefInt(
+                PreferKey.bookshelfFloatingDockSearchPosition,
+                BookshelfFloatingDockSearchPosition.LEFT.value
+            )
+        )
+        set(value) {
+            appCtx.putPrefInt(PreferKey.bookshelfFloatingDockSearchPosition, value.value)
+        }
+
+    val isSystemNightTheme: Boolean
+        get() = sysConfiguration.isNightMode
 }

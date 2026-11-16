@@ -324,7 +324,10 @@ dependencies {
     //图像处理库Toolkit
     implementation(libs.renderscript.intrinsics.replacement.toolkit)
     implementation(libs.liquidglass)
-    
+
+    //NG 主题色板生成
+    implementation(libs.material.color.utilities)
+
     //androidX
     implementation(libs.core.ktx)
     implementation(libs.appcompat.appcompat)

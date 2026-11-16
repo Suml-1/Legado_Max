@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Ng" />
+
+    <style name="Ng.Page">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:background">@android:color/transparent</item>
+    </style>
+
+    <style name="Ng.PageContent">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:paddingStart">@dimen/ng_page_padding</item>
+        <item name="android:paddingEnd">@dimen/ng_page_padding</item>
+        <item name="android:paddingTop">@dimen/ng_space_l</item>
+        <item name="android:paddingBottom">@dimen/ng_space_l</item>
+    </style>
+
+    <style name="Ng.Card">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">@dimen/ng_card_gap</item>
+        <item name="android:background">@drawable/ng_bg_card</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:foreground">?android:attr/selectableItemBackground</item>
+        <item name="android:paddingStart">@dimen/ng_card_padding</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingEnd">@dimen/ng_card_padding</item>
+        <item name="android:paddingBottom">12dp</item>
+    </style>
+
+    <style name="Ng.EntryCard" parent="@style/Ng.Card">
+        <item name="android:minHeight">72dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+    </style>
+
+    <style name="Ng.ListCard" parent="@style/Ng.Card">
+        <item name="android:minHeight">68dp</item>
+    </style>
+
+    <style name="Ng.ProviderCard" parent="@style/Ng.Card">
+        <item name="android:minHeight">70dp</item>
+        <item name="android:background">@drawable/ng_bg_provider_card</item>
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingTop">0dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:paddingBottom">0dp</item>
+    </style>
+
+    <style name="Ng.PromptCard" parent="@style/Ng.EntryCard">
+        <item name="android:background">@drawable/ng_bg_provider_card</item>
+    </style>
+
+    <style name="Ng.SurfacePanel">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/ng_bg_surface_panel</item>
+        <item name="android:padding">@dimen/ng_card_padding</item>
+    </style>
+
+    <style name="Ng.SettingsSectionLabel" parent="android:Widget.TextView">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">16dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:textColor">@color/ng_settings_section</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Ng.SettingsGroup">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">0dp</item>
+        <item name="ngGlassRadius">@dimen/ng_radius_xl</item>
+        <item name="ngGlassTintColor">@android:color/transparent</item>
+        <item name="ngGlassStrokeColor">@android:color/transparent</item>
+        <item name="ngGlassStrokeWidth">0dp</item>
+        <item name="ngGlassBlurRadius">18dp</item>
+        <item name="ngGlassDownSample">0.28</item>
+    </style>
+
+    <style name="Ng.SettingsItem">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">64dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:background">@drawable/ng_bg_settings_item</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:foreground">?android:attr/selectableItemBackground</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:paddingBottom">10dp</item>
+    </style>
+
+    <style name="Ng.SettingsGroupEdgeSpace">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">8dp</item>
+    </style>
+
+    <style name="Ng.SettingsItemGap">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">6dp</item>
+    </style>
+
+    <style name="Ng.SettingsIcon" parent="android:Widget.TextView">
+        <item name="android:layout_width">40dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/ng_on_surface_variant</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Ng.SettingsIconImage">
+        <item name="android:layout_width">36dp</item>
+        <item name="android:layout_height">36dp</item>
+        <item name="android:background">@drawable/ng_bg_settings_icon</item>
+        <item name="android:padding">7dp</item>
+        <item name="android:tint">@color/ng_settings_icon</item>
+    </style>
+
+    <style name="Ng.SettingsTitle" parent="android:Widget.TextView">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textColor">@color/ng_settings_title</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Ng.SettingsSummary" parent="@style/Ng.Summary">
+        <item name="android:textColor">@color/ng_settings_summary</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="Ng.IconCircle">
+        <item name="android:layout_width">@dimen/ng_icon_size</item>
+        <item name="android:layout_height">@dimen/ng_icon_size</item>
+        <item name="android:background">@drawable/ng_bg_icon_circle</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/ng_primary</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Ng.Title" parent="android:Widget.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/ng_on_surface</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Ng.DialogRoot">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:background">@drawable/ng_bg_dialog</item>
+        <item name="android:clipToOutline">true</item>
+    </style>
+
+    <style name="Ng.DialogHeader">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">@dimen/ng_dialog_padding</item>
+        <item name="android:paddingEnd">@dimen/ng_dialog_padding</item>
+        <item name="android:paddingTop">@dimen/ng_dialog_padding</item>
+        <item name="android:paddingBottom">12dp</item>
+    </style>
+
+    <style name="Ng.DialogTitle" parent="@style/Ng.Title">
+        <item name="android:textSize">24sp</item>
+    </style>
+
+    <style name="Ng.DialogBody">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">@dimen/ng_dialog_padding</item>
+        <item name="android:paddingEnd">@dimen/ng_dialog_padding</item>
+        <item name="android:paddingTop">@dimen/ng_space_s</item>
+        <item name="android:paddingBottom">@dimen/ng_space_l</item>
+    </style>
+
+    <style name="Ng.DialogSection">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/ng_bg_dialog_section</item>
+        <item name="android:padding">@dimen/ng_card_padding</item>
+    </style>
+
+    <style name="Ng.DialogActionBar">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/ng_bg_dialog_action_bar</item>
+        <item name="android:gravity">center_vertical|end</item>
+        <item name="android:paddingStart">@dimen/ng_dialog_padding</item>
+        <item name="android:paddingEnd">@dimen/ng_dialog_padding</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingBottom">@dimen/ng_dialog_padding</item>
+    </style>
+
+    <style name="Ng.DialogButton" parent="android:Widget.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">@dimen/ng_dialog_button_height</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minWidth">96dp</item>
+        <item name="android:paddingStart">18dp</item>
+        <item name="android:paddingEnd">18dp</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="radius">@dimen/ng_radius_m</item>
+    </style>
+
+    <style name="Ng.DialogButton.Primary" parent="@style/Ng.DialogButton">
+        <item name="android:background">@drawable/ng_bg_button_primary</item>
+        <item name="android:textColor">@color/ng_on_primary</item>
+    </style>
+
+    <style name="Ng.DialogButton.Secondary" parent="@style/Ng.DialogButton">
+        <item name="android:background">@drawable/ng_bg_button_secondary</item>
+        <item name="android:textColor">@color/ng_primary</item>
+    </style>
+
+    <style name="Ng.CardTitle" parent="android:Widget.TextView">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textColor">@color/ng_on_surface</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Ng.Body" parent="android:Widget.TextView">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/ng_on_surface</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="Ng.Summary" parent="android:Widget.TextView">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/ng_on_surface_variant</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="Ng.Label" parent="android:Widget.TextView">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/ng_on_surface_variant</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Ng.SearchPill">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:background">@drawable/ng_bg_search_pill</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+    </style>
+
+    <style name="Ng.OutlinedField" parent="android:Widget.EditText">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/ng_field_height</item>
+        <item name="android:background">@drawable/ng_bg_outlined_field</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:textColor">@color/ng_on_surface</item>
+        <item name="android:textColorHint">@color/ng_on_surface_variant</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="Ng.OutlinedField.Compact" parent="@style/Ng.OutlinedField">
+        <item name="android:layout_height">34dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:maxHeight">34dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingTop">0dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:paddingBottom">0dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Ng.Spinner" parent="android:Widget.Material.Spinner.Underlined">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/ng_field_height</item>
+        <item name="android:background">@drawable/ng_bg_spinner_compact</item>
+        <item name="android:paddingStart">6dp</item>
+        <item name="android:paddingEnd">34dp</item>
+        <item name="android:spinnerMode">dropdown</item>
+    </style>
+
+    <style name="Ng.Spinner.Compact" parent="@style/Ng.Spinner">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">34dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">34dp</item>
+    </style>
+
+    <style name="Ng.Tag" parent="android:Widget.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">@dimen/ng_tag_height</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minWidth">44dp</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Ng.Tag.Info" parent="@style/Ng.Tag">
+        <item name="android:background">@drawable/ng_bg_tag_info</item>
+        <item name="android:textColor">@color/ng_info</item>
+    </style>
+
+    <style name="Ng.Tag.Success" parent="@style/Ng.Tag">
+        <item name="android:background">@drawable/ng_bg_tag_success</item>
+        <item name="android:textColor">@color/ng_success</item>
+    </style>
+
+    <style name="Ng.Tag.Warning" parent="@style/Ng.Tag">
+        <item name="android:background">@drawable/ng_bg_tag_warning</item>
+        <item name="android:textColor">@color/ng_warning</item>
+    </style>
+
+    <style name="Ng.Tag.Error" parent="@style/Ng.Tag">
+        <item name="android:background">@drawable/ng_bg_tag_error</item>
+        <item name="android:textColor">@color/ng_error</item>
+    </style>
+
+    <style name="Ng.Tag.Neutral" parent="@style/Ng.Tag">
+        <item name="android:background">@drawable/ng_bg_tag_neutral</item>
+        <item name="android:textColor">@color/ng_on_surface_variant</item>
+    </style>
+
+    <style name="Ng.ActionBar">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/ng_action_bar_height</item>
+        <item name="android:background">@color/ng_surface</item>
+        <item name="android:gravity">center_vertical|end</item>
+        <item name="android:paddingStart">@dimen/ng_page_padding</item>
+        <item name="android:paddingEnd">@dimen/ng_page_padding</item>
+    </style>
+
+    <style name="Ng.ActionText" parent="android:Widget.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minWidth">72dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:textColor">@color/ng_primary</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="Ng.SmallButton" parent="android:Widget.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">36dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minWidth">76dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="radius">@dimen/ng_radius_m</item>
+    </style>
+
+    <style name="Ng.SmallButton.Primary" parent="@style/Ng.SmallButton">
+        <item name="android:background">@drawable/ng_bg_button_primary</item>
+        <item name="android:textColor">@color/ng_on_primary</item>
+    </style>
+
+    <style name="Ng.SmallButton.Secondary" parent="@style/Ng.SmallButton">
+        <item name="android:background">@drawable/ng_bg_button_secondary</item>
+        <item name="android:textColor">@color/ng_primary</item>
+    </style>
+
+    <style name="Ng.SegmentedContainer">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:background">@drawable/ng_bg_segment_container</item>
+        <item name="android:gravity">center</item>
+        <item name="android:padding">3dp</item>
+    </style>
+
+    <style name="Ng.SegmentedItem" parent="android:Widget.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">34dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minWidth">72dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:textColor">@color/ng_on_surface_variant</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Ng.SegmentedItem.Selected" parent="@style/Ng.SegmentedItem">
+        <item name="android:background">@drawable/ng_bg_segment_selected</item>
+        <item name="android:textColor">@color/ng_on_surface</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+</resources>

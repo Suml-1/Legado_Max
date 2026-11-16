@@ -25,4 +25,9 @@
     <item name="ui_title_typeface_role" type="id" />
     <item name="bubble_preview_key" type="id" />
 
+    <!-- NG 主题移植：宿主容器与标识 id（阶段2接线时挂到对应布局） -->
+    <item name="bookshelf_cover_load_key" type="id" />
+    <item name="bottom_glass_container" type="id" />
+    <item name="title_bar_container" type="id" />
+    <item name="ng_liquid_glass_backdrop_source" type="id" />
 </resources>

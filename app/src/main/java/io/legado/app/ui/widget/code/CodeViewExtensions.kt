@@ -27,6 +27,35 @@ val jsonPattern: Pattern = Pattern.compile("\"[A-Za-z0-9]*?\"\\:|\"|\\{|\\}|\\[|
  */
 val wrapPattern: Pattern = Pattern.compile("\\\\n")
 
+// NG 移植：CSS 语法模式
+val cssPropertyPattern: Pattern = Pattern.compile("\\b[-A-Za-z]+(?=\\s*:)")
+val cssStringPattern: Pattern = Pattern.compile("'(?:\\\\.|[^'\\\\])*'|\"(?:\\\\.|[^\"\\\\])*\"")
+val cssNumberPattern: Pattern = Pattern.compile("(?<![\\w.])-?\\d+(?:\\.\\d+)?(?:px|em|rem|vh|vw|%|s|ms)?(?![\\w.])")
+
+// NG 移植：JS 语法模式
+val jsCommentPattern: Pattern = Pattern.compile("//.*$|/\\*[\\s\\S]*?\\*/", Pattern.MULTILINE)
+val jsStringPattern: Pattern = Pattern.compile("'(?:\\\\.|[^'\\\\])*'|\"(?:\\\\.|[^\"\\\\])*\"|`(?:\\\\.|[^`\\\\])*`")
+val jsNumberPattern: Pattern = Pattern.compile("(?<![\\w.])-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?(?![\\w.])")
+val jsKeywordPattern: Pattern = Pattern.compile(
+    "\\b(?:async|await|break|case|catch|class|const|continue|default|delete|do|else|export|extends|finally|for|function|if|import|in|instanceof|let|new|return|switch|this|throw|try|typeof|var|void|while|yield)\\b"
+)
+val jsLiteralPattern: Pattern = Pattern.compile("\\b(?:false|null|true|undefined|NaN|Infinity)\\b")
+
+// NG 移植：调试日志模式
+val debugSectionPattern: Pattern = Pattern.compile("^// ===== .+ =====$", Pattern.MULTILINE)
+val debugTimestampPattern: Pattern = Pattern.compile("\\[\\d{2}:\\d{2}\\.\\d{3}]")
+val debugUrlPattern: Pattern = Pattern.compile("https?://[^\\s\"'<>]+|(?<=获取成功:)/[^\\s\"'<>]+")
+val debugHeaderPattern: Pattern = Pattern.compile("^[A-Za-z0-9_-]+(?=:)", Pattern.MULTILINE)
+
+// NG 移植：代码 / JSON / HTML 细分模式
+val codeStringPattern: Pattern = Pattern.compile("\"(?:\\\\.|[^\"\\\\])*\"")
+val jsonKeyPattern: Pattern = Pattern.compile("\"(?:\\\\.|[^\"\\\\])*\"(?=\\s*:)")
+val jsonLiteralPattern: Pattern = Pattern.compile("\\b(?:true|false|null)\\b")
+val jsonNumberPattern: Pattern = Pattern.compile("(?<![\\w.])-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?(?![\\w.])")
+val htmlStartTagNamePattern: Pattern = Pattern.compile("(?<=<)[A-Za-z][\\w:-]*")
+val htmlEndTagNamePattern: Pattern = Pattern.compile("(?<=</)[A-Za-z][\\w:-]*")
+val htmlAttributePattern: Pattern = Pattern.compile("\\b[A-Za-z_:][\\w:.-]*(?=\\s*=\\s*\")")
+
 /**
  * 运算符模式
  * 匹配各种运算符符号
@@ -85,6 +114,13 @@ fun CodeView.addJsPattern() {
     addSyntaxPattern(wrapPattern, appCtx.color(R.color.md_blue_grey_500))
     addSyntaxPattern(operationPattern, appCtx.color(R.color.md_orange_900))
     addSyntaxPattern(jsPattern, appCtx.color(R.color.md_light_blue_600))
+}
+
+// NG 移植：为CodeView添加CSS语法高亮
+fun CodeView.addCssPattern() {
+    addSyntaxPattern(cssPropertyPattern, appCtx.color(R.color.md_blue_800))
+    addSyntaxPattern(cssStringPattern, appCtx.color(R.color.md_green_800))
+    addSyntaxPattern(cssNumberPattern, appCtx.color(R.color.md_purple_700))
 }
 
 /**
