@@ -354,6 +354,7 @@ class ThemeConfigFragment : BaseFragment(R.layout.fragment_theme_config) {
         if (group == screenState.themeModeGroup) return
         NgThemeModeStore.activateGroup(requireContext(), group)
         refreshContent()
+        recreateActivities()
     }
 
     private fun selectStandardThemeMode(mode: String) {
@@ -365,6 +366,7 @@ class ThemeConfigFragment : BaseFragment(R.layout.fragment_theme_config) {
         }
         NgThemeModeStore.activateStandard(requireContext(), mode)
         refreshContent()
+        recreateActivities()
     }
 
     private fun selectInternalThemeMode(mode: NgThemePresentationMode) {
@@ -380,6 +382,7 @@ class ThemeConfigFragment : BaseFragment(R.layout.fragment_theme_config) {
             internalThemeMode = mode,
         )
         NgThemeModeStore.activateInternal(requireContext(), mode)
+        recreateActivities()
     }
 
     private fun selectSoftGradientColor(preset: NgSoftGradientColorPreset) {
