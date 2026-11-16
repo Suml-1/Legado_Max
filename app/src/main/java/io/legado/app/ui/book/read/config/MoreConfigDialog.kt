@@ -82,6 +82,7 @@ class MoreConfigDialog : BasePrefDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         var preferenceFragment = childFragmentManager.findFragmentByTag(readPreferTag)
+        if (preferenceFragment != null && preferenceFragment.isAdded) return
         if (preferenceFragment == null) preferenceFragment = ReadPreferenceFragment()
         childFragmentManager.beginTransaction()
             .replace(view.id, preferenceFragment, readPreferTag)

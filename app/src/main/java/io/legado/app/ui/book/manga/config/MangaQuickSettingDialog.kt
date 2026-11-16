@@ -63,7 +63,9 @@ class MangaQuickSettingDialog : BasePrefDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val tag = "mangaQuickPreferenceFragment"
-        val fragment = childFragmentManager.findFragmentByTag(tag) ?: MangaPreferenceFragment()
+        val existing = childFragmentManager.findFragmentByTag(tag)
+        if (existing != null && existing.isAdded) return
+        val fragment = existing ?: MangaPreferenceFragment()
         childFragmentManager.beginTransaction()
             .replace(view.id, fragment, tag)
             .commit()

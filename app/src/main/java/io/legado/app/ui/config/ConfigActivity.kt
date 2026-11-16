@@ -89,8 +89,13 @@ class ConfigActivity : VMBaseActivity<ActivityConfigBinding, ConfigViewModel>() 
     inline fun <reified T : Fragment> replaceFragment(configTag: String) {
         intent.putExtra("configTag", configTag)
         @Suppress("DEPRECATION")
-        val configFragment = supportFragmentManager.findFragmentByTag(configTag)
-            ?: T::class.java.newInstance()
+        val existing = supportFragmentManager.findFragmentByTag(configTag)
+        // Activity 经 RECREATE 重建后，Fragment 已由系统恢复并处于 added 状态，
+        // 再把它传入 replace 会触发 "Fragment already added"，这里直接跳过事务。
+        if (existing != null && existing.isAdded) {
+            return
+        }
+        val configFragment = existing ?: T::class.java.newInstance()
         supportFragmentManager.beginTransaction()
             .replace(R.id.configFrameLayout, configFragment, configTag)
             .commit()
