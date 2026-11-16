@@ -115,9 +115,12 @@ internal fun Bookshelf3DShelfContent(
         val heightFraction = 0.50f + (heightLevel - 1) / 9f * 0.45f
         var coverW = maxWidth * widthFraction
         var coverH = safeMaxH * heightFraction
-        // 仅防溢出兜底：不小于可读尺寸、不超出书架安全区
-        coverW = coverW.coerceIn(60.dp, maxWidth)
-        coverH = coverH.coerceIn(120.dp, safeMaxH)
+        // 仅防溢出兜底：不小于可读尺寸、不超出书架安全区。
+        // 量算瞬间容器宽度/高度可能为 0（零尺寸占位帧），上限先保底到下限，避免空区间崩溃。
+        val minCoverW = 60.dp
+        val minCoverH = 120.dp
+        coverW = coverW.coerceIn(minCoverW, maxWidth.coerceAtLeast(minCoverW))
+        coverH = coverH.coerceIn(minCoverH, safeMaxH.coerceAtLeast(minCoverH))
         val coverWpx = with(density) { coverW.toPx() }
         val spineW = coverW * 0.27f
         val spineWBasePx = with(density) { spineW.toPx() }
