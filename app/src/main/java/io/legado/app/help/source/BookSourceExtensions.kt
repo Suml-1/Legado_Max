@@ -27,17 +27,11 @@ private val mutexMap by lazy { hashMapOf<String, Mutex>() }
 private val exploreKindsMap by lazy { ConcurrentHashMap<String, List<ExploreKind>>() }
 private val aCache by lazy { ACache.get("explore") }
 
-private fun BookSource.getExploreKindsKey(): String {
-    return MD5Utils.md5Encode(bookSourceUrl + exploreUrl)
-}
+private fun BookSource.getExploreKindsKey(): String = MD5Utils.md5Encode(bookSourceUrl + exploreUrl)
 
-private fun BookSourcePart.getExploreKindsKey(): String {
-    return getBookSource()!!.getExploreKindsKey()
-}
+private fun BookSourcePart.getExploreKindsKey(): String = getBookSource()!!.getExploreKindsKey()
 
-suspend fun BookSourcePart.exploreKinds(): List<ExploreKind> {
-    return getBookSource()!!.exploreKinds()
-}
+suspend fun BookSourcePart.exploreKinds(): List<ExploreKind> = getBookSource()!!.exploreKinds()
 
 suspend fun BookSource.exploreKinds(): List<ExploreKind> {
     val exploreKindsKey = getExploreKindsKey()
@@ -97,9 +91,9 @@ suspend fun BookSource.exploreKinds(): List<ExploreKind> {
                             type = ExploreKind.Type.html,
                             style = FlexChildStyle(
                                 layout_flexBasisPercent = 1F,
-                                layout_wrapBefore = true
-                            )
-                        )
+                                layout_wrapBefore = true,
+                            ),
+                        ),
                     )
                 } else if (ruleStr.isJsonArray()) {
                     GSON.fromJsonArray<ExploreKind>(ruleStr).getOrThrow().let {
@@ -144,12 +138,10 @@ fun BookSource.exploreKindsJson(): String {
         ?: ""
 }
 
-fun BookSource.getBookType(): Int {
-    return when (bookSourceType) {
-        BookSourceType.file -> BookType.text or BookType.webFile
-        BookSourceType.image -> BookType.image
-        BookSourceType.audio -> BookType.audio
-        BookSourceType.video -> BookType.video
-        else -> BookType.text
-    }
+fun BookSource.getBookType(): Int = when (bookSourceType) {
+    BookSourceType.file -> BookType.text or BookType.webFile
+    BookSourceType.image -> BookType.image
+    BookSourceType.audio -> BookType.audio
+    BookSourceType.video -> BookType.video
+    else -> BookType.text
 }
