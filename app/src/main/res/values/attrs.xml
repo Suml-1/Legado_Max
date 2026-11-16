@@ -242,4 +242,35 @@
             <enum name="right_bottom_fill" value="7" />
         </attr>
     </declare-styleable>
+
+    <declare-styleable name="NgGlassLayout">
+        <attr name="ngGlassRadius" format="dimension" />
+        <attr name="ngGlassTintColor" format="color|reference" />
+        <attr name="ngGlassStrokeColor" format="color|reference" />
+        <attr name="ngGlassStrokeWidth" format="dimension" />
+        <attr name="ngGlassBlurRadius" format="dimension" />
+        <attr name="ngGlassDownSample" format="float" />
+    </declare-styleable>
+
+    <declare-styleable name="NgSurfaceLayout">
+        <attr name="ngSurfaceVariant">
+            <enum name="canvas" value="0" />
+            <enum name="card" value="1" />
+            <enum name="panel" value="2" />
+            <enum name="overlay" value="3" />
+        </attr>
+    </declare-styleable>
+
+    <declare-styleable name="NgSettingsItemView">
+        <attr name="ngTitle" format="string|reference" />
+        <attr name="ngSummary" format="string|reference" />
+        <attr name="ngLeadingIcon" format="reference" />
+        <attr name="ngTrailingType">
+            <enum name="none" value="0" />
+            <enum name="chevron" value="1" />
+            <enum name="switchControl" value="2" />
+            <enum name="value" value="3" />
+        </attr>
+        <attr name="ngValue" format="string|reference" />
+    </declare-styleable>
 </resources>
