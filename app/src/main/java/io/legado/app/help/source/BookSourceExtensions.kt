@@ -54,28 +54,38 @@ suspend fun BookSource.exploreKinds(): List<ExploreKind> {
             kotlin.runCatching {
                 val ruleStr = when {
                     exploreUrl.startsWith("@js:", true) -> {
-                        aCache.getAsString(exploreKindsKey)?.takeIf { it.isNotBlank() } ?: run {
-                            val exploreInfoMap = obtainExploreInfoMap(bookSourceUrl)
-                            runScriptWithContext {
-                                evalJS(exploreUrl.substring(4)) {
-                                    put("infoMap", exploreInfoMap)
-                                }.toString().trim()
-                            }.also {
-                                aCache.put(exploreKindsKey, it)
+                        val exploreInfoMap = obtainExploreInfoMap(bookSourceUrl)
+                        aCache.getAsString(exploreKindsKey)
+                            ?.takeIf { it.isNotBlank() && exploreInfoMap.hasPersisted() }
+                            ?: run {
+                                runScriptWithContext {
+                                    evalJS(exploreUrl.substring(4)) {
+                                        put("infoMap", exploreInfoMap)
+                                    }.toString().trim()
+                                }.also {
+                                    aCache.put(exploreKindsKey, it)
+                                    // 分类 JS 的 infoMap 副作用必须立即持久化：
+                                    // 结果缓存在 aCache（writer 重启后不再执行），若 infoMap 不落盘，
+                                    // 进程重启后 reader 会读到空 map（如 JSON.parse(infoMap['_maps']) 报
+                                    // Unexpected token: u）
+                                    exploreInfoMap.saveNow()
+                                }
                             }
-                        }
                     }
                     exploreUrl.startsWith("<js>", true) -> {
-                        aCache.getAsString(exploreKindsKey)?.takeIf { it.isNotBlank() } ?: run {
-                            val exploreInfoMap = obtainExploreInfoMap(bookSourceUrl)
-                            runScriptWithContext {
-                                evalJS(exploreUrl.substring(4, exploreUrl.lastIndexOf("<"))) {
-                                    put("infoMap", exploreInfoMap)
-                                }.toString().trim()
-                            }.also {
-                                aCache.put(exploreKindsKey, it)
+                        val exploreInfoMap = obtainExploreInfoMap(bookSourceUrl)
+                        aCache.getAsString(exploreKindsKey)
+                            ?.takeIf { it.isNotBlank() && exploreInfoMap.hasPersisted() }
+                            ?: run {
+                                runScriptWithContext {
+                                    evalJS(exploreUrl.substring(4, exploreUrl.lastIndexOf("<"))) {
+                                        put("infoMap", exploreInfoMap)
+                                    }.toString().trim()
+                                }.also {
+                                    aCache.put(exploreKindsKey, it)
+                                    exploreInfoMap.saveNow()
+                                }
                             }
-                        }
                     }
                     else -> exploreUrl
                 }
