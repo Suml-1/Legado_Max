@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.AttributeSet
@@ -26,6 +27,10 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.Theme
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ThemeConfig
+import io.legado.app.help.config.NgThemeLibraryStore
+import io.legado.app.help.config.NgThemeModeStore
+import io.legado.app.help.config.NgThemePresentationMode
+import io.legado.app.help.config.NgEffectThemeSelection
 import io.legado.app.lib.theme.ThemeStore
 import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.lib.theme.primaryColor
@@ -199,17 +204,38 @@ abstract class BaseActivity<VB : ViewBinding>(
 
     override fun onResume() {
         super.onResume()
+        ngThemeGradientBackground?.setHostActive(true)
+        ngThemeSceneHost?.run {
+            val profile = if (
+                NgThemeModeStore.current(this@BaseActivity) ==
+                NgThemePresentationMode.EFFECT_THEME
+            ) {
+                NgEffectThemeSelection.current(this@BaseActivity)
+            } else {
+                null
+            }
+            bind(profile)
+            setHostActive(true)
+        }
         DebugFloatingBallManager.onActivityResumed(this)
         refreshReadAloudMiniBar()
     }
 
     override fun onPause() {
+        ngThemeGradientBackground?.setHostActive(false)
+        ngThemeSceneHost?.setHostActive(false)
         super.onPause()
         readAloudMiniBarController?.onPause()
         DebugFloatingBallManager.onActivityPaused(this)
     }
 
     override fun onDestroy() {
+        ngThemeGradientBackground?.setHostActive(false)
+        ngThemeSceneHost?.setHostActive(false)
+        ngThemeScenePoster?.setImageDrawable(null)
+        ngThemeScenePoster = null
+        ngThemeGradientBackground?.setGradientDrawable(null)
+        ngThemeGradientBackground = null
         super.onDestroy()
         DebugFloatingBallManager.onActivityDestroyed(this)
         DebugLogPanelDialog.onActivityDestroyed(this)
@@ -295,6 +321,7 @@ abstract class BaseActivity<VB : ViewBinding>(
 
     open fun upBackgroundImage() {
         if (!imageBg) return
+        applyGradientBackground()
         // 首次调用时记录原始窗口背景（initTheme 设置的纯色底），
         // 供背景图缺失/加载失败时恢复；此时必然还没应用过任何背景图
         if (defaultDecorBackground == null) {
@@ -361,6 +388,31 @@ abstract class BaseActivity<VB : ViewBinding>(
      */
     protected open fun onBackgroundDrawableLoaded(drawable: Drawable?) {
         window.decorView.background = drawable ?: defaultDecorBackground
+        val scenePoster = ngThemeScenePoster
+        if (drawable != null && scenePoster != null) {
+            val cropWallpaper = drawable is BitmapDrawable &&
+                NgThemeLibraryStore.activeTheme(this)?.centerCropBackground == true
+            val usesDynamicScene = NgThemeModeStore.current(this) ==
+                NgThemePresentationMode.EFFECT_THEME
+            scenePoster.scaleType = if (usesDynamicScene || cropWallpaper) {
+                ImageView.ScaleType.CENTER_CROP
+            } else {
+                ImageView.ScaleType.FIT_XY
+            }
+            scenePoster.setImageDrawable(drawable)
+            scenePoster.visibility = View.VISIBLE
+        } else {
+            scenePoster?.setImageDrawable(null)
+            scenePoster?.visibility = View.GONE
+        }
+    }
+
+    private fun applyGradientBackground() {
+        val gradientDrawable = ThemeConfig.getGradientBgImage(this)
+        ngThemeGradientBackground?.run {
+            setGradientDrawable(gradientDrawable)
+            visibility = if (gradientDrawable != null) View.VISIBLE else View.GONE
+        }
     }
 
     open fun setupSystemBar() {
