@@ -1,0 +1,1 @@
+-keep class io.legado.effect.api.** { *; }

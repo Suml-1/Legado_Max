@@ -1,0 +1,44 @@
+import java.util.jar.JarFile
+import java.util.zip.ZipFile
+
+// Capture the JVM-visible public surface used by existing compiled plugins.
+def releaseAar = layout.buildDirectory.file('outputs/aar/effect-theme-api-release.aar')
+tasks.register('verifyEffectThemeAbi') {
+    dependsOn 'bundleReleaseAar'
+    inputs.file(releaseAar)
+    inputs.file(file('api-v1.txt'))
+    doLast {
+        def jar = new File(temporaryDir, 'effect-theme-api.jar')
+        new ZipFile(releaseAar.get().asFile).withCloseable { archive ->
+            archive.getInputStream(archive.getEntry('classes.jar')).withCloseable { input ->
+                jar.withOutputStream { output -> input.transferTo(output) }
+            }
+        }
+        def types = new JarFile(jar).withCloseable { archive ->
+            archive.entries().findAll { it.name.endsWith('.class') }
+                .collect { it.name.substring(0, it.name.size() - 6).replace('/', '.') }
+                .sort()
+        }
+        def executable = new File(System.getProperty('java.home'), 'bin/javap')
+        if (!executable.exists()) executable = new File(executable.path + '.exe')
+        def output = providers.exec {
+            commandLine([executable.absolutePath, '-public', '-classpath', jar.absolutePath] + types)
+        }.standardOutput.asText.get()
+        String owner = null
+        def actual = []
+        output.readLines().each { raw ->
+            def line = raw.trim()
+            if (line.endsWith(' {')) {
+                owner = types.find { line.contains(" ${it} ") || line.contains(" ${it}<") }
+                if (owner == null) throw new GradleException("Unexpected javap declaration: ${line}")
+                actual << line.substring(0, line.size() - 2)
+            } else if (owner != null && line.startsWith('public ')) {
+                actual << "${owner} ${line}".toString()
+            }
+        }
+        def expected = file('api-v1.txt').readLines('UTF-8').findAll { it }.sort()
+        if (actual.sort() != expected) {
+            throw new GradleException("Frozen effect-theme API v1 changed. Removed: ${expected - actual}; added: ${actual - expected}")
+        }
+    }
+}

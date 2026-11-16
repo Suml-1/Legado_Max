@@ -106,6 +106,9 @@ class CoverImageView @JvmOverloads constructor(
     }
     private var viewWidth: Float = 0f
     private var viewHeight: Float = 0f
+    // NG 主题封面比例与圆角（暂由 setter 记录，3D 测量/绘制逻辑后续阶段再接线）
+    private var coverRadius: Float = 12f
+    private var coverAspectRatio = 0.75f
     private var currentJob: Job? = null
     private val triggerChannel = Channel<Unit>(Channel.CONFLATED)
     var bitmapPath: String? = null
@@ -278,6 +281,21 @@ class CoverImageView @JvmOverloads constructor(
     fun setHeight(height: Int) {
         val width = height * 3 / 4
         minimumWidth = width
+    }
+
+    fun setCoverAspectRatio(aspectRatio: Float) {
+        val normalized = aspectRatio.coerceIn(0.4f, 1f)
+        if (coverAspectRatio == normalized) return
+        coverAspectRatio = normalized
+        requestLayout()
+    }
+
+    fun setCoverRadiusDp(radiusDp: Int) {
+        val radiusPx = radiusDp.coerceAtLeast(0) * resources.displayMetrics.density
+        if (coverRadius == radiusPx) return
+        coverRadius = radiusPx
+        invalidateOutline()
+        invalidate()
     }
 
     /**

@@ -153,6 +153,8 @@ object ThemeConfig {
 
     fun isDarkTheme(): Boolean = getTheme() == Theme.Dark
 
+    fun isDarkTheme(context: Context): Boolean = isDarkTheme()
+
     fun applyDayNight(context: Context) {
         // 过渡起点（上一轮显示的颜色/背景图）只能在主题改动前快照，且必须早于任何表面按新主题落地
         ThemeTransition.notifyThemeChanged()

@@ -176,7 +176,7 @@ fun NgAppTheme(
 private fun rememberNgThemeSnapshot(darkModeOverride: Boolean?): NgThemeSnapshot {
     val context = LocalContext.current
     val systemNightMode = LocalConfiguration.current.isNightMode
-    val themeMode = AppConfig.themeMode
+    val themeMode = AppConfig.themeMode ?: "0"
     val presentationMode = NgThemeModeStore.current(context)
     val isDark = resolveNgThemeNightMode(themeMode, systemNightMode, darkModeOverride)
     val colorFlow = remember(context) { NgColorConfigStore.observe(context) }

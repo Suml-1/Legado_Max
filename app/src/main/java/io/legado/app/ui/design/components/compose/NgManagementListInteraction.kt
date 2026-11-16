@@ -17,7 +17,6 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.pullToRefreshIndicator
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -320,12 +319,7 @@ fun NgPullRefreshBox(
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
-                                .size(40.dp)
-                                .pullToRefreshIndicator(
-                                    state = state,
-                                    isRefreshing = isRefreshing,
-                                    containerColor = Color(NgTheme.colors.cardContainer),
-                                ),
+                                .size(40.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             CircularProgressIndicator(

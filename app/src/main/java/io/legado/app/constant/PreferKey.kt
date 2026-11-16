@@ -461,4 +461,15 @@ object PreferKey {
     const val ngColorDarkBackground = "ngColor.dark.background"
     const val ngColorDarkLabel = "ngColor.dark.labelContainer"
     const val ngColorDarkTopBarTextMode = "ngColor.dark.topBarTextMode"
+
+    const val listeningMotionEnabled = "listeningMotionEnabled"
+    const val listeningMotionEffect = "listeningMotionEffect"
+    const val listeningMotionFireStyle = "listeningMotionFireStyle"
+    const val listeningMotionFluidType = "listeningMotionFluidType"
+    const val listeningMotionFluidIntensity = "listeningMotionFluidIntensity"
+    const val listeningMotionCartoonType = "listeningMotionCartoonType"
+    const val listeningMotionCartoonIntensity = "listeningMotionCartoonIntensity"
+    const val listeningMotionColorMode = "listeningMotionColorMode"
+    const val listeningMotionCustomColor = "listeningMotionCustomColor"
+    const val listeningMotionIntensity = "listeningMotionIntensity"
 }

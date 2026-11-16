@@ -343,6 +343,39 @@ object TintHelper {
         image.setColorFilter(color, PorterDuff.Mode.SRC_ATOP)
     }
 
+    internal fun tintSwitchDrawable(
+        context: Context,
+        from: Drawable,
+        @ColorInt color: Int,
+        thumb: Boolean,
+        isDark: Boolean
+    ): Drawable? = modifySwitchDrawable(context, from, color, thumb, true, isDark)
+
+    @SuppressLint("PrivateResource")
+    internal fun tintControlRipple(
+        context: Context,
+        background: Drawable?,
+        @ColorInt color: Int,
+        isDark: Boolean
+    ) {
+        if (background !is RippleDrawable) return
+        val unchecked = ContextCompat.getColor(
+            context,
+            if (isDark) androidx.appcompat.R.color.ripple_material_dark else androidx.appcompat.R.color.ripple_material_light
+        )
+        val checked = ColorUtils.adjustAlpha(color, 0.4f)
+        background.setColor(
+            ColorStateList(
+                arrayOf(
+                    intArrayOf(-android.R.attr.state_activated, -android.R.attr.state_checked),
+                    intArrayOf(android.R.attr.state_activated),
+                    intArrayOf(android.R.attr.state_checked)
+                ),
+                intArrayOf(unchecked, checked, checked)
+            )
+        )
+    }
+
     private fun modifySwitchDrawable(
         context: Context,
         from: Drawable,

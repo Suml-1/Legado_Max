@@ -391,6 +391,7 @@ dependencies {
     implementation(libs.jsoupxpath)
     implementation(project(path: ':modules:book'))
     implementation(project(path: ':modules:rhino'))
+    implementation(project(path: ':modules:effect-theme-api'))
     
     //JS rhino
     

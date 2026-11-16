@@ -1,0 +1,11 @@
+io.legado.effect.api.EffectThemeAssets public abstract java.io.InputStream open(java.lang.String);
+io.legado.effect.api.EffectThemeCallbacks public abstract void onError(java.lang.String);
+io.legado.effect.api.EffectThemeCallbacks public abstract void onReady();
+io.legado.effect.api.EffectThemePlugin public abstract io.legado.effect.api.EffectThemeSession createSession(android.content.Context, io.legado.effect.api.EffectThemeAssets, io.legado.effect.api.EffectThemeCallbacks);
+io.legado.effect.api.EffectThemeSession public abstract android.view.View getView();
+io.legado.effect.api.EffectThemeSession public abstract void release(java.lang.Runnable);
+io.legado.effect.api.EffectThemeSession public abstract void update(java.util.Map<java.lang.String, java.lang.String>, boolean, java.lang.Long);
+public interface io.legado.effect.api.EffectThemeAssets
+public interface io.legado.effect.api.EffectThemeCallbacks
+public interface io.legado.effect.api.EffectThemePlugin
+public interface io.legado.effect.api.EffectThemeSession
