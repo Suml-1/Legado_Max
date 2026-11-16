@@ -1,6 +1,7 @@
 package io.legado.app.ui.config
 
 import android.os.Bundle
+import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
@@ -8,9 +9,12 @@ import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.EventBus
 import io.legado.app.databinding.ActivityConfigBinding
-import io.legado.app.ui.config.theme.legacy.ThemeConfigFragment
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+
+interface ConfigBackHandler {
+    fun onConfigBackPressed(): Boolean
+}
 
 class ConfigActivity : VMBaseActivity<ActivityConfigBinding, ConfigViewModel>() {
 
@@ -38,11 +42,48 @@ class ConfigActivity : VMBaseActivity<ActivityConfigBinding, ConfigViewModel>() 
             ConfigTag.WELCOME_CONFIG -> replaceFragment<WelcomeConfigFragment>(configTag)
             else -> finish()
         }
+        onBackPressedDispatcher.addCallback(this) {
+            handleConfigBackPressed()
+        }
     }
 
     override fun setTitle(resId: Int) {
         super.setTitle(resId)
         binding.titleBar.setTitle(resId)
+    }
+
+    private fun handleConfigBackPressed() {
+        val fragment = supportFragmentManager.findFragmentById(R.id.configFrameLayout)
+        if ((fragment as? ConfigBackHandler)?.onConfigBackPressed() == true) {
+            return
+        }
+        if (supportFragmentManager.backStackEntryCount > 0) {
+            supportFragmentManager.popBackStack()
+            return
+        }
+        finish()
+    }
+
+    fun openThemeColorConfigPage() {
+        supportFragmentManager.beginTransaction()
+            .replace(
+                R.id.configFrameLayout,
+                ThemeColorConfigFragment(),
+                ConfigTag.THEME_COLOR_CONFIG
+            )
+            .addToBackStack(ConfigTag.THEME_COLOR_CONFIG)
+            .commit()
+    }
+
+    fun openThemeManagerPage() {
+        supportFragmentManager.beginTransaction()
+            .replace(
+                R.id.configFrameLayout,
+                ThemeManagerFragment(),
+                ConfigTag.THEME_MANAGER
+            )
+            .addToBackStack(ConfigTag.THEME_MANAGER)
+            .commit()
     }
 
     inline fun <reified T : Fragment> replaceFragment(configTag: String) {

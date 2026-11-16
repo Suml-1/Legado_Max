@@ -4,12 +4,23 @@ import android.app.Activity.RESULT_OK
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.webkit.MimeTypeMap
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import io.legado.app.R
+import io.legado.app.constant.AppLog
+import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.file.BuiltInFilePickerActivity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import splitties.init.appCtx
+import java.io.File
 
 fun <T> ActivityResultLauncher<T?>.launch() {
     launch(null)

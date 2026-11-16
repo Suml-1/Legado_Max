@@ -9,6 +9,7 @@ import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.Window
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
@@ -267,4 +268,19 @@ val Activity.navigationBarGravity: Int
 fun AppCompatActivity.showHelp(fileName: String) {
     val mdText = String(assets.open("web/help/md/${fileName}.md").readBytes())
     showDialogFragment(TextDialog(getString(R.string.help), mdText, TextDialog.Mode.MD, fileName))
+}
+
+fun Activity.applyAppNavigationBarVisibility() {
+    window.applyAppNavigationBarVisibility()
+}
+
+fun Window.applyAppNavigationBarVisibility() {
+    WindowCompat.getInsetsController(this, decorView).run {
+        if (AppConfig.hideSystemNavigationBar) {
+            hide(WindowInsetsCompat.Type.navigationBars())
+            systemBarsBehavior = BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        } else {
+            show(WindowInsetsCompat.Type.navigationBars())
+        }
+    }
 }

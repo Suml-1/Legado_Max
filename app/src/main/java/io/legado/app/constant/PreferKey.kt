@@ -141,6 +141,7 @@ object PreferKey {
     const val barElevation = "barElevation"
     const val transparentStatusBar = "transparentStatusBar"
     const val immNavigationBar = "immNavigationBar"
+    const val hideSystemNavigationBar = "hideSystemNavigationBar"
     const val defaultCover = "defaultCover"
     const val defaultCoverDark = "defaultCoverDark"
     const val coverCollectionDay = "coverCollectionDay"
@@ -378,6 +379,7 @@ object PreferKey {
 
     /** 是否显示首页tab */
     const val showHomepage = "showHomepage"
+    const val showHome = "showHome"
 
     /** 书架状态图标样式：0=新版（图标），1=经典（绿点） */
     const val bookshelfIconStyle = "bookshelfIconStyle"

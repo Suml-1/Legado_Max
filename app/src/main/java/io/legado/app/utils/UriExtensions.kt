@@ -313,3 +313,14 @@ fun Uri.canRead(): Boolean {
         Intent.FLAG_GRANT_READ_URI_PERMISSION
     ) == PackageManager.PERMISSION_GRANTED
 }
+
+fun Uri.takePersistableReadWritePermission() {
+    if (!isContentScheme()) return
+    try {
+        appCtx.contentResolver.takePersistableUriPermission(
+            this,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        )
+    } catch (_: SecurityException) {
+    }
+}

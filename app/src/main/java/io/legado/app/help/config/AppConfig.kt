@@ -380,6 +380,12 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val immNavigationBar: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.immNavigationBar, true)
 
+    var hideSystemNavigationBar: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.hideSystemNavigationBar, true)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.hideSystemNavigationBar, value)
+        }
+
     val screenOrientation: String?
         get() = appCtx.getPrefString(PreferKey.screenOrientation)
 
@@ -627,6 +633,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     val showHomepage: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.showHomepage, true)
+
+    val showHome: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.showHome, true)
 
     // 调试模式，开启后"我的"页面显示调试工具入口
     val debugMode: Boolean
