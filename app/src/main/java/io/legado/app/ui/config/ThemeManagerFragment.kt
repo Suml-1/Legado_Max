@@ -31,6 +31,8 @@ import io.legado.app.help.config.NgThemeDrawerAssets
 import io.legado.app.help.config.NgThemeDrawerProfile
 import io.legado.app.help.config.NgThemePackageManager
 import io.legado.app.help.config.isBuiltIn
+import io.legado.app.help.resource.RemoteThemeCatalog
+import io.legado.app.help.resource.RemoteThemeItem
 import io.legado.app.model.BookCover
 import io.legado.app.help.config.md3.Md3ThemeImportDraft
 import io.legado.app.help.config.md3.Md3ThemeImportManager
@@ -70,6 +72,11 @@ class ThemeManagerFragment : BaseFragment(R.layout.fragment_theme_manager) {
     private var effectWorking by mutableStateOf(false)
     private var effectStatuses by mutableStateOf<Map<String, NgEffectThemeStatus>>(emptyMap())
     private var statusRefresh by mutableStateOf(0L)
+    private var catalogOpen by mutableStateOf(false)
+    private var catalogItems by mutableStateOf<List<RemoteThemeItem>>(emptyList())
+    private var catalogLoading by mutableStateOf(false)
+    private var catalogError by mutableStateOf<String?>(null)
+    private var catalogInstallingId by mutableStateOf<String?>(null)
     private val effectBusy: Boolean get() = themePackageInstalling || inspectingImport || effectWorking ||
         applyingTheme || savingTheme || copyingDrawerImage || preparingExport || md3ImportInstalling
 
@@ -239,10 +246,18 @@ class ThemeManagerFragment : BaseFragment(R.layout.fragment_theme_manager) {
                         onConfirmThemePackageImport = ::installThemePackage,
                         onEffectApply = ::applyEffectTheme,
                         onEffectApplyStatic = ::applyStaticEffectTheme,
-                        onGetMore = {
-                            toastOnUi("更多主题资源中心暂未接入")
-                        },
+                        onGetMore = ::openOnlineCatalog,
                     )
+                    if (catalogOpen) {
+                        OnlineThemeCatalogDialog(
+                            items = catalogItems,
+                            loading = catalogLoading,
+                            error = catalogError,
+                            installingId = catalogInstallingId,
+                            onDismiss = { catalogOpen = false },
+                            onInstall = ::installOnlineTheme,
+                        )
+                    }
                 }
             }
         }
@@ -296,6 +311,48 @@ class ThemeManagerFragment : BaseFragment(R.layout.fragment_theme_manager) {
     private fun importThemePackage() {
         if (effectBusy) return
         importTheme.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream"))
+    }
+
+    private fun openOnlineCatalog() {
+        if (effectBusy) return
+        catalogOpen = true
+        catalogError = null
+        if (catalogItems.isEmpty() && !catalogLoading) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                catalogLoading = true
+                runCatching { RemoteThemeCatalog.fetchThemes() }
+                    .onSuccess { catalogItems = it }
+                    .onFailure {
+                        catalogError = it.localizedMessage
+                            ?: getString(R.string.ng_theme_online_error_generic)
+                    }
+                catalogLoading = false
+            }
+        }
+    }
+
+    private fun installOnlineTheme(item: RemoteThemeItem) {
+        if (effectBusy || catalogInstallingId != null) return
+        val context = requireContext().applicationContext
+        catalogInstallingId = item.id
+        viewLifecycleOwner.lifecycleScope.launch {
+            var tempFile: File? = null
+            try {
+                val downloaded = withContext(NonCancellable + Dispatchers.IO) {
+                    RemoteThemeCatalog.downloadThemeZip(context, item)
+                }
+                tempFile = downloaded
+                catalogOpen = false
+                prepareThemePackageImport(Uri.fromFile(downloaded))
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                toastOnUi(getString(R.string.ng_theme_import_failed, error.message.orEmpty()))
+            } finally {
+                catalogInstallingId = null
+                tempFile?.delete()
+            }
+        }
     }
 
     private suspend fun prepareThemePackageImport(uri: Uri) {

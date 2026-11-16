@@ -2807,4 +2807,11 @@
     <string name="ng_theme_mode_standard_short">自定义</string>
     <string name="ng_theme_mode_internal_short">内置</string>
     <string name="ng_theme_mode_effect_theme">特效主题</string>
+    <string name="ng_theme_online_title">在线主题</string>
+    <string name="ng_theme_online_loading">正在加载主题…</string>
+    <string name="ng_theme_online_error">加载失败：%1$s</string>
+    <string name="ng_theme_online_error_generic">主题加载失败</string>
+    <string name="ng_theme_online_install">安装</string>
+    <string name="ng_theme_online_installing">安装中</string>
+    <string name="ng_theme_online_empty">暂无可下载主题</string>
 </resources>

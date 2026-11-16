@@ -2969,6 +2969,13 @@ Night: %5$s / %6$s / %7$s / %8$s</string>
     <string name="ng_theme_export_failed">Export failed: %1$s</string>
     <string name="ng_theme_import_success">Imported: %1$s</string>
     <string name="ng_theme_import_failed">Import failed: %1$s</string>
+    <string name="ng_theme_online_title">Online themes</string>
+    <string name="ng_theme_online_loading">Loading themes…</string>
+    <string name="ng_theme_online_error">Failed to load: %1$s</string>
+    <string name="ng_theme_online_error_generic">Failed to load themes</string>
+    <string name="ng_theme_online_install">Install</string>
+    <string name="ng_theme_online_installing">Installing</string>
+    <string name="ng_theme_online_empty">No themes available</string>
     <string name="ng_theme_import_preview">Import theme</string>
     <string name="ng_theme_import_read_failed">Could not read the theme package. Check the ZIP file.</string>
     <string name="ng_theme_import_save_failed">Could not import the theme. Try again.</string>
