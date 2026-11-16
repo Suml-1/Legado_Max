@@ -1,0 +1,6 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <!-- Keep the visible glyph within an 18-unit keyline in the 24-unit viewport. -->
+    <group android:pivotX="12" android:pivotY="12" android:scaleX="0.967742" android:scaleY="0.967742" android:translateX="0" android:translateY="0">
+        <path android:fillColor="@android:color/transparent" android:pathData="M3.5,7h17M8,7V3.5h8V7M5.5,7l1,13.5h11l1,-13.5M10,10.5v6.5M14,10.5v6.5" android:strokeColor="#FF000000" android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    </group>
+</vector>

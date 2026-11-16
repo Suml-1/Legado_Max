@@ -173,7 +173,6 @@ internal fun ThemeConfigScreen(
     var drawerAppearanceExpanded by rememberSaveable { mutableStateOf(false) }
     var bookshelfTopBarExpanded by rememberSaveable { mutableStateOf(false) }
     var showSoftGradientColorSheet by rememberSaveable { mutableStateOf(false) }
-    var showInterfaceFontSheet by rememberSaveable { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -274,7 +273,7 @@ internal fun ThemeConfigScreen(
                 NgCompactSettingsItem(
                     title = stringResource(R.string.interface_font),
                     summary = fontSummary,
-                    onClick = { showInterfaceFontSheet = true },
+                    onClick = {},
                 )
             }
         }
@@ -562,10 +561,6 @@ internal fun ThemeConfigScreen(
                 )
             }
         }
-    }
-
-    if (showInterfaceFontSheet) {
-        ThemeInterfaceFontEditorSheet(onDismissRequest = { showInterfaceFontSheet = false })
     }
     NgSoftGradientColorPresetSheet(
         show = showSoftGradientColorSheet,
