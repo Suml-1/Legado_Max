@@ -562,6 +562,7 @@ internal fun ThemeConfigScreen(
             }
         }
     }
+
     NgSoftGradientColorPresetSheet(
         show = showSoftGradientColorSheet,
         currentMode = state.softGradientColorMode,

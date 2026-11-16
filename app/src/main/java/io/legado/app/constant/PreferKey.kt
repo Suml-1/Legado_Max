@@ -4,6 +4,7 @@ package io.legado.app.constant
 object PreferKey {
     const val language = "language"
     const val fontScale = "fontScale"
+    const val defaultFilePicker = "defaultFilePicker"
     const val themeMode = "themeMode"
     const val enableEInk = "enableEInk"
     const val userAgent = "userAgent"
