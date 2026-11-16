@@ -460,7 +460,7 @@ class ThemeConfigFragment :
 
             PreferKey.fontScale -> {
                 val fontScale = requireContext().getPrefInt(PreferKey.fontScale, 10)
-                preference.summary = getString(R.string.font_scale_summary, fontScale)
+                preference.summary = getString(R.string.font_scale_summary, fontScale.toFloat())
             }
 
             PreferKey.bgImage,

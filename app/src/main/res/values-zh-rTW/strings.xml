@@ -1082,7 +1082,7 @@
     <string name="show_login_header">查看登入頭</string>
     <string name="login_header">登入頭</string>
     <string name="font_scale">字體大小</string>
-    <string name="font_scale_summary">目前字體大小：%d</string>
+    <string name="font_scale_summary">目前字體大小：%.1f</string>
     <string name="tts_speech_reduce">語速減</string>
     <string name="tts_speech_add">語速加</string>
     <string name="open_sys_dir_picker_error">打開系統資料夾選擇器出錯，自動打開應用程式資料夾選擇器</string>
