@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape>
+            <solid android:color="@color/ng_surface_card" />
+            <stroke
+                android:width="1dp"
+                android:color="@color/ng_outline" />
+            <corners android:radius="@dimen/ng_radius_m" />
+        </shape>
+    </item>
+    <item android:state_focused="true">
+        <shape>
+            <solid android:color="@color/ng_surface" />
+            <stroke
+                android:width="1.5dp"
+                android:color="@color/ng_primary" />
+            <corners android:radius="@dimen/ng_radius_m" />
+        </shape>
+    </item>
+    <item>
+        <shape>
+            <solid android:color="@color/ng_surface" />
+            <stroke
+                android:width="1dp"
+                android:color="@color/ng_outline_strong" />
+            <corners android:radius="@dimen/ng_radius_m" />
+        </shape>
+    </item>
+</selector>
