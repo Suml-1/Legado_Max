@@ -24,6 +24,10 @@
 - [Github分支GEd520](https://github.com/GEd520/legados)
 - [Github分支Suml-1](https://github.com/Suml-1/Legado_Max)
 
+**2026/11/16**
+
+- fix(发现): 修复筛选类书源（如分类按钮从 infoMap 读配置的源）重启应用后再进分类报「JSON.parse 报错 Unexpected token: u」——分类 JS 的结果有磁盘缓存、重启后不再执行，而它写入 infoMap 的配置数据从未持久化；现在分类 JS 执行后立即持久化 infoMap，已处于坏状态的用户会在下次进入该源分类时自动重跑一次分类 JS 自愈
+
 **2026/11/15**
 
 - fix(正式包): 修复 release 包里番茄直连等签名类 JS 书源登录动作报「TypeError: 找不到函数 evalString」——JS 沙箱类不在 JsExtensions 继承链上、混淆规则覆盖不到，R8 改名后脚本按名调用失败（debug 包不受影响）；「刷新设备 / 开启段评 / 关闭段评」等登录按钮恢复可用
