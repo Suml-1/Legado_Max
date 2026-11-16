@@ -33,6 +33,13 @@ class ConfigActivity : VMBaseActivity<ActivityConfigBinding, ConfigViewModel>() 
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
+        // Activity 经 RECREATE 重建后，系统已把碎片恢复进容器；此时不能再开 replace 事务，
+        // 否则重复添加已恢复的碎片，报 "Fragment already added"。
+        if (savedInstanceState != null &&
+            supportFragmentManager.findFragmentById(R.id.configFrameLayout) != null
+        ) {
+            return
+        }
         when (val configTag = intent.getStringExtra("configTag")) {
             ConfigTag.PRECISE_MANAGE -> replaceFragment<PreciseManageFragment>(configTag)
             ConfigTag.OTHER_CONFIG -> replaceFragment<OtherConfigFragment>(configTag)
