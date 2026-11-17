@@ -31,6 +31,7 @@ import io.legado.app.help.config.NgThemeLibraryStore
 import io.legado.app.help.config.NgThemeModeStore
 import io.legado.app.help.config.NgThemePresentationMode
 import io.legado.app.help.config.NgEffectThemeSelection
+import io.legado.app.help.config.NgColorConfigStore
 import io.legado.app.lib.theme.ThemeStore
 import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.lib.theme.primaryColor
@@ -174,6 +175,9 @@ abstract class BaseActivity<VB : ViewBinding>(
     @SuppressLint("ObsoleteSdkInt")
     override fun onCreate(savedInstanceState: Bundle?) {
         window.decorView.disableAutoFill()
+        // 内置外观（柔光渐变/多色）没有手动保存动作，不会触发颜色投影；
+        // 必须在 initTheme 读色之前主动投影一次，View 界面才能拿到内置配色。
+        NgColorConfigStore.projectBuiltInToLegacy(this)
         initTheme()
         super.onCreate(savedInstanceState)
         setupSystemBar()
@@ -320,8 +324,10 @@ abstract class BaseActivity<VB : ViewBinding>(
     private var defaultDecorBackground: Drawable? = null
 
     open fun upBackgroundImage() {
-        if (!imageBg) return
+        // 柔光渐变/多色属于内置外观，不依赖「背景图」开关，必须独立喂给渐变宿主；
+        // 其它模式下 getGradientBgImage 返回 null，这里等同于原来的空操作。
         applyGradientBackground()
+        if (!imageBg) return
         // 首次调用时记录原始窗口背景（initTheme 设置的纯色底），
         // 供背景图缺失/加载失败时恢复；此时必然还没应用过任何背景图
         if (defaultDecorBackground == null) {

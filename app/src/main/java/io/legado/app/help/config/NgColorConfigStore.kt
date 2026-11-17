@@ -50,6 +50,20 @@ object NgColorConfigStore {
         ThemeConfig.applyTheme(context)
     }
 
+    /**
+     * 内置外观（柔光渐变 / 多色 / 墨白）没有手动保存动作，不会触发 [update]，
+     * 旧四颜色偏好会一直停留在上一次投影的旧值，View 界面因此看不到内置配色。
+     * 主题相关宿主在建立窗口主题前调用这里，把当前内置外观主动投影一次。
+     */
+    internal fun projectBuiltInToLegacy(context: Context) {
+        val colors = when (NgThemeModeStore.current(context)) {
+            NgThemePresentationMode.SOFT_GRADIENT -> NgSoftGradientTheme.colors(context)
+            NgThemePresentationMode.MULTICOLOR -> NgMulticolorTheme.colors
+            else -> return
+        }
+        projectToLegacy(context, colors)
+    }
+
     private fun ensureInitialized(context: Context) {
         if (initialized) return
         synchronized(lock) {

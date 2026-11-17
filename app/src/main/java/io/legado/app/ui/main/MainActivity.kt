@@ -50,6 +50,8 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.NavigationBarConfig
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.ThemeConfig
+import io.legado.app.help.config.NgThemeModeStore
+import io.legado.app.help.config.NgThemePresentationMode
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.storage.Backup
 import io.legado.app.lib.dialogs.alert
@@ -230,6 +232,17 @@ class MainActivity :
         // 注意：此处会无条件覆盖 content_container 背景，详见上方约束说明
         // 无背景图时回退主题纯色底：LiquidGlass 只能采到 content_container 自身
         // 的绘制内容，背景置 null 会使采样源透明，玻璃/磨砂效果随之失效
+        // 内置外观（柔光渐变/多色光场）由 sceneSource 中的渐变宿主绘制，
+        // content_container 必须保持透明，否则会被主题纯色底整块盖住。
+        // 自定义组（标准/特效主题）不受影响，图片背景照旧可用。
+        if (
+            NgThemeModeStore.current(this) == NgThemePresentationMode.SOFT_GRADIENT ||
+            NgThemeModeStore.current(this) == NgThemePresentationMode.MULTICOLOR
+        ) {
+            binding.contentContainer.background = null
+            backgroundImageApplied = true
+            return
+        }
         val target = drawable?.constantState?.newDrawable()?.mutate()
             ?: backgroundColor.toDrawable()
         binding.contentContainer.background = themeContentBackground(target)

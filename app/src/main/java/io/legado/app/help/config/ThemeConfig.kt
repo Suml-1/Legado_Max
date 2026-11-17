@@ -210,6 +210,15 @@ object ThemeConfig {
     }
 
     fun getBgImage(context: Context, metrics: DisplayMetrics): Drawable? {
+        // 内置外观（柔光渐变/多色光场）不使用窗口壁纸：否则上一个特效主题写入的
+        // bgImage 偏好会在切回内置模式后仍然被解码铺出来，看起来像“切不回来”。
+        val presentationMode = NgThemeModeStore.current(context)
+        if (
+            presentationMode == NgThemePresentationMode.SOFT_GRADIENT ||
+            presentationMode == NgThemePresentationMode.MULTICOLOR
+        ) {
+            return null
+        }
         val themeMode = getTheme()
         val preferenceKey = when (themeMode) {
             Theme.Light -> PreferKey.bgImage
@@ -302,6 +311,14 @@ object ThemeConfig {
      * 绝对路径须为真实存在的文件，否则视为无背景图。
      */
     fun resolveBgImagePath(context: Context): String? {
+        // 与 getBgImage 同一套模式守卫：内置外观下不解析任何旧壁纸路径。
+        val presentationMode = NgThemeModeStore.current(context)
+        if (
+            presentationMode == NgThemePresentationMode.SOFT_GRADIENT ||
+            presentationMode == NgThemePresentationMode.MULTICOLOR
+        ) {
+            return null
+        }
         val prefKey = if (AppConfig.isNightTheme) PreferKey.bgImageN else PreferKey.bgImage
         val rawPath = context.getPrefString(prefKey).orEmpty()
         if (rawPath.isBlank()) return null
