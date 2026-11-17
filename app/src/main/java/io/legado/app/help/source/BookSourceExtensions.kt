@@ -27,17 +27,11 @@ private val mutexMap by lazy { hashMapOf<String, Mutex>() }
 private val exploreKindsMap by lazy { ConcurrentHashMap<String, List<ExploreKind>>() }
 private val aCache by lazy { ACache.get("explore") }
 
-private fun BookSource.getExploreKindsKey(): String {
-    return MD5Utils.md5Encode(bookSourceUrl + exploreUrl)
-}
+private fun BookSource.getExploreKindsKey(): String = MD5Utils.md5Encode(bookSourceUrl + exploreUrl)
 
-private fun BookSourcePart.getExploreKindsKey(): String {
-    return getBookSource()!!.getExploreKindsKey()
-}
+private fun BookSourcePart.getExploreKindsKey(): String = getBookSource()!!.getExploreKindsKey()
 
-suspend fun BookSourcePart.exploreKinds(): List<ExploreKind> {
-    return getBookSource()!!.exploreKinds()
-}
+suspend fun BookSourcePart.exploreKinds(): List<ExploreKind> = getBookSource()!!.exploreKinds()
 
 suspend fun BookSource.exploreKinds(): List<ExploreKind> {
     val exploreKindsKey = getExploreKindsKey()
@@ -54,28 +48,38 @@ suspend fun BookSource.exploreKinds(): List<ExploreKind> {
             kotlin.runCatching {
                 val ruleStr = when {
                     exploreUrl.startsWith("@js:", true) -> {
-                        aCache.getAsString(exploreKindsKey)?.takeIf { it.isNotBlank() } ?: run {
-                            val exploreInfoMap = obtainExploreInfoMap(bookSourceUrl)
-                            runScriptWithContext {
-                                evalJS(exploreUrl.substring(4)) {
-                                    put("infoMap", exploreInfoMap)
-                                }.toString().trim()
-                            }.also {
-                                aCache.put(exploreKindsKey, it)
+                        val exploreInfoMap = obtainExploreInfoMap(bookSourceUrl)
+                        aCache.getAsString(exploreKindsKey)
+                            ?.takeIf { it.isNotBlank() && exploreInfoMap.hasPersisted() }
+                            ?: run {
+                                runScriptWithContext {
+                                    evalJS(exploreUrl.substring(4)) {
+                                        put("infoMap", exploreInfoMap)
+                                    }.toString().trim()
+                                }.also {
+                                    aCache.put(exploreKindsKey, it)
+                                    // 分类 JS 的 infoMap 副作用必须立即持久化：
+                                    // 结果缓存在 aCache（writer 重启后不再执行），若 infoMap 不落盘，
+                                    // 进程重启后 reader 会读到空 map（如 JSON.parse(infoMap['_maps']) 报
+                                    // Unexpected token: u）
+                                    exploreInfoMap.saveNow()
+                                }
                             }
-                        }
                     }
                     exploreUrl.startsWith("<js>", true) -> {
-                        aCache.getAsString(exploreKindsKey)?.takeIf { it.isNotBlank() } ?: run {
-                            val exploreInfoMap = obtainExploreInfoMap(bookSourceUrl)
-                            runScriptWithContext {
-                                evalJS(exploreUrl.substring(4, exploreUrl.lastIndexOf("<"))) {
-                                    put("infoMap", exploreInfoMap)
-                                }.toString().trim()
-                            }.also {
-                                aCache.put(exploreKindsKey, it)
+                        val exploreInfoMap = obtainExploreInfoMap(bookSourceUrl)
+                        aCache.getAsString(exploreKindsKey)
+                            ?.takeIf { it.isNotBlank() && exploreInfoMap.hasPersisted() }
+                            ?: run {
+                                runScriptWithContext {
+                                    evalJS(exploreUrl.substring(4, exploreUrl.lastIndexOf("<"))) {
+                                        put("infoMap", exploreInfoMap)
+                                    }.toString().trim()
+                                }.also {
+                                    aCache.put(exploreKindsKey, it)
+                                    exploreInfoMap.saveNow()
+                                }
                             }
-                        }
                     }
                     else -> exploreUrl
                 }
@@ -87,9 +91,9 @@ suspend fun BookSource.exploreKinds(): List<ExploreKind> {
                             type = ExploreKind.Type.html,
                             style = FlexChildStyle(
                                 layout_flexBasisPercent = 1F,
-                                layout_wrapBefore = true
-                            )
-                        )
+                                layout_wrapBefore = true,
+                            ),
+                        ),
                     )
                 } else if (ruleStr.isJsonArray()) {
                     GSON.fromJsonArray<ExploreKind>(ruleStr).getOrThrow().let {
@@ -134,12 +138,10 @@ fun BookSource.exploreKindsJson(): String {
         ?: ""
 }
 
-fun BookSource.getBookType(): Int {
-    return when (bookSourceType) {
-        BookSourceType.file -> BookType.text or BookType.webFile
-        BookSourceType.image -> BookType.image
-        BookSourceType.audio -> BookType.audio
-        BookSourceType.video -> BookType.video
-        else -> BookType.text
-    }
+fun BookSource.getBookType(): Int = when (bookSourceType) {
+    BookSourceType.file -> BookType.text or BookType.webFile
+    BookSourceType.image -> BookType.image
+    BookSourceType.audio -> BookType.audio
+    BookSourceType.video -> BookType.video
+    else -> BookType.text
 }

@@ -7,13 +7,13 @@ import io.legado.app.help.CacheManager
  * 发现按钮信息
  */
 @Keep
-class InfoMap(val sourceUrl: String): MutableMap<String, String> {
+class InfoMap(val sourceUrl: String) : MutableMap<String, String> {
     private var actualMap: MutableMap<String, String>
     var needSave = false
     private var saveTime = 0
 
     init {
-        val cache = CacheManager.get("infoMap_${sourceUrl}")
+        val cache = CacheManager.get("infoMap_$sourceUrl")
         actualMap = GSON.fromJsonObject<MutableMap<String, String>>(cache).getOrNull() ?: mutableMapOf()
     }
 
@@ -28,13 +28,17 @@ class InfoMap(val sourceUrl: String): MutableMap<String, String> {
 
     fun saveNow() {
         val json = GSON.toJson(actualMap)
-        CacheManager.put("infoMap_${sourceUrl}", json, saveTime)
+        CacheManager.put("infoMap_$sourceUrl", json, saveTime)
         needSave = false
     }
 
-    fun get(): MutableMap<String, String> {
-        return actualMap
-    }
+    /**
+     * 是否曾落盘过（即使内容为空）。用于区分「writer 从未执行持久化」与「持久化内容为空」：
+     * 前者说明缓存命中时 infoMap 副作用缺失，需要重跑分类 JS 自愈；后者不用重跑。
+     */
+    fun hasPersisted(): Boolean = CacheManager.get("infoMap_$sourceUrl") != null
+
+    fun get(): MutableMap<String, String> = actualMap
 
     fun set(value: Map<String, String>) {
         actualMap = value.toMutableMap()
