@@ -419,7 +419,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
      * 入门设备与墨水屏默认关闭。用户可在书架配置里手动覆盖，渲染层仍会对低端设备强制回退普通书架。
      */
     var bookshelf3D: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.bookshelf3D, !isLowEndDevice())
+        // 3D 书架改为默认关闭，由用户手动开启；不写入任何偏好，
+        // 已显式设置过的用户保持原有选择，不受本次默认值调整影响。
+        get() = appCtx.getPrefBoolean(PreferKey.bookshelf3D, false)
         set(value) {
             appCtx.putPrefBoolean(PreferKey.bookshelf3D, value)
         }
