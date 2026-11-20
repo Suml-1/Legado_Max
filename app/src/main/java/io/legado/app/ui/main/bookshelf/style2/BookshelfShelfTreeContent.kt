@@ -109,7 +109,8 @@ private fun BookshelfListContent(
     val scrollbarBottomInset = with(LocalDensity.current) { bottomPaddingPx.toDp() }
     // remember 必须以 listState 为 key：分组切换会换用新的滚动状态实例，
     // 无 key 时 derivedStateOf 一直观察首个实例，回抛给 SwipeRefresh 的
-    // canChildScrollUp 回调会被冻结（滚到底后滑不上去、下拉误触刷新）
+    // canChildScrollUp 回调会被冻结（滚到底后滑不上去、下拉误触刷新）。
+    // Fragment 侧只持单个布尔，新实例的初值与旧值相同时无需重通知
     val canScrollBack by remember(listState) {
         derivedStateOf {
             listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
