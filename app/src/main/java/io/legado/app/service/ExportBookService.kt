@@ -230,7 +230,8 @@ class ExportBookService : BaseService() {
 
     private data class SrcData(
         val chapterTitle: String,
-        val index: Int,
+        val chapterIndex: Int,
+        val imageIndex: Int,
         val src: String,
     )
 
@@ -258,11 +259,11 @@ class ExportBookService : BaseService() {
                     val vFile = BookHelp.getImage(book, it.src)
                     if (vFile.exists()) {
                         fileDoc.createFileIfNotExist(
-                            "${it.index}-${MD5Utils.md5Encode16(it.src)}.jpg",
+                            "${it.imageIndex}-${MD5Utils.md5Encode16(it.src)}.jpg",
                             subDirs = arrayOf(
                                 imageBookDir,
                                 "images",
-                                it.chapterTitle.toImageChapterDir(it.index),
+                                it.chapterTitle.toImageChapterDir(it.chapterIndex),
                             ),
                         ).writeFile(vFile)
                     }
@@ -334,7 +335,9 @@ class ExportBookService : BaseService() {
                 while (matcher.find()) {
                     matcher.group(1)?.let {
                         val src = NetworkUtils.getAbsoluteURL(chapter.url, it)
-                        srcList.add(SrcData(chapter.title, index, src))
+                        // imageIndex 取图片所在行号，仅用于同章内命名；目录归属用的是 chapterIndex，
+                        // 不能混用，否则每张图都会生成一个独立的章节目录
+                        srcList.add(SrcData(chapter.title, chapter.index, index, src))
                     }
                 }
             }
