@@ -100,7 +100,10 @@ private suspend fun exportTxt(fileDoc: FileDoc, book: Book) {
     val bookDoc = fileDoc.createFileIfNotExist(filename)
     val charset = Charset.forName(AppConfig.exportCharset)
 
-    bookDoc.openOutputStream().bufferedWriter(charset).use { bw ->
+    // 图片按「书名_作者/images/章节序号_章节名」分目录存放；章节目录名由 toImageChapterDir 生成，
+    // 序号取 chapterIndex（全书章节序号），同一章的图片落在同一子文件夹
+    val imageBookDir = "${book.name}_${book.author}".toSafeFileName().ifBlank { "book" }
+    bookDoc.openOutputStream().getOrThrow().bufferedWriter(charset).use { bw ->
         getAllContents(book) { text, srcList ->
             bw.write(text)
             // 导出图片（可选）
@@ -108,8 +111,8 @@ private suspend fun exportTxt(fileDoc: FileDoc, book: Book) {
                 val vFile = BookHelp.getImage(book, it.src)
                 if (vFile.exists()) {
                     fileDoc.createFileIfNotExist(
-                        "${it.index}-${MD5Utils.md5Encode16(it.src)}.jpg",
-                        subDirs = arrayOf("${book.name}_${book.author}", "images", it.chapterTitle)
+                        "${it.imageIndex}-${MD5Utils.md5Encode16(it.src)}.jpg",
+                        subDirs = arrayOf(imageBookDir, "images", it.chapterTitle.toImageChapterDir(it.chapterIndex))
                     ).writeFile(vFile)
                 }
             }
@@ -313,7 +316,8 @@ private fun getExportData(
             while (matcher.find()) {
                 matcher.group(1)?.let {
                     val src = NetworkUtils.getAbsoluteURL(chapter.url, it)
-                    srcList.add(SrcData(chapter.title, index, src))
+                    // imageIndex 为图片所在行号，仅用于同章内文件命名；目录归属用 chapterIndex
+                    srcList.add(SrcData(chapter.title, chapter.index, index, src))
                 }
             }
         }

@@ -69,6 +69,7 @@ import me.ag2s.epublib.util.ResourceUtil
 import splitties.init.appCtx
 import splitties.systemservices.notificationManager
 import java.nio.charset.Charset
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.min
 
@@ -901,8 +902,8 @@ class ExportBookService : BaseService() {
 private fun String.toImageChapterDir(index: Int): String {
     val title = toSafeFileName().trim()
     return if (title.isEmpty()) {
-        "%05d".format(index)
+        "%05d".format(Locale.ROOT, index)
     } else {
-        "%05d_%s".format(index, title)
+        "%05d_%s".format(Locale.ROOT, index, title)
     }
 }
