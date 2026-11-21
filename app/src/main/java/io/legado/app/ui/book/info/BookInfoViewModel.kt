@@ -172,11 +172,11 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
             }
             AppLog.putReaderDebug(
                 "[TOC] upBook入口快照: name=${book.name}, author=${book.author}, " +
-                        "bookUrl=${book.bookUrl}, tocUrl='${book.tocUrl}', " +
-                        "intro.len=${book.intro?.length ?: -1}, intro.prefix='${book.intro?.take(16) ?: "null"}', " +
-                        "coverUrl='${book.coverUrl?.take(40) ?: "null"}', " +
-                        "latestChapterTitle='${book.latestChapterTitle}', " +
-                        "inBookshelf=$inBookshelf, isLocal=${book.isLocal}"
+                    "bookUrl=${book.bookUrl}, tocUrl='${book.tocUrl}', " +
+                    "intro.len=${book.intro?.length ?: -1}, intro.prefix='${book.intro?.take(16) ?: "null"}', " +
+                    "coverUrl='${book.coverUrl?.take(40) ?: "null"}', " +
+                    "latestChapterTitle='${book.latestChapterTitle}', " +
+                    "inBookshelf=$inBookshelf, isLocal=${book.isLocal}",
             )
             bookData.postValue(book)
             upCoverByRule(book)
@@ -272,10 +272,10 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
                     try {
                         AppLog.putReaderDebug(
                             "[TOC] loadBookInfo成功: bookUrl=${book.bookUrl}, isWebFile=${it.isWebFile}, " +
-                                    "tocUrl='${it.tocUrl}', intro.len=${it.intro?.length ?: -1}, " +
-                                    "intro.prefix='${it.intro?.take(16) ?: "null"}', " +
-                                    "coverUrl='${it.coverUrl?.take(40) ?: "null"}', " +
-                                    "latestChapterTitle='${it.latestChapterTitle}'"
+                                "tocUrl='${it.tocUrl}', intro.len=${it.intro?.length ?: -1}, " +
+                                "intro.prefix='${it.intro?.take(16) ?: "null"}', " +
+                                "coverUrl='${it.coverUrl?.take(40) ?: "null"}', " +
+                                "latestChapterTitle='${it.latestChapterTitle}'",
                         )
                         val dbBook = appDb.bookDao.getBook(book.name, book.author)
                         if (!inBookshelf && dbBook != null && !dbBook.isNotShelf && dbBook.origin == book.origin) {
@@ -488,7 +488,7 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
         oldBook: Book,
         currentBook: Book,
         oldChapters: List<BookChapter>,
-        latestChapters: List<BookChapter>
+        latestChapters: List<BookChapter>,
     ) {
         if (latestChapters.isNotEmpty()) {
             BookHelp.createChapterCacheMigrator(currentBook, latestChapters).migrate(oldChapters)
@@ -771,7 +771,12 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
                     appDb.searchBookDao.clearByOriginAuthor(book.origin, book.author)
                 }
                 if (book.isLocal) {
+                    // 本地书由 LocalBook 一并清缓存与封面
                     LocalBook.deleteBook(book, deleteOriginal)
+                } else {
+                    // 移出书架要连缓存一起清：缓存清单会让 clearInvalidCache 跳过该目录，
+                    // 不清的话这份缓存会一直占着空间
+                    BookHelp.clearCache(book)
                 }
             }
         }.onSuccess {

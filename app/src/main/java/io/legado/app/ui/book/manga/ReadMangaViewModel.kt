@@ -90,7 +90,7 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
             return
         }
 
-        //开始加载内容
+        // 开始加载内容
         if (!isSameBook) {
             ReadManga.loadContent()
         } else {
@@ -103,13 +103,14 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
         } else if (ReadManga.inBookshelf) {
             if (AppConfig.syncBookProgressPlus) {
                 ReadManga.syncProgress(
-                    { progress -> ReadManga.mCallback?.sureNewProgress(progress) })
+                    { progress -> ReadManga.mCallback?.sureNewProgress(progress) },
+                )
             } else {
                 syncBookProgress(book)
             }
         }
 
-        //自动换源
+        // 自动换源
         if (!book.isLocal && ReadManga.bookSource == null) {
             autoChangeSource(book.name, book.author)
             return
@@ -132,7 +133,7 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
             return true
         }.onFailure {
             currentCoroutineContext().ensureActive()
-            //加载章节出错
+            // 加载章节出错
             ReadManga.mCallback?.loadFail(appCtx.getString(R.string.error_load_toc))
             return false
         }
@@ -169,7 +170,6 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
                 }
             }.onStart {
                 // 自动换源
-
             }.mapParallelSafe(AppConfig.threadCount) { source ->
                 val book = WebBook.preciseSearchAwait(source, name, author).getOrThrow()
                 if (book.tocUrl.isEmpty()) {
@@ -186,7 +186,7 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
                     bookSource = source,
                     book = book,
                     bookChapter = chapter,
-                    nextChapterUrl = nextChapter.url
+                    nextChapterUrl = nextChapter.url,
                 )
                 book to toc
             }.take(1).onEach { (book, toc) ->
@@ -207,7 +207,7 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
      */
     fun syncBookProgress(
         book: Book,
-        alertSync: ((progress: BookProgress) -> Unit)? = null
+        alertSync: ((progress: BookProgress) -> Unit)? = null,
     ) {
         if (!AppConfig.syncBookProgress) return
         execute {
@@ -220,8 +220,10 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
                 return@onSuccess
             }
             if (progress.durChapterIndex < book.durChapterIndex ||
-                (progress.durChapterIndex == book.durChapterIndex
-                        && progress.durChapterPos < book.durChapterPos)
+                (
+                    progress.durChapterIndex == book.durChapterIndex &&
+                        progress.durChapterPos < book.durChapterPos
+                    )
             ) {
                 alertSync?.invoke(progress)
             } else if (progress.durChapterIndex < book.simulatedTotalChapterNum()) {
@@ -238,7 +240,7 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
     fun changeTo(book: Book, toc: List<BookChapter>) {
         changeSourceCoroutine?.cancel()
         changeSourceCoroutine = execute {
-            //换源中
+            // 换源中
             ReadManga.book?.migrateTo(book, toc)
             book.removeType(BookType.updateError)
             ReadManga.book?.delete()
@@ -275,7 +277,11 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
     fun removeFromBookshelf(success: (() -> Unit)?) {
         val book = ReadManga.book
         Coroutine.async {
-            book?.delete()
+            book?.let {
+                it.delete()
+                // 移出书架要连缓存一起清，否则清单会让这份缓存一直留在磁盘上
+                BookHelp.clearCache(it)
+            }
         }.onSuccess {
             success?.invoke()
         }

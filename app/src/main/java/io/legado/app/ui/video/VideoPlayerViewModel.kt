@@ -9,6 +9,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.RssSource
+import io.legado.app.help.book.BookHelp
 import io.legado.app.model.VideoPlay
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.utils.toastOnUi
@@ -19,6 +20,8 @@ class VideoPlayerViewModel(application: Application) : BaseViewModel(application
         execute {
             VideoPlay.book?.let {
                 appDb.bookDao.delete(it)
+                // 移出书架要连缓存一起清，否则清单会让这份缓存一直留在磁盘上
+                BookHelp.clearCache(it)
             }
         }.onSuccess {
             success?.invoke()

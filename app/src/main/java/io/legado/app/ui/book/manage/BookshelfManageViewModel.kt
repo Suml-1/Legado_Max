@@ -64,8 +64,12 @@ class BookshelfManageViewModel(application: Application) : BaseViewModel(applica
             appDb.bookDao.delete(*books.toTypedArray())
             books.forEach {
                 if (it.isLocal) {
+                    // 本地书由 LocalBook 一并清缓存与封面
                     LocalBook.deleteBook(it, deleteOriginal)
                 } else {
+                    // 移出书架要连缓存一起清：缓存清单会让 clearInvalidCache 跳过该目录，
+                    // 不清的话这份缓存会一直占着空间
+                    BookHelp.clearCache(it)
                     val source = appDb.bookSourceDao.getBookSource(it.origin)
                     SourceCallBack.callBackBook(SourceCallBack.DEL_BOOK_SHELF, source, it)
                 }

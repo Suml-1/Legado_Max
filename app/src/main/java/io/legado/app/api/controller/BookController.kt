@@ -245,7 +245,11 @@ object BookController {
     fun deleteBook(postData: String?): ReturnData {
         val returnData = ReturnData()
         GSON.fromJsonObject<Book>(postData).getOrNull()?.let { book ->
-            book.delete()
+            // web 端传来的是搜索/阅读用的轻量 Book，清缓存要按库里的记录拿缓存目录名
+            val shelfBook = appDb.bookDao.getBook(book.bookUrl) ?: book
+            shelfBook.delete()
+            // 移出书架要连缓存一起清，否则清单会让这份缓存一直留在磁盘上
+            BookHelp.clearCache(shelfBook)
             return returnData.setData("")
         }
         return returnData.setErrorMsg("格式不对")
@@ -286,7 +290,7 @@ object BookController {
      */
     fun addLocalBook(
         parameters: Map<String, List<String>>,
-        files: Map<String, String>
+        files: Map<String, String>,
     ): ReturnData {
         val returnData = ReturnData()
         val fileName = parameters["fileName"]?.firstOrNull()
@@ -297,7 +301,7 @@ object BookController {
             val uri = LocalBook.saveBookFile(File(fileData).inputStream(), fileName)
             LocalBook.importFile(uri)
         }.onFailure {
-            //web传书在浏览器上操作，app内原本毫无感知，成败都在本机弹Toast提示
+            // web传书在浏览器上操作，app内原本毫无感知，成败都在本机弹Toast提示
             appCtx.toastOnUi("Web传书失败：${it.localizedMessage ?: "未知错误"}")
             return when (it) {
                 is NoBooksDirException -> returnData.setErrorMsg("未设置书籍保存位置，请在App设置中设置")
@@ -306,7 +310,7 @@ object BookController {
             }
         }.onSuccess { book ->
             appCtx.toastOnUi("《${book.name}》添加书架成功")
-            postEvent(EventBus.BOOKSHELF_REFRESH, "")//BOOKSHELF_REFRESH` 会让书架Fragment执行 `refreshBookshelf()`，从数据库重新拉取完整列表，从web服务导入的书自然就出来了。
+            postEvent(EventBus.BOOKSHELF_REFRESH, "") // BOOKSHELF_REFRESH` 会让书架Fragment执行 `refreshBookshelf()`，从数据库重新拉取完整列表，从web服务导入的书自然就出来了。
             postEvent(EventBus.UP_BOOKSHELF, "")
         }
         return returnData.setData(true)
@@ -332,5 +336,4 @@ object BookController {
             ?: return returnData.setErrorMsg("没有配置")
         return returnData.setData(data)
     }
-
 }

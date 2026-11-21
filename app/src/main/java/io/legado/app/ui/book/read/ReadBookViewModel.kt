@@ -29,7 +29,6 @@ import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
 import io.legado.app.model.localBook.LocalBook
-import io.legado.app.model.webBook.PartialChapterList
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.page.entities.TextChapter
@@ -102,8 +101,8 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
             }
             val index = intent.getIntExtra("index", -1)
             val chapterPos = intent.getIntExtra("chapterPos", -1)
-            if (index >= 0 && chapterPos >= 0) { //从书签打开的正文，有进度传递
-                ReadBook.saveCurrentBookProgress() //启用恢复进度提示
+            if (index >= 0 && chapterPos >= 0) { // 从书签打开的正文，有进度传递
+                ReadBook.saveCurrentBookProgress() // 启用恢复进度提示
                 openChapter(index, chapterPos)
             }
         }.onSuccess {
@@ -358,7 +357,7 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
      */
     fun syncBookProgress(
         book: Book,
-        alertSync: ((progress: BookProgress) -> Unit)? = null
+        alertSync: ((progress: BookProgress) -> Unit)? = null,
     ) {
         if (!AppConfig.syncBookProgress) return
         execute {
@@ -371,8 +370,10 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
                 return@onSuccess
             }
             if (progress.durChapterIndex < book.durChapterIndex ||
-                (progress.durChapterIndex == book.durChapterIndex
-                        && progress.durChapterPos < book.durChapterPos)
+                (
+                    progress.durChapterIndex == book.durChapterIndex &&
+                        progress.durChapterPos < book.durChapterPos
+                    )
             ) {
                 alertSync?.invoke(progress)
             } else if (progress.durChapterIndex < book.simulatedTotalChapterNum()) {
@@ -437,7 +438,7 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
                     bookSource = source,
                     book = book,
                     bookChapter = chapter,
-                    nextChapterUrl = nextChapter.url
+                    nextChapterUrl = nextChapter.url,
                 )
                 book to toc
             }.take(1).onEach { (book, toc) ->
@@ -460,7 +461,11 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
     fun removeFromBookshelf(success: (() -> Unit)?) {
         val book = ReadBook.book
         Coroutine.async {
-            book?.delete()
+            book?.let {
+                it.delete()
+                // 移出书架要连缓存一起清，否则清单会让这份缓存一直留在磁盘上
+                BookHelp.clearCache(it)
+            }
         }.onSuccess {
             success?.invoke()
         }
@@ -491,7 +496,7 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
             appDb.bookChapterDao.getChapterList(
                 book.bookUrl,
                 ReadBook.durChapterIndex,
-                book.totalChapterNum
+                book.totalChapterNum,
             ).forEach { chapter ->
                 BookHelp.delContent(book, chapter)
             }
@@ -541,7 +546,7 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
      */
     fun searchResultPositions(
         textChapter: TextChapter,
-        searchResult: SearchResult
+        searchResult: SearchResult,
     ): Array<Int> {
         // calculate search result's pageIndex
         val pages = textChapter.pages
@@ -615,7 +620,9 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
             val book = ReadBook.book ?: return@execute
             val textChapter = ReadBook.curTextChapter ?: return@execute
             BookHelp.setRemoveSameTitle(
-                book, textChapter.chapter, !textChapter.sameTitleRemoved
+                book,
+                textChapter.chapter,
+                !textChapter.sameTitleRemoved,
             )
             ReadBook.loadContent(ReadBook.durChapterIndex)
         }
@@ -693,5 +700,4 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
             ReadAloud.stop(context)
         }
     }
-
 }

@@ -12,6 +12,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
+import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.getBookSource
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.simulatedTotalChapterNum
@@ -96,7 +97,7 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
     fun upSource() {
         execute {
             val book = AudioPlay.book ?: return@execute
-            AudioPlay.bookSource = book.getBookSource()?.also{
+            AudioPlay.bookSource = book.getBookSource()?.also {
                 customBtnListData.postValue(it.customButton)
             }
         }
@@ -121,10 +122,11 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
         execute {
             AudioPlay.book?.let {
                 appDb.bookDao.delete(it)
+                // 移出书架要连缓存一起清，否则清单会让这份缓存一直留在磁盘上
+                BookHelp.clearCache(it)
             }
         }.onSuccess {
             success?.invoke()
         }
     }
-
 }
